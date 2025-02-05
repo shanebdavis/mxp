@@ -120,3 +120,45 @@ body.resizing {
 body.resizing * {
   cursor: col-resize !important; /* Ensure cursor stays consistent on all elements */
 }
+
+/* Remove all transition effects */
+.drag-before,
+.drag-after,
+.drag-inside {
+  transform: translate3d(0,0,0); /* Force GPU acceleration */
+}
+
+.drag-before::before,
+.drag-after::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #2196f3;
+  pointer-events: none;
+}
+
+.drag-before::before {
+  top: 0;
+}
+
+.drag-after::after {
+  bottom: 0;
+}
+
+.drag-inside {
+  background-color: #e3f2fd;
+}
+
+/* Remove any old drag-over styles */
+.drag-over,
+.drag-over-invalid,
+.drag-before,
+.drag-after {
+  display: none;
+}
+
+[draggable] {
+  cursor: move;
+}
