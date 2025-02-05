@@ -1,0 +1,1 @@
+export const formatReadinessLevel = (level: number) => `RL${level}`
