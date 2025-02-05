@@ -111,6 +111,25 @@ const styles = {
   levelColumn: {
     width: '30%',
   },
+  dropIndicator: {
+    position: 'absolute' as const,
+    pointerEvents: 'none' as const,
+    transition: 'opacity 0.1s',
+    zIndex: -1,
+  },
+  dropLine: {
+    position: 'absolute' as const,
+    height: '2px',
+    backgroundColor: '#2196f3',
+    right: 0,
+  },
+  dropParent: {
+    position: 'absolute' as const,
+    height: '40px',
+    backgroundColor: '#e3f2fd',
+    width: '100%',
+    transform: 'translateY(-50%)',
+  },
 } as const
 
 interface TreeNodeProps {
@@ -144,6 +163,14 @@ interface DragOverState {
 interface DragTarget {
   nodeId: string | null
   position: DropPosition
+}
+
+interface DropIndicatorState {
+  top: number
+  show: boolean
+  isLine: boolean
+  parentTop?: number
+  indentLevel?: number
 }
 
 const isDescendant = (node: TreeNode, targetId: string): boolean => {
@@ -203,6 +230,11 @@ const TreeNode: FC<TreeNodeProps> = ({
     e.preventDefault()
     const data = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
     if (data.id !== node.id && !isDescendant(data.sourceNode, node.id)) {
+      if (dragTarget.position === 'inside' &&
+          node.children.length > 0 &&
+          !expandedNodes.includes(node.id)) {
+        toggleNode(node.id)
+      }
       onMove(data.id, node.id, dragTarget.position)
     }
   }
@@ -227,19 +259,23 @@ const TreeNode: FC<TreeNodeProps> = ({
         <td style={styles.cell}>
           <div style={styles.treeCell}>
             <span style={{ paddingLeft: `${level * 16}px` }} />
-            {node.children.length > 0 && (
-              <span
-                className="toggle-button"
-                onClick={handleToggleClick}
-                style={styles.toggleButton}
-              >
-                {expandedNodes.includes(node.id)
+            <span
+              className={node.children.length > 0 ? "toggle-button" : undefined}
+              onClick={node.children.length > 0 ? handleToggleClick : undefined}
+              style={{
+                ...styles.toggleButton,
+                cursor: node.children.length > 0 ? 'pointer' : 'default',
+                color: node.children.length > 0 ? '#666' : 'transparent',
+              }}
+            >
+              {node.children.length > 0 ? (
+                expandedNodes.includes(node.id)
                   ? <ArrowDropDown style={{ width: 16, height: 16 }} />
                   : <ArrowRight style={{ width: 16, height: 16 }} />
-                }
-              </span>
-            )}
-            {!node.children.length && <span style={{ width: 24 }} />}
+              ) : (
+                <ArrowRight style={{ width: 16, height: 16, visibility: 'hidden' }} />
+              )}
+            </span>
             {node.name}
           </div>
         </td>
@@ -278,11 +314,11 @@ const HierarchicalTable: FC<{
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
-  const [dropIndicator, setDropIndicator] = useState<{
-    top: number,
-    show: boolean,
-    isLine: boolean
-  }>({ top: 0, show: false, isLine: false })
+  const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
+    top: 0,
+    show: false,
+    isLine: false,
+  })
 
   const toggleNode = (id: string) => {
     setExpandedNodes(prev =>
@@ -374,6 +410,7 @@ const HierarchicalTable: FC<{
     const tableRect = tableRef.current.getBoundingClientRect()
     const y = e.clientY - rect.top
     const height = rect.height
+    const level = getNodeLevel(data, nodeId)
 
     let position: DropPosition
     if (y < height * 0.25) {
@@ -381,14 +418,18 @@ const HierarchicalTable: FC<{
       setDropIndicator({
         top: rect.top - tableRect.top,
         show: true,
-        isLine: true
+        isLine: true,
+        parentTop: rect.top - tableRect.top,
+        indentLevel: level
       })
     } else if (y > height * 0.75) {
       position = 'after'
       setDropIndicator({
         top: rect.bottom - tableRect.top,
         show: true,
-        isLine: true
+        isLine: true,
+        parentTop: rect.top - tableRect.top,
+        indentLevel: level
       })
     } else {
       position = 'inside'
@@ -410,23 +451,49 @@ const HierarchicalTable: FC<{
     setDropIndicator(prev => ({ ...prev, show: false }))
   }
 
+  const getNodeLevel = (root: TreeNode, targetId: string, level = 0): number => {
+    if (root.id === targetId) return level
+    for (const child of root.children) {
+      const foundLevel = getNodeLevel(child, targetId, level + 1)
+      if (foundLevel !== -1) return foundLevel
+    }
+    return -1
+  }
+
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: dropIndicator.top,
-          height: dropIndicator.isLine ? '2px' : '40px',
-          transform: dropIndicator.isLine ? 'none' : 'translateY(-50%)',
-          backgroundColor: dropIndicator.isLine ? '#2196f3' : '#e3f2fd',
-          opacity: dropIndicator.show ? 1 : 0,
-          pointerEvents: 'none',
-          transition: 'opacity 0.1s',
-          zIndex: -1,
-        }}
-      />
+      {dropIndicator.show && (
+        <>
+          {dropIndicator.isLine ? (
+            <>
+              <div
+                style={{
+                  ...styles.dropIndicator,
+                  ...styles.dropParent,
+                  top: dropIndicator.parentTop,
+                  opacity: 0.5,
+                }}
+              />
+              <div
+                style={{
+                  ...styles.dropIndicator,
+                  ...styles.dropLine,
+                  top: dropIndicator.top,
+                  left: (dropIndicator.indentLevel || 0) * 16 + 40,
+                }}
+              />
+            </>
+          ) : (
+            <div
+              style={{
+                ...styles.dropIndicator,
+                ...styles.dropParent,
+                top: dropIndicator.top,
+              }}
+            />
+          )}
+        </>
+      )}
       <table style={styles.table}>
         <colgroup>
           <col style={styles.nameColumn} />
