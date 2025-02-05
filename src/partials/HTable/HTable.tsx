@@ -31,11 +31,6 @@ export const HTable: FC<HTableProps> = ({ selectNode = () => { }, selectedNode }
     )
   }
 
-  const handleSelect = (node: TreeNode) => {
-    console.log('handleSelect', node)
-    selectNode(node)
-  }
-
   const handleMove = (sourceId: string, targetId: string, position: DropPosition) => {
     setData(prevData => {
       // Helper function to find and remove node from tree
