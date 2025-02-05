@@ -1,0 +1,81 @@
+export const styles = {
+  container: {
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    fontSize: '14px',
+    lineHeight: '1.4',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    borderSpacing: 0,
+    tableLayout: 'fixed' as const,
+  },
+  headerCell: {
+    textAlign: 'left' as const,
+    padding: '8px 12px',
+    borderBottom: '2px solid #e0e0e0',
+    color: '#666',
+    fontWeight: 600,
+    fontSize: '13px',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+  },
+  cell: {
+    padding: '6px 12px',
+    borderBottom: '1px solid #f0f0f0',
+    color: '#333',
+  },
+  treeCell: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  toggleButton: {
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '24px',
+    height: '24px',
+    color: '#666',
+    userSelect: 'none' as const,
+    fontSize: '10px',
+    borderRadius: '12px',
+  },
+  readinessLevel: {
+    fontFamily: 'Monaco, Consolas, monospace',
+    fontSize: '13px',
+    color: '#666',
+  },
+  row: {
+    cursor: 'pointer',
+  },
+  nameColumn: {
+    width: '70%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap' as const,
+  },
+  levelColumn: {
+    width: '30%',
+  },
+  dropIndicator: {
+    position: 'absolute' as const,
+    pointerEvents: 'none' as const,
+    transition: 'opacity 0.1s',
+    zIndex: -1,
+  },
+  dropLine: {
+    position: 'absolute' as const,
+    height: '2px',
+    backgroundColor: '#2196f3',
+    right: 0,
+  },
+  dropParent: {
+    position: 'absolute' as const,
+    height: '40px',
+    backgroundColor: '#e3f2fd',
+    width: '100%',
+    transform: 'translateY(-50%)',
+  },
+} as const

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import HierarchicalTable from './components/HierarchicalTable'
+import { HTable } from './components'
+import { TreeNode } from './models'
 import { ArrowDropDown, ArrowDropUp, ArrowLeft, ArrowRight } from '@mui/icons-material'
 import { formatReadinessLevel } from './utils/formatting'
 
@@ -119,7 +120,7 @@ const PanelHeader = ({ isCollapsed, label, onClick, isVertical = false }: {
 const App = () => {
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(false)
   const [isFooterCollapsed, setFooterCollapsed] = useState(false)
-  const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null)
+  const [selectedNode, selectNode] = useState<TreeNode | null>(null)
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
 
@@ -162,7 +163,7 @@ const App = () => {
       </header>
 
       <main style={styles.main}>
-        <HierarchicalTable onSelect={setSelectedNode} />
+        <HTable {...{ selectNode }} />
       </main>
 
       <aside style={{
