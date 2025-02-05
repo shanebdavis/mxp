@@ -3,7 +3,7 @@ import HierarchicalTable from './components/HierarchicalTable'
 
 const App = () => (
   <div>
-    <h1>Project Explorer</h1>
+    <h1>Expedition Status</h1>
     <HierarchicalTable />
   </div>
 )

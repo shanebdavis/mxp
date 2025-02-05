@@ -97,10 +97,21 @@ const PanelHeader = ({ isCollapsed, label, onClick, isVertical = false }: {
     }}
     onClick={onClick}
   >
-    {isCollapsed
-      ? <ArrowRight style={{ width: 20, height: 20 }} />
-      : <ArrowDropDown style={{ width: 20, height: 20 }} />
-    }
+    {isVertical ? (
+      // Details panel: left when collapsed, right when expanded
+      isCollapsed ? (
+        <ArrowLeft style={{ width: 20, height: 20 }} />
+      ) : (
+        <ArrowRight style={{ width: 20, height: 20 }} />
+      )
+    ) : (
+      // Comments panel: up when collapsed, down when expanded
+      isCollapsed ? (
+        <ArrowDropUp style={{ width: 20, height: 20 }} />
+      ) : (
+        <ArrowDropDown style={{ width: 20, height: 20 }} />
+      )
+    )}
     {(!isCollapsed || !isVertical) && <span>{label}</span>}
   </button>
 )
@@ -147,7 +158,7 @@ const App = () => {
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Project Explorer</h1>
+        <h1 style={styles.title}>Expedition Status</h1>
       </header>
 
       <main style={styles.main}>

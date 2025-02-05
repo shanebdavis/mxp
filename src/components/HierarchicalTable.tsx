@@ -108,16 +108,30 @@ interface TreeNodeProps {
   expandedNodes: string[]
   toggleNode: (id: string) => void
   onSelect: (node: TreeNode) => void
+  selectedNodeId?: string
 }
 
-const TreeNode: FC<TreeNodeProps> = ({ node, level = 0, expandedNodes, toggleNode, onSelect }) => {
+const TreeNode: FC<TreeNodeProps> = ({ node, level = 0, expandedNodes, toggleNode, onSelect, selectedNodeId }) => {
   const hasChildren = node.children?.length > 0
   const isExpanded = expandedNodes.includes(node.id)
+  const isSelected = node.id === selectedNodeId
 
   const handleRowClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('.toggle-button')) {
-      onSelect(node)
+      if (isSelected && hasChildren) {
+        toggleNode(node.id)
+      } else {
+        onSelect(node)
+        if (hasChildren && !isExpanded) {
+          toggleNode(node.id)
+        }
+      }
     }
+  }
+
+  const handleToggleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleNode(node.id)
   }
 
   return (
@@ -133,10 +147,7 @@ const TreeNode: FC<TreeNodeProps> = ({ node, level = 0, expandedNodes, toggleNod
             {hasChildren && (
               <span
                 className="toggle-button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleNode(node.id)
-                }}
+                onClick={handleToggleClick}
                 style={styles.toggleButton}
               >
                 {isExpanded
@@ -161,6 +172,7 @@ const TreeNode: FC<TreeNodeProps> = ({ node, level = 0, expandedNodes, toggleNod
           expandedNodes={expandedNodes}
           toggleNode={toggleNode}
           onSelect={onSelect}
+          selectedNodeId={selectedNodeId}
         />
       ))}
     </>
@@ -171,6 +183,7 @@ const HierarchicalTable: FC<{
   onSelect?: (node: TreeNode) => void
 }> = ({ onSelect = () => {} }) => {
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['root'])
+  const [selectedNodeId, setSelectedNodeId] = useState<string>('root')
 
   const toggleNode = (id: string) => {
     setExpandedNodes(prev =>
@@ -178,6 +191,11 @@ const HierarchicalTable: FC<{
         ? prev.filter(nodeId => nodeId !== id)
         : [...prev, id]
     )
+  }
+
+  const handleSelect = (node: TreeNode) => {
+    setSelectedNodeId(node.id)
+    onSelect(node)
   }
 
   return (
@@ -194,7 +212,8 @@ const HierarchicalTable: FC<{
             node={dummyData}
             expandedNodes={expandedNodes}
             toggleNode={toggleNode}
-            onSelect={onSelect}
+            onSelect={handleSelect}
+            selectedNodeId={selectedNodeId}
           />
         </tbody>
       </table>
