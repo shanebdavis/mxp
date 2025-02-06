@@ -1,6 +1,12 @@
-# mxp - Max EXPedition Method with Git Storage Solution
+# mxp - Locally Hosted Tool for the Expedition Method of Project Management (Max eXP)
 
-**mxp** is a Node.js-based tool for project management and status tracking. It reads the contents of a Git repository, specifically looking for project and deliverable files organized in markdown with metadata. The tool provides a web-based user interface to visualize and manage the project's status and deliverables, following the Expedition Methodology.
+**mxp** implements the [Expedition Method](EXPEDITION_METHOD.md), a superior form of project management. So superior, I prefer to think if it as a knowledge factory rather than just a project management tool.
+
+MXP has a few key design considerations to make the Expedition Method accessible to all:
+
+- Data is stored in a local Git repository
+- Data is stored in markdown files with YAML metadata
+- Team support is achieved through the the normal git workflow
 
 ## The Expedition Methodology
 
