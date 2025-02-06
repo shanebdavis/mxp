@@ -80,8 +80,6 @@ While on the expedition, you need two key things: progress and direction. Progre
 
 Once a week, repeat these steps:
 
-Good call! Here’s an update that keeps “knowledge” central:
-
 1. **Plot**: Mark your current position on the map.
 2. **Reflect**: Review key knowledge gained over the past week.
 3. **Reorient**: Refine your overall goal and strategy in light of new knowledge.
