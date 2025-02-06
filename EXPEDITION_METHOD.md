@@ -9,7 +9,9 @@ Most creative projects, especially in software development, encounter predictabl
 3. **Overbuilding unused features:** Teams invest heavily in building features or functionality that end up never being used, wasting both time and money.
 4. **Skyrocketing costs:** Inefficient planning and execution can easily cause project costs to multiply, far exceeding what was actually required.
 
-In all these cases, in retrospect, it's trivial to identify to identify the problem: some key bit of knowledge was discovered too late. The key to project success is knowledge:
+In all these cases, in retrospect, it's trivial to identify the problem: some key bit of knowledge was discovered too late. 
+
+The key to project success is knowledge:
 
 1. Generate the right knowledge
 2. At the right time
