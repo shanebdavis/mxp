@@ -1,8 +1,12 @@
 {
-  "name": "my-react-app",
-  "private": true,
-  "version": "0.0.0",
+  "name": "mxp",
+  "private": false,
+  "version": "0.0.1",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shanebdavis/mxp"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -16,7 +20,8 @@
     "@mui/icons-material": "^6.4.3",
     "@mui/material": "^6.4.3",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
