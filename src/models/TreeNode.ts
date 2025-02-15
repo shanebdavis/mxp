@@ -1,52 +1,94 @@
+import { v4 as uuidv4 } from 'uuid'
 
-export interface TreeNode {
-  id: string
+export interface TreeNodeProperties {
   name: string
-  readinessLevel: number  // 0-9
+  readinessLevel: number
+}
+
+export interface TreeNode extends TreeNodeProperties {
+  id: string
   children: TreeNode[]
 }
 
-export const isDescendant = (node: TreeNode, targetId: string): boolean => {
-  if (node.id === targetId) return true
-  return node.children.some(child => isDescendant(child, targetId))
+//*************************************************
+// NON-MUTATING, PURE-FUNCTIONAL HELPERS
+//*************************************************
+const applyToChildren = (node: TreeNode, fn: (child: TreeNode, index: number) => TreeNode | null): TreeNode => {
+  const newChildren = node.children.map(fn)
+  const changed = node.children.find((child, i) => child !== newChildren[i])
+  if (changed) {
+    return {
+      ...node,
+      children: newChildren.filter(child => child !== null)
+    }
+  }
+  return node
 }
 
-export const dummyData: TreeNode = {
-  id: 'root',
-  name: 'Project Root',
-  readinessLevel: 3,
-  children: [
-    {
-      id: '1',
-      name: 'Frontend Development',
-      readinessLevel: 2,
-      children: [
-        {
-          id: '1.1',
-          name: 'User Interface',
-          readinessLevel: 1,
-          children: []
-        },
-        {
-          id: '1.2',
-          name: 'Authentication',
-          readinessLevel: 0,
-          children: []
-        }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Backend Development',
-      readinessLevel: 1,
-      children: [
-        {
-          id: '2.1',
-          name: 'API Design',
-          readinessLevel: 2,
-          children: []
-        }
-      ]
-    }
-  ]
+const applyToMatchingChildRecursive = (currentNode: TreeNode, childNodeId: string, fn: ((child: TreeNode, index: number) => TreeNode | null), __indexInParent: number): TreeNode => {
+  if (currentNode.id === childNodeId) {
+    return fn(currentNode, __indexInParent) as TreeNode // this can actually be null, but that's accounted for in the recursive call; the root call will never return null
+  }
+  return applyToChildren(currentNode, (child, index) => applyToMatchingChildRecursive(child, childNodeId, fn, index))
 }
+
+const applyToMatchingNode = (currentNode: TreeNode, matchNodeId: string, fn: ((node: TreeNode, index: number) => TreeNode | null)): TreeNode | null => {
+  if (currentNode.id === matchNodeId) {
+    return fn(currentNode, 0)
+  } else {
+    return applyToChildren(currentNode, (child, index) => applyToMatchingChildRecursive(child, matchNodeId, fn, index))
+  }
+}
+
+export const createNode = (properties: TreeNodeProperties): TreeNode => {
+  return { ...properties, id: uuidv4(), children: [] }
+}
+
+export const isParentOf = (currentNode: TreeNode, potentialParentId: string, childId: string): boolean => {
+  if (potentialParentId === childId) return true
+  if (currentNode.id === potentialParentId && currentNode.children.find(child => child.id === childId)) return true
+  return !!currentNode.children.find(child => isParentOf(child, potentialParentId, childId))
+}
+
+//*************************************************
+// MUTATING EXPORTS - these are placeholders for an eventual async API
+//*************************************************
+export const getTreeWithNodeParentChanged = async (sourceTree: TreeNode, nodeId: string, newParentId: string, insertAtIndex: number | null | undefined): Promise<TreeNode> => {
+  if (nodeId === sourceTree.id) throw new Error('Cannot set root node as child')
+  if (isParentOf(sourceTree, nodeId, newParentId)) throw new Error('Cannot set node as its own child')
+  const { tree: treeWithRemovedNode, removedNode } = getTreeWithNodeRemoved(sourceTree, nodeId)
+  if (!removedNode) throw new Error('Node not found in tree')
+  if (!treeWithRemovedNode) return removedNode
+  return getTreeWithNodeAdded(treeWithRemovedNode, removedNode, newParentId, insertAtIndex)
+}
+
+export const getTreeWithNodeUpdated = async (sourceTree: TreeNode, nodeId: string, properties: Partial<TreeNodeProperties>): Promise<{ tree: TreeNode, updatedNode: TreeNode }> => {
+  let updatedNode: TreeNode | null = null
+  const tree = applyToMatchingNode(sourceTree, nodeId, currentNode => {
+    updatedNode = {
+      ...currentNode,
+      ...properties
+    }
+    return updatedNode
+  })
+  if (!tree) throw new Error('tree should not be null')
+  if (!updatedNode) throw new Error('Node not found in tree')
+  return { tree, updatedNode }
+}
+
+export const getTreeWithNodeRemoved = (sourceTree: TreeNode, toRemoveId: string): { tree: TreeNode | null, removedNode: TreeNode | null } => {
+  let removedNode: TreeNode | null = null
+  const tree = applyToMatchingNode(sourceTree, toRemoveId, (node) => {
+    removedNode = node
+    return null
+  })
+  return { tree, removedNode }
+}
+
+export const getTreeWithNodeAdded = (sourceTree: TreeNode, toAdd: TreeNode, newParentId: string, insertAtIndex?: number | null): TreeNode =>
+  applyToMatchingNode(sourceTree, newParentId, parent => ({
+    ...parent,
+    children: insertAtIndex != null
+      ? [...parent.children.slice(0, insertAtIndex), toAdd, ...parent.children.slice(insertAtIndex)]
+      : [...parent.children, toAdd]
+  })) as TreeNode
