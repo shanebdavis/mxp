@@ -3,7 +3,7 @@ import {
   getTreeWithNodeAdded,
   createNode,
   getTreeWithNodeRemoved,
-  isParentOf,
+  isParentOfInTree,
   getTreeWithNodeParentChanged,
   type TreeNode,
   getTreeWithNodeUpdated
@@ -129,7 +129,7 @@ describe('TreeNode', () => {
         readinessLevel: 2
       })
       const intermediateTree = await getTreeWithNodeAdded(testTree, child2, 'child1', null)
-      expect(isParentOf(intermediateTree, 'child1', child2.id)).toBe(true)
+      expect(isParentOfInTree(intermediateTree, 'child1', child2.id)).toBe(true)
 
       await expect(getTreeWithNodeParentChanged(intermediateTree, 'child1', child2.id, null))
         .rejects.toThrow()
@@ -139,15 +139,15 @@ describe('TreeNode', () => {
 
   describe('isParentOf', () => {
     it('should return true for direct parent relationship', () => {
-      expect(isParentOf(testTree, 'root', 'child1')).toBe(true)
+      expect(isParentOfInTree(testTree, 'root', 'child1')).toBe(true)
     })
 
     it('should return true for self-reference', () => {
-      expect(isParentOf(testTree, 'root', 'root')).toBe(true)
+      expect(isParentOfInTree(testTree, 'root', 'root')).toBe(true)
     })
 
     it('should return false for non-parent relationship', () => {
-      expect(isParentOf(testTree, 'child1', 'root')).toBe(false)
+      expect(isParentOfInTree(testTree, 'child1', 'root')).toBe(false)
     })
   })
 })

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './partials'
-import { TreeNode } from './models'
+import { createNode, TreeNode } from './models'
+import { useTreeState } from './useTreeState'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -44,9 +45,21 @@ const styles = {
 const App = () => {
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(false)
   const [isFooterCollapsed, setFooterCollapsed] = useState(false)
-  const [selectedNode, selectNode] = useState<TreeNode | null>(null)
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
+
+  const [rootNode, treeStateMethods] = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
+    createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
+      createNode({ name: 'Customer can add product to cart', readinessLevel: 2 }),
+      createNode({ name: 'Customer can remove product from cart', readinessLevel: 2 }),
+      createNode({ name: 'Customer can view cart', readinessLevel: 2 }),
+    ]),
+    createNode({ name: 'Fulfillment can process orders', readinessLevel: 1 }, [
+      createNode({ name: 'Fulfillment can process orders', readinessLevel: 2 }),
+      createNode({ name: 'Fulfillment can view order history', readinessLevel: 2 }),
+    ]),
+  ]))
+  const [selectedNode, selectNode] = useState<TreeNode | null>(null)
 
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
@@ -87,7 +100,7 @@ const App = () => {
       </header>
 
       <main style={styles.main}>
-        <HTable {...{ selectNode }} />
+        <HTable {...{ selectNode, treeStateMethods, rootNode }} />
       </main>
 
       <DetailsPanel

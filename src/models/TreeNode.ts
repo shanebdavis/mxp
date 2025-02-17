@@ -40,29 +40,29 @@ const applyToMatchingNode = (currentNode: TreeNode, matchNodeId: string, fn: ((n
   }
 }
 
-export const createNode = (properties: TreeNodeProperties): TreeNode => {
-  return { ...properties, id: uuidv4(), children: [] }
+export const createNode = (properties: TreeNodeProperties, children: TreeNode[] = []): TreeNode => {
+  return { ...properties, id: uuidv4(), children }
 }
 
-export const isParentOf = (currentNode: TreeNode, potentialParentId: string, childId: string): boolean => {
+export const isParentOfInTree = (currentNode: TreeNode, potentialParentId: string, childId: string): boolean => {
   if (potentialParentId === childId) return true
   if (currentNode.id === potentialParentId && currentNode.children.find(child => child.id === childId)) return true
-  return !!currentNode.children.find(child => isParentOf(child, potentialParentId, childId))
+  return !!currentNode.children.find(child => isParentOfInTree(child, potentialParentId, childId))
 }
 
 //*************************************************
 // MUTATING EXPORTS - these are placeholders for an eventual async API
 //*************************************************
-export const getTreeWithNodeParentChanged = async (sourceTree: TreeNode, nodeId: string, newParentId: string, insertAtIndex: number | null | undefined): Promise<TreeNode> => {
+export const getTreeWithNodeParentChanged = (sourceTree: TreeNode, nodeId: string, newParentId: string, insertAtIndex: number | null | undefined): TreeNode => {
   if (nodeId === sourceTree.id) throw new Error('Cannot set root node as child')
-  if (isParentOf(sourceTree, nodeId, newParentId)) throw new Error('Cannot set node as its own child')
+  if (isParentOfInTree(sourceTree, nodeId, newParentId)) throw new Error('Cannot set node as its own child')
   const { tree: treeWithRemovedNode, removedNode } = getTreeWithNodeRemoved(sourceTree, nodeId)
   if (!removedNode) throw new Error('Node not found in tree')
   if (!treeWithRemovedNode) return removedNode
   return getTreeWithNodeAdded(treeWithRemovedNode, removedNode, newParentId, insertAtIndex)
 }
 
-export const getTreeWithNodeUpdated = async (sourceTree: TreeNode, nodeId: string, properties: Partial<TreeNodeProperties>): Promise<{ tree: TreeNode, updatedNode: TreeNode }> => {
+export const getTreeWithNodeUpdated = (sourceTree: TreeNode, nodeId: string, properties: Partial<TreeNodeProperties>): { tree: TreeNode, updatedNode: TreeNode } => {
   let updatedNode: TreeNode | null = null
   const tree = applyToMatchingNode(sourceTree, nodeId, currentNode => {
     updatedNode = {

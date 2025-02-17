@@ -1,20 +1,21 @@
 import { useState, type FC, useRef } from 'react'
 import React from 'react'
-import { TreeNode, dummyData } from '../../models'
+import { TreeNode, TreeNodeProperties } from '../../models'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
-
+import { TreeStateMethods } from '../../useTreeState'
 type HTableProps = {
-  selectNode?: (node: TreeNode) => void
+  rootNode: TreeNode
   selectedNode?: TreeNode
+  selectNode?: (node: TreeNode) => void
+  treeStateMethods: TreeStateMethods
 }
 
-export const HTable: FC<HTableProps> = ({ selectNode = () => { }, selectedNode }) => {
-  const [data, setData] = useState(dummyData)
+export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, selectedNode, treeStateMethods }) => {
   const [expandedNodes, setExpandedNodes] = useState<string[]>(['root'])
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
-  const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null })
+  const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
   const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
@@ -31,73 +32,7 @@ export const HTable: FC<HTableProps> = ({ selectNode = () => { }, selectedNode }
     )
   }
 
-  const handleMove = (sourceId: string, targetId: string, position: DropPosition) => {
-    setData(prevData => {
-      // Helper function to find and remove node from tree
-      const removeNode = (nodes: TreeNode[]): [TreeNode | null, TreeNode[]] => {
-        for (let i = 0; i < nodes.length; i++) {
-          if (nodes[i].id === sourceId) {
-            const node = nodes[i]
-            const newNodes = [...nodes.slice(0, i), ...nodes.slice(i + 1)]
-            return [node, newNodes]
-          }
-          if (nodes[i].children.length) {
-            const [found, newChildren] = removeNode(nodes[i].children)
-            if (found) {
-              const newNode = { ...nodes[i], children: newChildren }
-              return [found, [...nodes.slice(0, i), newNode, ...nodes.slice(i + 1)]]
-            }
-          }
-        }
-        return [null, nodes]
-      }
-
-      // Modified add logic
-      const addNode = (nodes: TreeNode[], node: TreeNode, targetId: string, position: DropPosition): TreeNode[] => {
-        if (targetId === 'root') {
-          return position === 'after'
-            ? [...nodes, node]
-            : [node, ...nodes]
-        }
-
-        return nodes.map((n, i) => {
-          if (n.id === targetId) {
-            if (position === 'inside') {
-              return { ...n, children: [...n.children, node] }
-            }
-            // Instead of returning arrays, we'll handle before/after at the parent level
-            return n
-          }
-          if (n.children.length) {
-            return { ...n, children: addNode(n.children, node, targetId, position) }
-          }
-          return n
-        }).reduce((acc: TreeNode[], curr, i) => {
-          if (nodes[i].id === targetId) {
-            if (position === 'before') {
-              return [...acc, node, curr]
-            }
-            if (position === 'after') {
-              return [...acc, curr, node]
-            }
-          }
-          return [...acc, curr]
-        }, [])
-      }
-
-      // Find and remove the node from its current location
-      const [nodeToMove, newChildren] = removeNode(prevData.children)
-      if (!nodeToMove) return prevData
-
-      // If dropping on root, add to root's children
-      return {
-        ...prevData,
-        children: addNode(newChildren, nodeToMove, targetId, position)
-      }
-    })
-  }
-
-  const handleDragOver = (nodeId: string) => (e: React.DragEvent) => {
+  const handleDragOver = (nodeId: string, indexInParent: number) => (e: React.DragEvent) => {
     e.preventDefault()
     if (!draggedNode || !tableRef.current) return
 
@@ -108,7 +43,7 @@ export const HTable: FC<HTableProps> = ({ selectNode = () => { }, selectedNode }
     const tableRect = tableRef.current.getBoundingClientRect()
     const y = e.clientY - rect.top
     const height = rect.height
-    const level = getNodeLevel(data, nodeId)
+    const level = getNodeLevel(rootNode, nodeId)
 
     let position: DropPosition
     if (y < height * 0.25) {
@@ -140,12 +75,12 @@ export const HTable: FC<HTableProps> = ({ selectNode = () => { }, selectedNode }
 
     if (dragTarget.nodeId !== nodeId || dragTarget.position !== position) {
       lastDragUpdate.current.timestamp = now
-      setDragTarget({ nodeId, position })
+      setDragTarget({ nodeId, position, indexInParent })
     }
   }
 
   const handleDragLeave = () => {
-    setDragTarget({ nodeId: null, position: null })
+    setDragTarget({ nodeId: null, position: null, indexInParent: null })
     setDropIndicator(prev => ({ ...prev, show: false }))
   }
 
@@ -205,17 +140,17 @@ export const HTable: FC<HTableProps> = ({ selectNode = () => { }, selectedNode }
         </thead>
         <tbody>
           <HTableRow
-            node={data}
+            node={rootNode}
             expandedNodes={expandedNodes}
             toggleNode={toggleNode}
             selectNode={selectNode}
-            selectedNode={selectedNode}
-            onMove={handleMove}
+            treeStateMethods={treeStateMethods}
             draggedNode={draggedNode}
             setDraggedNode={setDraggedNode}
             dragTarget={dragTarget}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
+            indexInParent={0}
           />
         </tbody>
       </table>

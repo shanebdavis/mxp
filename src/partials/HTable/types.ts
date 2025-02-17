@@ -2,8 +2,6 @@ import { TreeNode } from "../../models"
 
 export interface DragItem {
   id: string
-  parentId: string | null
-  sourceNode: TreeNode
 }
 
 export type DropPosition = 'before' | 'after' | 'inside' | null
@@ -16,6 +14,7 @@ export interface DragOverState {
 export interface DragTarget {
   nodeId: string | null
   position: DropPosition
+  indexInParent: number | null
 }
 
 export interface DropIndicatorState {

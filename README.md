@@ -1,6 +1,6 @@
-# mxp - Locally Hosted Tool for the Expedition Method of Project Management (Max eXP)
+# mxp - Method: Expedition - Knowledge Engine for Visionary Projects
 
-**mxp** implements the [Expedition Method](EXPEDITION_METHOD.md), a superior form of project management. So superior, I prefer to think if it as a knowledge factory rather than just a project management tool.
+**mxp** implements the [Expedition Method](EXPEDITION_METHOD.md), a superior form of project management. So superior, it isn't really about "managing" at all. It is about knowledge generation.
 
 MXP has a few key design considerations to make the Expedition Method accessible to all:
 

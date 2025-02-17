@@ -1,9 +1,9 @@
 import { FC } from 'react'
-import { TreeNode, isDescendant } from '../../models'
-import { DropPosition, DragTarget, DragItem } from './types'
+import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { formatReadinessLevel } from '../../presenters/formatting'
+import { TreeStateMethods, TreeNode } from '../../useTreeState'
 
 interface TreeNodeProps {
   node: TreeNode
@@ -12,12 +12,13 @@ interface TreeNodeProps {
   toggleNode: (id: string) => void
   selectNode: (node: TreeNode) => void
   selectedNode?: TreeNode
-  onMove: (sourceId: string, targetId: string, position: DropPosition) => void
+  treeStateMethods: TreeStateMethods
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
   dragTarget: DragTarget
-  onDragOver: (nodeId: string) => (e: React.DragEvent) => void
+  onDragOver: (nodeId: string, indexInParent: number) => (e: React.DragEvent) => void
   onDragLeave: () => void
+  indexInParent: number
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -27,14 +28,16 @@ export const HTableRow: FC<TreeNodeProps> = ({
   toggleNode,
   selectNode,
   selectedNode,
-  onMove,
+  treeStateMethods,
   draggedNode,
   setDraggedNode,
   dragTarget,
   onDragOver,
-  onDragLeave
+  onDragLeave,
+  indexInParent,
 }) => {
-  const isValidTarget = draggedNode && draggedNode.id !== node.id && !isDescendant(draggedNode, node.id)
+  const { setNodeParent, isParentOf } = treeStateMethods
+  const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
   const isDragTarget = dragTarget.nodeId === node.id && isValidTarget
 
   const handleRowClick = (e: React.MouseEvent) => {
@@ -60,7 +63,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
     e.dataTransfer.setData('application/json', JSON.stringify({
       id: node.id,
       parentId: null,
-      sourceNode: node
     }))
   }
 
@@ -70,14 +72,12 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    const data = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
-    if (data.id !== node.id && !isDescendant(data.sourceNode, node.id)) {
-      if (dragTarget.position === 'inside' &&
-        node.children.length > 0 &&
-        !expandedNodes.includes(node.id)) {
+    const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
+    if (dragItem.id !== node.id && !isParentOf(dragItem.id, node.id)) {
+      if (dragTarget.position === 'inside' && node.children.length > 0 && !expandedNodes.includes(node.id))
         toggleNode(node.id)
-      }
-      onMove(data.id, node.id, dragTarget.position)
+
+      setNodeParent(dragItem.id, node.id)
     }
   }
 
@@ -95,7 +95,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragOver={onDragOver(node.id)}
+        onDragOver={onDragOver(node.id, indexInParent)}
         onDragLeave={onDragLeave}
         onDrop={handleDrop}
       >
@@ -126,7 +126,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           {formatReadinessLevel(node.readinessLevel)}
         </td>
       </tr>
-      {expandedNodes.includes(node.id) && node.children.map(child => (
+      {expandedNodes.includes(node.id) && node.children.map((child, index) => (
         <HTableRow
           key={child.id}
           node={child}
@@ -135,12 +135,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
           toggleNode={toggleNode}
           selectNode={selectNode}
           selectedNode={selectedNode}
-          onMove={onMove}
+          treeStateMethods={treeStateMethods}
           draggedNode={draggedNode}
           setDraggedNode={setDraggedNode}
           dragTarget={dragTarget}
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
+          indexInParent={index}
         />
       ))}
     </>
