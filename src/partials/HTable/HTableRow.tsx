@@ -135,7 +135,38 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleInputBlur()
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Save current edits
+      if (editValue !== node.name) {
+        treeStateMethods.updateNode(node.id, { name: editValue })
+      }
+
+      // Handle node creation
+      if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
+        const newNodeId = treeStateMethods.addNode({
+          name: 'New Item',
+          readinessLevel: 0,
+          parentId: node.id,
+        })
+        if (!expandedNodes[node.id]) {
+          toggleNode(node.id)
+        }
+        selectNodeById(newNodeId)
+        setEditingNodeId(newNodeId)
+      } else {  // Regular Enter - add sibling
+        if (parentNode) {  // Only if we have a parent (not root)
+          const newNodeId = treeStateMethods.addNode({
+            name: 'New Item',
+            readinessLevel: 0,
+            parentId: parentNode.id,
+            afterId: node.id,
+          })
+          selectNodeById(newNodeId)
+          setEditingNodeId(newNodeId)
+        }
+      }
     } else if (e.key === 'Escape') {
       setEditValue(node.name)
       setIsEditing(false)
@@ -181,13 +212,39 @@ export const HTableRow: FC<TreeNodeProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isSelected) return
+      if (isEditing) return  // Add this line to prevent handling keys while editing
 
       switch (e.key) {
         case 'Enter':
-          if (!isEditing) {
-            setIsEditing(true)
-            e.preventDefault()
+          e.preventDefault()
+          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter
+            const newNodeId = treeStateMethods.addNode({
+              name: 'New Item',
+              readinessLevel: 0,
+              parentId: node.id,
+            })
+            if (!expandedNodes[node.id]) {
+              toggleNode(node.id)
+            }
+            selectNodeById(newNodeId)
+            setEditingNodeId(newNodeId)
+          } else {  // Regular Enter - add sibling
+            if (parentNode) {  // Only if we have a parent (not root)
+              const newNodeId = treeStateMethods.addNode({
+                name: 'New Item',
+                readinessLevel: 0,
+                parentId: parentNode.id,
+                afterId: node.id,
+              })
+              selectNodeById(newNodeId)
+              setEditingNodeId(newNodeId)
+            }
           }
+          break
+
+        case ' ':  // Space key
+          e.preventDefault()
+          setIsEditing(true)
           break
 
         case 'ArrowLeft':
@@ -258,6 +315,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
             const idx = displayOrder.indexOf(node.id)
             if (idx < displayOrder.length - 1) {
               selectNodeById(displayOrder[idx + 1])
+            }
+          }
+          break
+
+        case 'Delete':
+        case 'Backspace':  // Add both keys for better UX
+          e.preventDefault()
+          if (!isRoot) {  // Prevent deleting root node
+            const currentIndex = displayOrder.indexOf(node.id)
+            const nextSelectedId = displayOrder[currentIndex - 1]  // Get previous node
+            treeStateMethods.removeNode(node.id)
+            if (nextSelectedId) {
+              selectNodeById(nextSelectedId)  // Select previous node
             }
           }
           break

@@ -51,6 +51,14 @@ const App = () => {
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ root: true })
+
+  const toggleNode = useCallback((id: string) => {
+    setExpandedNodes(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
+  }, [])
 
   const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
     createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
@@ -173,6 +181,9 @@ const App = () => {
                       readinessLevel: 0,
                       parentId: selectedNode.id,
                     })
+                    if (!expandedNodes[selectedNode.id]) {  // If parent isn't expanded
+                      toggleNode(selectedNode.id)  // Expand it
+                    }
                     selectNodeById(newNodeId)
                     setEditingNodeId(newNodeId)
                   }
@@ -244,6 +255,8 @@ const App = () => {
             treeStateMethods={treeStateMethods}
             editingNodeId={editingNodeId}
             setEditingNodeId={setEditingNodeId}
+            expandedNodes={expandedNodes}
+            toggleNode={toggleNode}
           />
         </div>
       </main>

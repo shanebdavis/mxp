@@ -13,6 +13,8 @@ interface HTableProps {
   treeStateMethods: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
+  expandedNodes: Record<string, boolean>
+  toggleNode: (id: string) => void
 }
 
 type NonFlattenedIdList = (NonFlattenedIdList | string | null | undefined)[]
@@ -36,8 +38,7 @@ const getIndexInParentMap = (node: TreeNode, indexInParent: number = 0, out: Rec
   return out
 }
 
-export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId }) => {
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ [rootNode.id]: true })
+export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId, expandedNodes, toggleNode }) => {
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
@@ -56,8 +57,6 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
     show: false,
     isLine: false,
   })
-
-  const toggleNode = (id: string) => setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
 
   const handleDragOver = (nodeId: string, indexInParent: number) => (e: React.DragEvent) => {
     e.preventDefault()
