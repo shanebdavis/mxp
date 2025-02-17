@@ -5,7 +5,7 @@ import { TreeNode, TreeNodeProperties, createNode, getTreeWithNodeAdded, getTree
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties) => void
   updateNode: (nodeId: string, properties: Partial<TreeNodeProperties>) => void
-  setNodeParent: (nodeId: string, newParentId: string) => void
+  setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => void
   removeNode: (nodeId: string) => void
   isParentOf: (nodeId: string, potentialChildId: string) => boolean
 }
@@ -21,8 +21,8 @@ export const useTreeState = (initialTree: TreeNode): [TreeNode, TreeStateMethods
     getTreeWithNodeUpdated(treeRoot, nodeId, properties).tree
   )
 
-  const setNodeParent = (nodeId: string, newParentId: string) => setTreeRoot((treeRoot) =>
-    getTreeWithNodeParentChanged(treeRoot, nodeId, newParentId, null)
+  const setNodeParent = (nodeId: string, newParentId: string, insertAtIndex?: number | null) => setTreeRoot((treeRoot) =>
+    getTreeWithNodeParentChanged(treeRoot, nodeId, newParentId, insertAtIndex)
   )
 
   const removeNode = (nodeId: string) => setTreeRoot((treeRoot) => {
