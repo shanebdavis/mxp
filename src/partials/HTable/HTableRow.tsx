@@ -22,6 +22,7 @@ interface TreeNodeProps {
   parentNode?: TreeNode // if undefined, this is the root node
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
+  displayOrder: string[]
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -41,6 +42,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   parentNode,
   editingNodeId,
   setEditingNodeId,
+  displayOrder,
 }) => {
   const { setNodeParent, isParentOf } = treeStateMethods
   const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
@@ -199,9 +201,29 @@ export const HTableRow: FC<TreeNodeProps> = ({
             if (!expanded) {
               toggleNode(node.id)
             } else {
-              // Select first child
               selectNodeById(node.children[0].id)
             }
+          } else {
+            const idx = displayOrder.indexOf(node.id)
+            if (idx < displayOrder.length - 1) {
+              selectNodeById(displayOrder[idx + 1])
+            }
+          }
+          break
+
+        case 'ArrowUp':
+          e.preventDefault()
+          const currentIndex = displayOrder.indexOf(node.id)
+          if (currentIndex > 0) {
+            selectNodeById(displayOrder[currentIndex - 1])
+          }
+          break
+
+        case 'ArrowDown':
+          e.preventDefault()
+          const idx = displayOrder.indexOf(node.id)
+          if (idx < displayOrder.length - 1) {
+            selectNodeById(displayOrder[idx + 1])
           }
           break
       }
@@ -211,7 +233,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       document.addEventListener('keydown', handleKeyDown)
       return () => document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isSelected, isEditing, node, expanded, parentNode, toggleNode, selectNodeById])
+  }, [isSelected, isEditing, node, expanded, parentNode, toggleNode, selectNodeById, displayOrder])
 
   return (
     <>
@@ -333,6 +355,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           parentNode={node}
           editingNodeId={editingNodeId}
           setEditingNodeId={setEditingNodeId}
+          displayOrder={displayOrder}
         />
       ))}
     </>

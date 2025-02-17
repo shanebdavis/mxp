@@ -1,4 +1,4 @@
-import { useState, type FC, useRef } from 'react'
+import { useState, type FC, useRef, useMemo } from 'react'
 import React from 'react'
 import { TreeNode, TreeNodeProperties } from '../../models'
 import { styles } from './styles'
@@ -15,12 +15,26 @@ interface HTableProps {
   setEditingNodeId: (id: string | null) => void
 }
 
+type NonFlattenedIdList = (NonFlattenedIdList | string | null | undefined)[]
+
+const getDisplayOrder = (node: TreeNode, expandedNodes: Record<string, boolean>): NonFlattenedIdList => {
+  if (expandedNodes[node.id]) {
+    return [node.id, ...node.children.map(child => getDisplayOrder(child, expandedNodes)).flat()]
+  }
+  return [node.id]
+}
+
 export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId }) => {
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ [rootNode.id]: true })
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
+
+  const displayOrder = useMemo(() =>
+    getDisplayOrder(rootNode, expandedNodes),
+    [rootNode, expandedNodes]
+  )
 
   const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
     top: 0,
@@ -153,6 +167,7 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
               indexInParent: 0,
               editingNodeId,
               setEditingNodeId,
+              displayOrder,
             }}
           />
         </tbody>
