@@ -18,7 +18,8 @@ interface TreeNodeProps {
   dragTarget: DragTarget
   onDragOver: (nodeId: string, indexInParent: number) => (e: React.DragEvent) => void
   onDragLeave: () => void
-  indexInParent: number
+  indexInParent: number,
+  parentNode?: TreeNode // if undefined, this is the root node
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -35,6 +36,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   onDragOver,
   onDragLeave,
   indexInParent,
+  parentNode,
 }) => {
   const { setNodeParent, isParentOf } = treeStateMethods
   const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
@@ -74,10 +76,24 @@ export const HTableRow: FC<TreeNodeProps> = ({
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
     if (dragItem.id !== node.id && !isParentOf(dragItem.id, node.id)) {
-      if (dragTarget.position === 'inside' && node.children.length > 0 && !expandedNodes.includes(node.id))
+      if (dragTarget.position === 'inside' && node.children.length > 0 && !expandedNodes.includes(node.id)) {
         toggleNode(node.id)
+      }
 
-      setNodeParent(dragItem.id, node.id, 0)
+      // For root node, only allow 'inside' drops
+      if (node.id === 'root' && dragTarget.position !== 'inside') {
+        return
+      }
+
+      if (dragTarget.position === 'inside' || !parentNode) {
+        setNodeParent(dragItem.id, node.id, 0)
+      } else {
+        setNodeParent(
+          dragItem.id,
+          parentNode?.id,
+          dragTarget.position === 'before' ? indexInParent : indexInParent + 1
+        )
+      }
     }
   }
 
@@ -143,6 +159,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           indexInParent={index}
+          parentNode={node}
         />
       ))}
     </>
