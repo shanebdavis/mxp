@@ -8,7 +8,7 @@ import { TreeStateMethods, TreeNode } from '../../useTreeState'
 interface TreeNodeProps {
   node: TreeNode
   level?: number
-  expandedNodes: string[]
+  expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
   selectNode: (node: TreeNode) => void
   selectedNode?: TreeNode
@@ -42,13 +42,16 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
   const isDragTarget = dragTarget.nodeId === node.id && isValidTarget
 
+  const expanded = expandedNodes[node.id]
+  const isRoot = !parentNode
+
   const handleRowClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('.toggle-button')) {
       if (selectedNode?.id === node.id && node.children.length > 0) {
         toggleNode(node.id)
       } else {
         selectNode(node)
-        if (node.children.length > 0 && !expandedNodes.includes(node.id)) {
+        if (node.children.length > 0 && !expanded) {
           toggleNode(node.id)
         }
       }
@@ -76,16 +79,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
     if (dragItem.id !== node.id && !isParentOf(dragItem.id, node.id)) {
-      if (dragTarget.position === 'inside' && node.children.length > 0 && !expandedNodes.includes(node.id)) {
+      if (dragTarget.position === 'inside' && node.children.length > 0 && !expanded) {
         toggleNode(node.id)
       }
 
-      // For root node, only allow 'inside' drops
-      if (node.id === 'root' && dragTarget.position !== 'inside') {
-        return
-      }
-
-      if (dragTarget.position === 'inside' || !parentNode) {
+      if (dragTarget.position === 'inside' || isRoot || (expanded && dragTarget.position !== 'before')) {
         setNodeParent(dragItem.id, node.id, 0)
       } else {
         setNodeParent(
@@ -108,7 +106,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             : undefined,
         }}
         onClick={handleRowClick}
-        draggable
+        draggable={!isRoot}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onDragOver={onDragOver(node.id, indexInParent)}
@@ -128,7 +126,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               }}
             >
               {node.children.length > 0 ? (
-                expandedNodes.includes(node.id)
+                expanded
                   ? <ArrowDropDown style={{ width: 16, height: 16 }} />
                   : <ArrowRight style={{ width: 16, height: 16 }} />
               ) : (
@@ -143,7 +141,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           {formatReadinessLevel(node.readinessLevel)}
         </td>
       </tr>
-      {expandedNodes.includes(node.id) && node.children.map((child, index) => (
+      {expanded && node.children.map((child, index) => (
         <HTableRow
           key={child.id}
           node={child}

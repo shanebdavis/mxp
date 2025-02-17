@@ -29,6 +29,7 @@ export const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '4px',
+    userSelect: 'none' as const,
   },
   toggleButton: {
     cursor: 'pointer',

@@ -13,7 +13,7 @@ type HTableProps = {
 }
 
 export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, selectedNode, treeStateMethods }) => {
-  const [expandedNodes, setExpandedNodes] = useState<string[]>(['root'])
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ [rootNode.id]: true })
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
@@ -24,13 +24,7 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, sele
     isLine: false,
   })
 
-  const toggleNode = (id: string) => {
-    setExpandedNodes(prev =>
-      prev.includes(id)
-        ? prev.filter(nodeId => nodeId !== id)
-        : [...prev, id]
-    )
-  }
+  const toggleNode = (id: string) => setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
 
   const handleDragOver = (nodeId: string, indexInParent: number) => (e: React.DragEvent) => {
     e.preventDefault()
