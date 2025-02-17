@@ -264,6 +264,7 @@ const App = () => {
         setRightPanelCollapsed={setRightPanelCollapsed}
         selectedNode={selectedNode}
         isResizing={isResizing}
+        treeStateMethods={treeStateMethods}
       />
       <CommentsPanel
         isFooterCollapsed={isFooterCollapsed}

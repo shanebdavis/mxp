@@ -180,3 +180,73 @@ body.resizing * {
 [draggable] {
   cursor: move;
 }
+
+/* Markdown styles */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content h1 {
+  font-size: 1.7em;
+  margin: 0.5em 0;
+}
+
+.markdown-content h2 {
+  font-size: 1.4em;
+  margin: 0.5em 0;
+}
+
+.markdown-content h3 {
+  font-size: 1.2em;
+  margin: 0.5em 0;
+}
+
+.markdown-content h4, h5, h6 {
+  font-size: 1.1em;
+  margin: 0.5em 0;
+}
+
+.markdown-content p {
+  margin: 0.5em 0;
+}
+
+.markdown-content blockquote {
+  margin: 0.5em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid var(--border-color);
+  background: var(--background-secondary);
+}
+
+.markdown-content code {
+  background: var(--background-secondary);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: ui-monospace, monospace;
+}
+
+.markdown-content pre {
+  background: var(--background-secondary);
+  padding: 1em;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+.markdown-content a {
+  color: #646cff;
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}

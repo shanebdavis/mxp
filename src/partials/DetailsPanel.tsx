@@ -1,6 +1,8 @@
-import { TreeNode } from "../models"
+import { TreeNode, TreeNodeProperties } from "../models"
 import { PanelHeader } from "./PanelHeader"
 import { formatReadinessLevel } from '../presenters'
+import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 const styles = {
   rightPanel: {
@@ -10,6 +12,9 @@ const styles = {
     background: 'var(--background-secondary)',
     transition: 'width 0.2s ease',
     position: 'relative' as const,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
   },
   rightPanelCollapsed: {
     width: '40px',
@@ -23,47 +28,132 @@ const styles = {
     cursor: 'col-resize',
   },
   content: {
+    flex: 1,
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
     color: 'var(--text-primary)',
+  },
+  description: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    padding: '8px',
+    border: '1px solid var(--border-color)',
+    borderRadius: '4px',
+    background: 'var(--background-primary)',
+    color: 'var(--text-primary)',
+    fontFamily: 'inherit',
+    fontSize: '14px',
+    resize: 'none' as const,
+    overflow: 'auto',
+  },
+  markdownPreview: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    padding: '8px',
+    border: '1px solid var(--border-color)',
+    borderRadius: '4px',
+    background: 'var(--background-primary)',
+    color: 'var(--text-primary)',
+    overflow: 'auto',
   }
 }
 
-export const DetailsPanel = ({ isRightPanelCollapsed, rightPanelWidth, startResize, setRightPanelCollapsed, selectedNode, isResizing }: {
+export const DetailsPanel = ({
+  isRightPanelCollapsed,
+  rightPanelWidth,
+  startResize,
+  setRightPanelCollapsed,
+  selectedNode,
+  isResizing,
+  treeStateMethods,
+}: {
   isRightPanelCollapsed: boolean
   rightPanelWidth: number
   startResize: (e: React.MouseEvent) => void
   setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
   selectedNode: TreeNode | null
   isResizing: boolean
-}) => (
-  < aside style={{
-    ...styles.rightPanel,
-    width: isRightPanelCollapsed ? '40px' : `${rightPanelWidth}px`,
-    transition: isResizing ? 'none' : 'width 0.2s ease',
-  }}>
-    {!isRightPanelCollapsed && (
-      <div
-        onMouseDown={startResize}
-        style={styles.resizeHandle}
+  treeStateMethods: { updateNode: (id: string, props: Partial<TreeNodeProperties>) => void }
+}) => {
+  const [isEditingDescription, setIsEditingDescription] = useState(false)
+  const [descriptionDraft, setDescriptionDraft] = useState('')
+
+  const handleDescriptionClick = () => {
+    if (!isEditingDescription && selectedNode) {
+      setDescriptionDraft(selectedNode.description || '')
+      setIsEditingDescription(true)
+    }
+  }
+
+  const handleDescriptionBlur = () => {
+    if (selectedNode && descriptionDraft !== selectedNode.description) {
+      treeStateMethods.updateNode(selectedNode.id, { description: descriptionDraft })
+    }
+    setIsEditingDescription(false)
+  }
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation()
+  }
+
+  return (
+    <aside style={{
+      ...styles.rightPanel,
+      width: isRightPanelCollapsed ? '40px' : `${rightPanelWidth}px`,
+      transition: isResizing ? 'none' : 'width 0.2s ease',
+    }}>
+      {!isRightPanelCollapsed && (
+        <div
+          onMouseDown={startResize}
+          style={styles.resizeHandle}
+        />
+      )}
+      <PanelHeader
+        isCollapsed={isRightPanelCollapsed}
+        label="Details"
+        onClick={() => setRightPanelCollapsed(prev => !prev)}
+        isVertical={true}
       />
-    )}
-    <PanelHeader
-      isCollapsed={isRightPanelCollapsed}
-      label="Details"
-      onClick={() => setRightPanelCollapsed(prev => !prev)}
-      isVertical={true}
-    />
-    {
-      !isRightPanelCollapsed && (
+      {!isRightPanelCollapsed && (
         <div style={{ padding: '12px', ...styles.content }}>
           {selectedNode ? (
             <>
               <h3>{selectedNode.name}</h3>
               <p>Readiness Level: {formatReadinessLevel(selectedNode.readinessLevel)}</p>
+              {isEditingDescription ? (
+                <textarea
+                  value={descriptionDraft}
+                  onChange={e => setDescriptionDraft(e.target.value)}
+                  onBlur={handleDescriptionBlur}
+                  onKeyDown={handleDescriptionKeyDown}
+                  style={styles.description}
+                  placeholder="Add a description... (Markdown supported)"
+                  autoFocus
+                />
+              ) : (
+                <div
+                  onClick={handleDescriptionClick}
+                  style={styles.markdownPreview}
+                >
+                  {selectedNode.description ? (
+                    <div className="markdown-content">
+                      <ReactMarkdown>{selectedNode.description}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    'Click to add description... (Markdown supported)'
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <p>Select an item to view details</p>
           )}
         </div>
-      )
-    }
-  </aside >)
+      )}
+    </aside>
+  )
+}
