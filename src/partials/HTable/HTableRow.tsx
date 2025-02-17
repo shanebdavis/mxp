@@ -23,6 +23,8 @@ interface TreeNodeProps {
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
+  parentMap: Record<string, TreeNode>
+  indexInParentMap: Record<string, number>
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -43,6 +45,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
   editingNodeId,
   setEditingNodeId,
   displayOrder,
+  parentMap,
+  indexInParentMap,
 }) => {
   const { setNodeParent, isParentOf } = treeStateMethods
   const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
@@ -188,42 +192,73 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
         case 'ArrowLeft':
           e.preventDefault()
-          if (node.children.length > 0 && expanded) {
-            toggleNode(node.id)
-          } else if (parentNode) {
-            selectNodeById(parentNode.id)
+          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Left
+            // Only if we have a parent and grandparent
+            if (parentNode && parentMap[parentNode.id]) {
+              const grandparentId = parentMap[parentNode.id].id
+              const parentIndex = indexInParentMap[parentNode.id]
+              setNodeParent(node.id, grandparentId, parentIndex + 1)
+            }
+          } else {  // Regular left arrow behavior
+            if (node.children.length > 0 && expanded) {
+              toggleNode(node.id)
+            } else if (parentNode) {
+              selectNodeById(parentNode.id)
+            }
           }
           break
 
         case 'ArrowRight':
           e.preventDefault()
-          if (node.children.length > 0) {
-            if (!expanded) {
-              toggleNode(node.id)
-            } else {
-              selectNodeById(node.children[0].id)
+          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Right
+            if (parentNode && indexInParent > 0) {
+              const prevSibling = parentNode.children[indexInParent - 1]
+              setNodeParent(node.id, prevSibling.id)  // No index = add to end
+              if (!expandedNodes[prevSibling.id]) {
+                toggleNode(prevSibling.id)  // Expand the target node
+              }
             }
-          } else {
-            const idx = displayOrder.indexOf(node.id)
-            if (idx < displayOrder.length - 1) {
-              selectNodeById(displayOrder[idx + 1])
+          } else {  // Regular right arrow behavior
+            if (node.children.length > 0) {
+              if (!expanded) {
+                toggleNode(node.id)
+              } else {
+                selectNodeById(node.children[0].id)
+              }
+            } else {
+              const idx = displayOrder.indexOf(node.id)
+              if (idx < displayOrder.length - 1) {
+                selectNodeById(displayOrder[idx + 1])
+              }
             }
           }
           break
 
         case 'ArrowUp':
           e.preventDefault()
-          const currentIndex = displayOrder.indexOf(node.id)
-          if (currentIndex > 0) {
-            selectNodeById(displayOrder[currentIndex - 1])
+          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Up
+            if (parentNode && indexInParent > 0) {
+              setNodeParent(node.id, parentNode.id, indexInParent - 1)
+            }
+          } else {  // Regular up arrow behavior
+            const currentIndex = displayOrder.indexOf(node.id)
+            if (currentIndex > 0) {
+              selectNodeById(displayOrder[currentIndex - 1])
+            }
           }
           break
 
         case 'ArrowDown':
           e.preventDefault()
-          const idx = displayOrder.indexOf(node.id)
-          if (idx < displayOrder.length - 1) {
-            selectNodeById(displayOrder[idx + 1])
+          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Down
+            if (parentNode && indexInParent < parentNode.children.length - 1) {
+              setNodeParent(node.id, parentNode.id, indexInParent + 1)  // Move to next position
+            }
+          } else {  // Regular down arrow behavior
+            const idx = displayOrder.indexOf(node.id)
+            if (idx < displayOrder.length - 1) {
+              selectNodeById(displayOrder[idx + 1])
+            }
           }
           break
       }
@@ -356,6 +391,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           editingNodeId={editingNodeId}
           setEditingNodeId={setEditingNodeId}
           displayOrder={displayOrder}
+          parentMap={parentMap}
+          indexInParentMap={indexInParentMap}
         />
       ))}
     </>

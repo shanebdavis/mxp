@@ -17,11 +17,23 @@ interface HTableProps {
 
 type NonFlattenedIdList = (NonFlattenedIdList | string | null | undefined)[]
 
-const getDisplayOrder = (node: TreeNode, expandedNodes: Record<string, boolean>): NonFlattenedIdList => {
+const getDisplayOrder = (node: TreeNode, expandedNodes: Record<string, boolean>): string[] => {
   if (expandedNodes[node.id]) {
     return [node.id, ...node.children.map(child => getDisplayOrder(child, expandedNodes)).flat()]
   }
   return [node.id]
+}
+
+const getParentMap = (node: TreeNode, parentNode: TreeNode | undefined = undefined, out: Record<string, TreeNode> = {}): Record<string, TreeNode> => {
+  if (parentNode) out[node.id] = parentNode
+  node.children.forEach(child => getParentMap(child, node, out))
+  return out
+}
+
+const getIndexInParentMap = (node: TreeNode, indexInParent: number = 0, out: Record<string, number> = {}): Record<string, number> => {
+  out[node.id] = indexInParent
+  node.children.forEach((child, index) => getIndexInParentMap(child, index, out))
+  return out
 }
 
 export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId }) => {
@@ -31,10 +43,13 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
 
-  const displayOrder = useMemo(() =>
-    getDisplayOrder(rootNode, expandedNodes),
-    [rootNode, expandedNodes]
-  )
+  const [displayOrder, parentMap, indexInParentMap] = useMemo(() => {
+    return [
+      getDisplayOrder(rootNode, expandedNodes),
+      getParentMap(rootNode),
+      getIndexInParentMap(rootNode)
+    ]
+  }, [rootNode, expandedNodes])
 
   const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
     top: 0,
@@ -168,6 +183,8 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
               editingNodeId,
               setEditingNodeId,
               displayOrder,
+              parentMap,
+              indexInParentMap,
             }}
           />
         </tbody>
