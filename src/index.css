@@ -73,6 +73,7 @@ button:focus-visible {
 }
 
 .table-row {
+  will-change: box-shadow;
   cursor: pointer;
 }
 

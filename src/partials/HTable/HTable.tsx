@@ -18,6 +18,7 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, sele
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
+
   const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
     top: 0,
     show: false,

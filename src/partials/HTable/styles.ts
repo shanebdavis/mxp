@@ -50,6 +50,7 @@ export const styles = {
   },
   row: {
     cursor: 'pointer',
+    position: 'relative' as const,
   },
   nameColumn: {
     width: '70%',
@@ -69,14 +70,23 @@ export const styles = {
   dropLine: {
     position: 'absolute' as const,
     height: '2px',
-    backgroundColor: '#2196f3',
+    border: '1px solid orange',
+    borderRadius: '3px',
     right: 0,
   },
   dropParent: {
     position: 'absolute' as const,
     height: '40px',
-    backgroundColor: '#e3f2fd',
     width: '100%',
     transform: 'translateY(-50%)',
+    borderRadius: '3px',
+    border: '2px solid red',
+  },
+  dropTarget: {
+    inside: {
+      outline: '2px solid #2196f3',
+      outlineOffset: '-2px',
+      borderRadius: '3px',
+    }
   },
 } as const

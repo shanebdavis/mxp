@@ -101,9 +101,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
         className="table-row"
         style={{
           ...styles.row,
-          backgroundColor: isDragTarget && dragTarget.position === 'inside'
-            ? '#e3f2fd'
-            : undefined,
+          ...(isDragTarget && dragTarget.position === 'inside' ? styles.dropTarget.inside : {}),
+          ...(isDragTarget && dragTarget.position === 'before' ? { boxShadow: '0 -1px 0 #2196f3, inset 0 1px 0 #2196f3' } : {}),
+          ...(isDragTarget && dragTarget.position === 'after' ? { boxShadow: '0 1px 0 #2196f3, inset 0 -1px 0 #2196f3' } : {}),
         }}
         onClick={handleRowClick}
         draggable={!isRoot}
