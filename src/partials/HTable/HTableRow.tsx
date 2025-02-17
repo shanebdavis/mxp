@@ -73,6 +73,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleDragEnd = () => {
     setDraggedNode(null)
+    handleDragLeave()
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -92,6 +93,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           dragTarget.position === 'before' ? indexInParent : indexInParent + 1
         )
       }
+      handleDragLeave()
     }
   }
 
