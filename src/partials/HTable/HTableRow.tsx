@@ -50,6 +50,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [editValue, setEditValue] = useState(node.name)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const [isEditingRL, setIsEditingRL] = useState(false)
+  const rlRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (isEditing) {
       inputRef.current?.focus()
@@ -122,6 +125,41 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
+  const handleRLClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsEditingRL(true)
+  }
+
+  const handleRLSelect = (e: React.MouseEvent, level: number) => {
+    e.stopPropagation()  // Stop click from bubbling
+    if (level !== node.readinessLevel) {  // Only update if value changed
+      treeStateMethods.updateNode(node.id, { readinessLevel: level })
+    }
+    setIsEditingRL(false)  // Always close picker
+  }
+
+  useEffect(() => {
+    if (isEditingRL) {
+      const handleClickOutside = (e: MouseEvent) => {
+        if (rlRef.current && !rlRef.current.contains(e.target as Node)) {
+          setIsEditingRL(false)
+        }
+      }
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isEditingRL])
+
+  const RLPill = ({ level }: { level: number }) => (
+    <div style={{
+      ...styles.readinessLevelPill,
+      backgroundColor: styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors],
+      // Darken text for yellow which needs better contrast
+    }}>
+      {formatReadinessLevel(level)}
+    </div>
+  )
+
   return (
     <>
       <tr
@@ -184,8 +222,43 @@ export const HTableRow: FC<TreeNodeProps> = ({
             )}
           </div>
         </td>
-        <td style={{ ...styles.cell, ...styles.readinessLevel }}>
-          {formatReadinessLevel(node.readinessLevel)}
+        <td
+          style={{ ...styles.cell, ...styles.readinessLevel }}
+          onClick={handleRLClick}
+        >
+          <div style={{ position: 'relative' }} ref={rlRef}>
+            <RLPill level={node.readinessLevel} />
+            {isEditingRL && (
+              <div style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: 0,
+                background: 'white',
+                border: '1px solid #ddd',
+                borderRadius: 4,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                zIndex: 1000,
+                padding: '4px',
+                display: 'flex',
+                flexDirection: 'column' as const,
+                gap: '4px',
+              }}>
+                {[0, 1, 2, 3, 4, 5, 6].map(level => (
+                  <div
+                    key={level}
+                    onClick={(e) => handleRLSelect(e, level)}
+                    style={{
+                      cursor: 'pointer',
+                      borderRadius: '4px',
+                      padding: '2px',
+                    }}
+                  >
+                    <RLPill level={level} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </td>
       </tr>
       {expanded && node.children.map((child, index) => (

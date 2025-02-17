@@ -43,11 +43,6 @@ export const styles = {
     fontSize: '10px',
     borderRadius: '12px',
   },
-  readinessLevel: {
-    fontFamily: 'Monaco, Consolas, monospace',
-    fontSize: '13px',
-    color: '#666',
-  },
   row: {
     cursor: 'pointer',
     position: 'relative' as const,
@@ -88,5 +83,29 @@ export const styles = {
       outlineOffset: '-2px',
       borderRadius: '3px',
     }
+  },
+  readinessLevel: {
+    color: '#000',
+    fontWeight: 600,
+  },
+  readinessLevelColors: {
+    0: '#ddd',  // grey
+    1: '#FF878F',  // red
+    2: '#ffbd3b',  // orange
+    3: '#ffeb3b',  // yellow
+    4: '#af0',  // yellow-green
+    5: '#0f0',  // green
+    6: '#0ff',  // cyan
+  },
+  readinessLevelPill: {
+    fontFamily: 'inherit',
+    fontWeight: 700,
+    fontSize: '11px',
+    color: 'rgba(0, 0, 0, 0.8)',
+    display: 'inline-block',
+    padding: '1px 6px',
+    borderRadius: '10px',
+    textAlign: 'center' as const,
+    minWidth: '32px',
   },
 } as const
