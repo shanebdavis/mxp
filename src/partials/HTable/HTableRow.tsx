@@ -1,4 +1,4 @@
-import { FC } from 'react'
+import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
@@ -44,16 +44,25 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const expanded = expandedNodes[node.id]
   const isRoot = !parentNode
+  const isSelected = selectedNode?.id === node.id
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState(node.name)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+  }, [isEditing])
 
   const handleRowClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('.toggle-button')) {
-      if (selectedNode?.id === node.id && node.children.length > 0) {
-        toggleNode(node.id)
+      if (isSelected) {
+        setIsEditing(true)
       } else {
         selectNode(node)
-        if (node.children.length > 0 && !expanded) {
-          toggleNode(node.id)
-        }
       }
     }
   }
@@ -97,6 +106,22 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
+  const handleInputBlur = () => {
+    setIsEditing(false)
+    if (editValue !== node.name) {
+      treeStateMethods.updateNode(node.id, { name: editValue })
+    }
+  }
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleInputBlur()
+    } else if (e.key === 'Escape') {
+      setEditValue(node.name)
+      setIsEditing(false)
+    }
+  }
+
   return (
     <>
       <tr
@@ -106,7 +131,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           ...(isDragTarget && dragTarget.position === 'inside' ? styles.dropTarget.inside : {}),
           ...(isDragTarget && dragTarget.position === 'before' ? { boxShadow: '0 -1px 0 #2196f3, inset 0 1px 0 #2196f3' } : {}),
           ...(isDragTarget && dragTarget.position === 'after' ? { boxShadow: '0 1px 0 #2196f3, inset 0 -1px 0 #2196f3' } : {}),
-          ...(selectedNode?.id === node.id ? { backgroundColor: '#e3f2fd' } : {}),
+          ...(isSelected ? { backgroundColor: '#e3f2fd' } : {}),
         }}
         onClick={handleRowClick}
         draggable={!isRoot}
@@ -137,7 +162,26 @@ export const HTableRow: FC<TreeNodeProps> = ({
               )}
             </span>
             <span style={{ fontSize: '0.8em', color: '#666', marginRight: '2px' }}>{indexInParent + 1}</span>
-            {node.name}
+            {isEditing ? (
+              <input
+                ref={inputRef}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onBlur={handleInputBlur}
+                onKeyDown={handleInputKeyDown}
+                style={{
+                  border: 'none',
+                  background: 'white',
+                  padding: '1px 4px',
+                  margin: '-2px 0',
+                  width: '100%',
+                  fontSize: 'inherit',
+                  fontFamily: 'inherit',
+                }}
+              />
+            ) : (
+              node.name
+            )}
           </div>
         </td>
         <td style={{ ...styles.cell, ...styles.readinessLevel }}>
