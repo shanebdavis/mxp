@@ -89,13 +89,16 @@ export const styles = {
     fontWeight: 600,
   },
   readinessLevelColors: {
-    0: '#ddd',  // grey
+    0: '#aaa',  // grey
     1: '#FF878F',  // red
     2: '#ffbd3b',  // orange
     3: '#ffeb3b',  // yellow
     4: '#af0',  // yellow-green
     5: '#0f0',  // green
     6: '#0ff',  // cyan
+    7: '#aaf',  // blue
+    8: '#f7f',  //
+    9: '#f000f0',  // aquamarine
   },
   readinessLevelPill: {
     fontFamily: 'inherit',

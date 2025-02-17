@@ -2,8 +2,8 @@ import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
-import { formatReadinessLevel } from '../../presenters/formatting'
 import { TreeStateMethods, TreeNode } from '../../useTreeState'
+import { RlPill, RlPillWithDropdown } from '../../widgets'
 
 interface TreeNodeProps {
   node: TreeNode
@@ -219,15 +219,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }, [isEditingRL])
 
-  const RLPill = ({ level }: { level: number }) => (
-    <div style={{
-      ...styles.readinessLevelPill,
-      backgroundColor: styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors],
-      // Darken text for yellow which needs better contrast
-    }}>
-      {formatReadinessLevel(level)}
-    </div>
-  )
 
   // Add this effect for keyboard handling
   useEffect(() => {
@@ -450,37 +441,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           onClick={handleRLClick}
         >
           <div style={{ position: 'relative' }} ref={rlRef}>
-            <RLPill level={node.readinessLevel} />
-            {isEditingRL && (
-              <div style={{
-                position: 'absolute',
-                top: 'calc(100% + 4px)',
-                left: 0,
-                background: '#2D2D2D',
-                border: '1px solid var(--border-color)',
-                borderRadius: 4,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                zIndex: 1000,
-                padding: '4px',
-                display: 'flex',
-                flexDirection: 'column' as const,
-                gap: '4px',
-              }}>
-                {[0, 1, 2, 3, 4, 5, 6].map(level => (
-                  <div
-                    key={level}
-                    onClick={(e) => handleRLSelect(e, level)}
-                    style={{
-                      cursor: 'pointer',
-                      borderRadius: '4px',
-                      padding: '2px',
-                    }}
-                  >
-                    <RLPill level={level} />
-                  </div>
-                ))}
-              </div>
-            )}
+            <RlPill level={node.readinessLevel} />
+            {isEditingRL && <RlPillWithDropdown level={node.readinessLevel} handleRLSelect={handleRLSelect} />}
           </div>
         </td>
       </tr>
