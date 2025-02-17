@@ -86,9 +86,12 @@ export const getTreeWithNodeRemoved = (sourceTree: TreeNode, toRemoveId: string)
 }
 
 export const getTreeWithNodeAdded = (sourceTree: TreeNode, toAdd: TreeNode, newParentId: string, insertAtIndex?: number | null): TreeNode =>
-  applyToMatchingNode(sourceTree, newParentId, parent => ({
+  applyToMatchingNode(sourceTree, newParentId, (parent: TreeNode) => ({
     ...parent,
     children: insertAtIndex != null
-      ? [...parent.children.slice(0, insertAtIndex), toAdd, ...parent.children.slice(insertAtIndex)]
-      : [...parent.children, toAdd]
+      ? (insertAtIndex < 0
+        ? [...parent.children, toAdd]  // append if negative
+        : [...parent.children.slice(0, insertAtIndex), toAdd, ...parent.children.slice(insertAtIndex)]
+      )
+      : [...parent.children, toAdd]  // append if null/undefined
   })) as TreeNode

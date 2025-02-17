@@ -111,6 +111,39 @@ describe('TreeNode', () => {
       expect(result3.children[result3.children.length - 1].name).toBe('Last')
       expect(result3.children.length).toBe(3)
     })
+
+    it('should add node at end when index is negative', () => {
+      // Setup a tree with multiple children
+      const treeWithChildren = {
+        id: 'root',
+        name: 'Root',
+        readinessLevel: 1,
+        children: [
+          {
+            id: 'child1',
+            name: 'Child 1',
+            readinessLevel: 2,
+            children: []
+          },
+          {
+            id: 'child2',
+            name: 'Child 2',
+            readinessLevel: 2,
+            children: []
+          }
+        ]
+      }
+
+      const newNode = createNode({ name: 'Last', readinessLevel: 3 })
+      const result = getTreeWithNodeAdded(treeWithChildren, newNode, 'root', -1)
+      expect(result.children[result.children.length - 1].name).toBe('Last')
+      expect(result.children.length).toBe(3)
+
+      // Test with other negative numbers too
+      const result2 = getTreeWithNodeAdded(treeWithChildren, newNode, 'root', -42)
+      expect(result2.children[result2.children.length - 1].name).toBe('Last')
+      expect(result2.children.length).toBe(3)
+    })
   })
 
   describe('getTreeWithNodeRemoved', () => {
