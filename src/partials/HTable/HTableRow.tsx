@@ -77,7 +77,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       if (dragTarget.position === 'inside' && node.children.length > 0 && !expandedNodes.includes(node.id))
         toggleNode(node.id)
 
-      setNodeParent(dragItem.id, node.id)
+      setNodeParent(dragItem.id, node.id, 0)
     }
   }
 
@@ -119,6 +119,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 <ArrowRight style={{ width: 16, height: 16, visibility: 'hidden' }} />
               )}
             </span>
+            <span style={{ fontSize: '0.8em', color: '#666', marginRight: '2px' }}>{indexInParent + 1}</span>
             {node.name}
           </div>
         </td>
