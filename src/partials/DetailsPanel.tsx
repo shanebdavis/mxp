@@ -6,8 +6,8 @@ const styles = {
   rightPanel: {
     gridArea: 'right',
     width: '300px',
-    borderLeft: '1px solid #e0e0e0',
-    background: '#f8f9fa',
+    borderLeft: '1px solid var(--border-color)',
+    background: 'var(--background-secondary)',
     transition: 'width 0.2s ease',
     position: 'relative' as const,
   },
@@ -22,6 +22,9 @@ const styles = {
     width: 8,
     cursor: 'col-resize',
   },
+  content: {
+    color: 'var(--text-primary)',
+  }
 }
 
 export const DetailsPanel = ({ isRightPanelCollapsed, rightPanelWidth, startResize, setRightPanelCollapsed, selectedNode, isResizing }: {
@@ -51,7 +54,7 @@ export const DetailsPanel = ({ isRightPanelCollapsed, rightPanelWidth, startResi
     />
     {
       !isRightPanelCollapsed && (
-        <div style={{ padding: '12px' }}>
+        <div style={{ padding: '12px', ...styles.content }}>
           {selectedNode ? (
             <>
               <h3>{selectedNode.name}</h3>

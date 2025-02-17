@@ -4,22 +4,34 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
   background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Light theme colors */
+  --background-primary: #ffffff;
+  --background-secondary: #f8f9fa;
+  --border-color: #e0e0e0;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --hover-color: #f5f5f5;
+  --selected-color: #e3f2fd;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark theme colors */
+    --background-primary: #1a1a1a;
+    --background-secondary: #2d2d2d;
+    --border-color: #404040;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --hover-color: #3d3d3d;
+    --selected-color: #1e3a5f;
+  }
 }
 
 body {
@@ -28,7 +40,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f8f9fa;
+  background: var(--background-primary);
+  color: var(--text-primary);
 }
 
 h1 {
@@ -78,7 +91,11 @@ button:focus-visible {
 }
 
 .table-row:hover {
-  background-color: #f5f5f5;
+  background-color: var(--hover-color);
+}
+
+.table-row.selected {
+  background-color: var(--selected-color);
 }
 
 .toggle-button {

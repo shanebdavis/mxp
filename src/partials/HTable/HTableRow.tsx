@@ -162,10 +162,16 @@ export const HTableRow: FC<TreeNodeProps> = ({
           treeStateMethods.updateNode(node.id, { name: editValue })
         }
 
-        // Handle node creation
+        // For root node, just close the edit box
+        if (isRoot) {
+          setIsEditing(false)
+          return
+        }
+
+        // Handle node creation for non-root nodes
         if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
           const newNodeId = treeStateMethods.addNode({
-            name: '',  // Empty name for new nodes
+            name: '',
             readinessLevel: 0,
           }, node.id)
           if (!expandedNodes[node.id]) {
@@ -173,15 +179,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
           }
           selectNodeById(newNodeId)
           setEditingNodeId(newNodeId)
-        } else {  // Regular Enter - add sibling
-          if (parentNode) {  // Only if we have a parent (not root)
-            const newNodeId = treeStateMethods.addNode({
-              name: '',  // Empty name for new nodes
-              readinessLevel: 0,
-            }, parentNode.id)
-            selectNodeById(newNodeId)
-            setEditingNodeId(newNodeId)
-          }
+        } else if (parentNode) {  // Regular Enter - add sibling (only if we have a parent)
+          const newNodeId = treeStateMethods.addNode({
+            name: '',
+            readinessLevel: 0,
+          }, parentNode.id)
+          selectNodeById(newNodeId)
+          setEditingNodeId(newNodeId)
         }
       }
     } else if (e.key === 'Escape') {
@@ -359,10 +363,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
           e.preventDefault()
           if (!isRoot) {  // Prevent deleting root node
             const currentIndex = displayOrder.indexOf(node.id)
-            const nextSelectedId = displayOrder[currentIndex - 1]  // Get previous node
+            const nextSelectedId = displayOrder[currentIndex + 1]  // Get next node instead of previous
             treeStateMethods.removeNode(node.id)
             if (nextSelectedId) {
-              selectNodeById(nextSelectedId)  // Select previous node
+              selectNodeById(nextSelectedId)  // Select next node
+            } else if (currentIndex > 0) {
+              // If there is no next node (we're at the end), select the previous node
+              selectNodeById(displayOrder[currentIndex - 1])
             }
           }
           break
@@ -384,7 +391,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           ...(isDragTarget && dragTarget.position === 'inside' ? styles.dropTarget.inside : {}),
           ...(isDragTarget && dragTarget.position === 'before' ? { boxShadow: '0 -1px 0 #2196f3, inset 0 1px 0 #2196f3' } : {}),
           ...(isDragTarget && dragTarget.position === 'after' ? { boxShadow: '0 1px 0 #2196f3, inset 0 -1px 0 #2196f3' } : {}),
-          ...(isSelected ? { backgroundColor: '#e3f2fd' } : {}),
+          backgroundColor: isSelected ? 'var(--selected-color)' : undefined,
         }}
         onClick={handleRowClick}
         draggable={!isRoot}
@@ -424,7 +431,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 onKeyDown={handleInputKeyDown}
                 style={{
                   border: 'none',
-                  background: 'white',
+                  background: 'var(--background-primary)',
+                  color: 'var(--text-primary)',
                   padding: '1px 4px',
                   margin: '-2px 0',
                   width: '100%',
@@ -448,10 +456,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 position: 'absolute',
                 top: 'calc(100% + 4px)',
                 left: 0,
-                background: 'white',
-                border: '1px solid #ddd',
+                background: '#2D2D2D',
+                border: '1px solid var(--border-color)',
                 borderRadius: 4,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                 zIndex: 1000,
                 padding: '4px',
                 display: 'flex',

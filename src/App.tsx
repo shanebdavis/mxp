@@ -25,23 +25,24 @@ const styles = {
   },
   header: {
     gridArea: 'header',
-    borderBottom: '1px solid #e0e0e0',
+    borderBottom: '1px solid var(--border-color)',
     padding: '12px 20px',
     display: 'flex',
     alignItems: 'center',
-    background: '#fff',
+    background: 'var(--background-primary)',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+    color: 'var(--text-primary)',
   },
   title: {
     margin: 0,
     fontSize: '18px',
     fontWeight: 600,
-    color: '#333',
+    color: 'var(--text-primary)',
   },
   main: {
     gridArea: 'main',
     overflow: 'auto',
-    background: '#fff',
+    background: 'var(--background-primary)',
   },
 } as const
 
@@ -178,7 +179,7 @@ const App = () => {
                 onClick={() => {
                   if (selectedNode) {
                     const newNodeId = treeStateMethods.addNode({
-                      name: 'New Item',
+                      name: '',
                       readinessLevel: 0,
                     }, selectedNode.id)
                     selectNodeById(newNodeId)
@@ -204,7 +205,7 @@ const App = () => {
                 onClick={() => {
                   if (selectedNodeParent) {
                     const newNodeId = treeStateMethods.addNode({
-                      name: 'New Item',
+                      name: '',
                       readinessLevel: 0,
                     }, selectedNodeParent.id)
                     selectNodeById(newNodeId)

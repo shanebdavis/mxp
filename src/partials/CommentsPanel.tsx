@@ -1,17 +1,19 @@
 import { PanelHeader } from "./PanelHeader"
 
 const styles = {
-
   footer: {
     gridArea: 'footer',
-    borderTop: '1px solid #e0e0e0',
+    borderTop: '1px solid var(--border-color)',
     height: '200px',
-    background: '#f8f9fa',
+    background: 'var(--background-secondary)',
     transition: 'height 0.2s ease',
   },
   footerCollapsed: {
     height: '40px',
   },
+  content: {
+    color: 'var(--text-primary)',
+  }
 }
 
 export const CommentsPanel = ({ isFooterCollapsed, setFooterCollapsed }: {
@@ -27,5 +29,5 @@ export const CommentsPanel = ({ isFooterCollapsed, setFooterCollapsed }: {
     onClick={() => setFooterCollapsed(prev => !prev)}
     isVertical={false}
   />
-  {!isFooterCollapsed && <div style={{ padding: '12px' }}>Panel content</div>}
+  {!isFooterCollapsed && <div style={{ padding: '12px', ...styles.content }}>Panel content</div>}
 </footer>)

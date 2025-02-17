@@ -13,8 +13,8 @@ export const styles = {
   headerCell: {
     textAlign: 'left' as const,
     padding: '8px 12px',
-    borderBottom: '2px solid #e0e0e0',
-    color: '#666',
+    borderBottom: '2px solid var(--border-color)',
+    color: 'var(--text-secondary)',
     fontWeight: 600,
     fontSize: '13px',
     textTransform: 'uppercase' as const,
@@ -22,8 +22,8 @@ export const styles = {
   },
   cell: {
     padding: '6px 12px',
-    borderBottom: '1px solid #f0f0f0',
-    color: '#333',
+    borderBottom: '1px solid var(--border-color)',
+    color: 'var(--text-primary)',
   },
   treeCell: {
     display: 'flex',
