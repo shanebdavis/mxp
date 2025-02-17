@@ -234,6 +234,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
         case '4':
         case '5':
         case '6':
+        case '7':
+        case '8':
+        case '9':
           e.preventDefault()
           const level = parseInt(e.key)
           if (level !== node.readinessLevel) {
