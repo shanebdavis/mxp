@@ -31,13 +31,13 @@ describe('TreeNode', () => {
   })
 
   describe('addNode', () => {
-    it('should add a node to the specified parent', async () => {
+    it('should add a node to the specified parent', () => {
       const newNode = createNode({
         name: 'New Node',
         readinessLevel: 3
       })
 
-      const tree2 = await getTreeWithNodeAdded(testTree, newNode, 'root')
+      const tree2 = getTreeWithNodeAdded(testTree, newNode, 'root')
 
       expect(tree2.children.length).toBe(2)
       expect(tree2.children[1].name).toBe('New Node')
@@ -50,7 +50,7 @@ describe('TreeNode', () => {
         readinessLevel: 4
       })
 
-      const tree3 = await getTreeWithNodeAdded(tree2, newNode2, newNode.id)
+      const tree3 = getTreeWithNodeAdded(tree2, newNode2, newNode.id)
 
       expect(tree3.children.length).toBe(2)
       expect(tree3.children[1].name).toBe('New Node')
@@ -59,16 +59,57 @@ describe('TreeNode', () => {
       expect(tree3.children[1].children[0].id).toBeDefined()
     })
 
-    it('should add a node at specific index', async () => {
+    it('should add a node at specific index', () => {
       const newNode = createNode({
         name: 'New Node',
         readinessLevel: 3
       })
 
-      const result = await getTreeWithNodeAdded(testTree, newNode, 'root', 0)
+      const result = getTreeWithNodeAdded(testTree, newNode, 'root', 0)
 
       expect(result.children.length).toBe(2)
       expect(result.children[0].name).toBe('New Node')
+    })
+
+    it('should add nodes at specific indexes', () => {
+      // Setup a tree with multiple children
+      const treeWithChildren = {
+        id: 'root',
+        name: 'Root',
+        readinessLevel: 1,
+        children: [
+          {
+            id: 'child1',
+            name: 'Child 1',
+            readinessLevel: 2,
+            children: []
+          },
+          {
+            id: 'child2',
+            name: 'Child 2',
+            readinessLevel: 2,
+            children: []
+          }
+        ]
+      }
+
+      // Test adding at index 0 (beginning)
+      const newNode1 = createNode({ name: 'First', readinessLevel: 3 })
+      const result1 = getTreeWithNodeAdded(treeWithChildren, newNode1, 'root', 0)
+      expect(result1.children[0].name).toBe('First')
+      expect(result1.children.length).toBe(3)
+
+      // Test adding at index 1 (middle)
+      const newNode2 = createNode({ name: 'Middle', readinessLevel: 3 })
+      const result2 = getTreeWithNodeAdded(treeWithChildren, newNode2, 'root', 1)
+      expect(result2.children[1].name).toBe('Middle')
+      expect(result2.children.length).toBe(3)
+
+      // Test adding at index > children.length (should append)
+      const newNode3 = createNode({ name: 'Last', readinessLevel: 3 })
+      const result3 = getTreeWithNodeAdded(treeWithChildren, newNode3, 'root', 999)
+      expect(result3.children[result3.children.length - 1].name).toBe('Last')
+      expect(result3.children.length).toBe(3)
     })
   })
 
@@ -119,20 +160,22 @@ describe('TreeNode', () => {
       expect(result.children[0].children.length).toBe(1) // child2 now has 1 child
       expect(result.children[0].children[0].id).toBe('child1') // child1 is now under child2
     })
-    it('should throw error when trying to set root as child', async () => {
-      await expect(getTreeWithNodeParentChanged(testTree, 'root', 'child1', null))
-        .rejects.toThrow('Cannot set root node as child')
+    it('should throw error when trying to set root as child', () => {
+      expect(() =>
+        getTreeWithNodeParentChanged(testTree, 'root', 'child1', null)
+      ).toThrow('Cannot set root node as child')
     })
-    it('should throw error when trying to create circular reference', async () => {
+    it('should throw error when trying to create circular reference', () => {
       const child2 = createNode({
         name: 'Child 2',
         readinessLevel: 2
       })
-      const intermediateTree = await getTreeWithNodeAdded(testTree, child2, 'child1', null)
+      const intermediateTree = getTreeWithNodeAdded(testTree, child2, 'child1', null)
       expect(isParentOfInTree(intermediateTree, 'child1', child2.id)).toBe(true)
 
-      await expect(getTreeWithNodeParentChanged(intermediateTree, 'child1', child2.id, null))
-        .rejects.toThrow()
+      expect(() =>
+        getTreeWithNodeParentChanged(intermediateTree, 'child1', child2.id, null)
+      ).toThrow('Cannot set node as its own child')
     })
   })
 
