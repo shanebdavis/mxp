@@ -8,11 +8,11 @@ import { TreeStateMethods } from '../../useTreeState'
 type HTableProps = {
   rootNode: TreeNode
   selectedNode: TreeNode | null
-  selectNode: (node: TreeNode) => void
+  selectNodeById: (nodeId: string) => void
   treeStateMethods: TreeStateMethods
 }
 
-export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, selectedNode, treeStateMethods }) => {
+export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods }) => {
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ [rootNode.id]: true })
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
@@ -139,7 +139,7 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, sele
               node: rootNode,
               expandedNodes,
               toggleNode,
-              selectNode,
+              selectNodeById,
               selectedNode,
               treeStateMethods,
               draggedNode,

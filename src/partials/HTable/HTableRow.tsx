@@ -10,7 +10,7 @@ interface TreeNodeProps {
   level?: number
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
-  selectNode: (node: TreeNode) => void
+  selectNodeById: (nodeId: string) => void
   selectedNode: TreeNode | null
   treeStateMethods: TreeStateMethods
   draggedNode: TreeNode | null
@@ -27,7 +27,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   level = 0,
   expandedNodes,
   toggleNode,
-  selectNode,
+  selectNodeById,
   selectedNode,
   treeStateMethods,
   draggedNode,
@@ -62,7 +62,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       if (isSelected) {
         setIsEditing(true)
       } else {
-        selectNode(node)
+        selectNodeById(node.id)
       }
     }
   }
@@ -195,7 +195,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           level={level + 1}
           expandedNodes={expandedNodes}
           toggleNode={toggleNode}
-          selectNode={selectNode}
+          selectNodeById={selectNodeById}
           selectedNode={selectedNode}
           treeStateMethods={treeStateMethods}
           draggedNode={draggedNode}
