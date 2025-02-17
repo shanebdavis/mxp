@@ -5,14 +5,17 @@ import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
 import { TreeStateMethods } from '../../useTreeState'
-type HTableProps = {
+
+interface HTableProps {
   rootNode: TreeNode
   selectedNode: TreeNode | null
   selectNodeById: (nodeId: string) => void
   treeStateMethods: TreeStateMethods
+  editingNodeId?: string | null
+  setEditingNodeId: (id: string | null) => void
 }
 
-export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods }) => {
+export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId }) => {
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ [rootNode.id]: true })
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
@@ -148,6 +151,8 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
               handleDragOver,
               handleDragLeave,
               indexInParent: 0,
+              editingNodeId,
+              setEditingNodeId,
             }}
           />
         </tbody>

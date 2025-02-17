@@ -2,7 +2,11 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './partials'
 import { createNode, TreeNode } from './models'
 import { useTreeState } from './useTreeState'
-import { Undo, Redo } from '@mui/icons-material'
+import {
+  Undo, Redo, Add,
+  ArrowRight, ArrowDropDown,
+  Delete
+} from '@mui/icons-material'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -46,6 +50,7 @@ const App = () => {
   const [isFooterCollapsed, setFooterCollapsed] = useState(false)
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
   const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
     createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
@@ -59,7 +64,7 @@ const App = () => {
     ]),
   ]))
   const { undo, redo, undosAvailable, redosAvailable } = treeStateMethods
-  const [selectedNodeId, selectNodeById] = useState<string | null>(null)
+  const [selectedNodeId, selectNodeById] = useState<string | null>(rootNode.id)
 
   const selectedNode = selectedNodeId ? nodesById[selectedNodeId] : null
 
@@ -120,45 +125,125 @@ const App = () => {
         <div className="App">
           <div style={{
             position: 'absolute',
-            top: 12,  // Adjusted to align better with header
-            right: 20,  // Match header padding
+            top: 12,
+            right: 20,
             display: 'flex',
-            gap: 4  // Reduced gap
+            gap: 8,  // Increased gap for visual grouping
+            alignItems: 'center'
           }}>
-            <button
-              onClick={undo}
-              disabled={!undosAvailable}
-              style={{
-                opacity: undosAvailable ? 1 : 0.5,
-                cursor: undosAvailable ? 'pointer' : 'default',
-                padding: 4,  // Reduced padding
-                background: 'none',
-                border: 'none',
-                color: '#666'  // More subtle color
-              }}
-            >
-              <Undo sx={{ fontSize: 18 }} />  {/* Smaller icon */}
-            </button>
-            <button
-              onClick={redo}
-              disabled={!redosAvailable}
-              style={{
-                opacity: redosAvailable ? 1 : 0.5,
-                cursor: redosAvailable ? 'pointer' : 'default',
-                padding: 4,  // Reduced padding
-                background: 'none',
-                border: 'none',
-                color: '#666'  // More subtle color
-              }}
-            >
-              <Redo sx={{ fontSize: 18 }} />  {/* Smaller icon */}
-            </button>
+            {/* First group: Undo/Redo */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={undo}
+                disabled={!undosAvailable}
+                style={{
+                  opacity: undosAvailable ? 1 : 0.5,
+                  cursor: undosAvailable ? 'pointer' : 'default',
+                  padding: 4,
+                  background: 'none',
+                  border: 'none',
+                  color: '#666'
+                }}
+              >
+                <Undo sx={{ fontSize: 18 }} />
+              </button>
+              <button
+                onClick={redo}
+                disabled={!redosAvailable}
+                style={{
+                  opacity: redosAvailable ? 1 : 0.5,
+                  cursor: redosAvailable ? 'pointer' : 'default',
+                  padding: 4,
+                  background: 'none',
+                  border: 'none',
+                  color: '#666'
+                }}
+              >
+                <Redo sx={{ fontSize: 18 }} />
+              </button>
+            </div>
+
+            {/* Second group: Node operations */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button
+                onClick={() => {
+                  if (selectedNode) {
+                    const newNodeId = treeStateMethods.addNode({
+                      name: 'New Item',
+                      readinessLevel: 0,
+                      parentId: selectedNode.id,
+                    })
+                    selectNodeById(newNodeId)
+                    setEditingNodeId(newNodeId)
+                  }
+                }}
+                disabled={!selectedNode}
+                style={{
+                  opacity: selectedNode ? 1 : 0.5,
+                  cursor: selectedNode ? 'pointer' : 'default',
+                  padding: 4,
+                  background: 'none',
+                  border: 'none',
+                  color: '#666',
+                  position: 'relative'
+                }}
+                title="Add Child"
+              >
+                <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
+                <ArrowRight sx={{ fontSize: 18 }} />
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedNode && selectedNode.parentId) {
+                    const newNodeId = treeStateMethods.addNode({
+                      name: 'New Item',
+                      readinessLevel: 0,
+                      parentId: selectedNode.parentId,
+                      afterId: selectedNode.id,
+                    })
+                    selectNodeById(newNodeId)
+                    setEditingNodeId(newNodeId)
+                  }
+                }}
+                disabled={!selectedNode || !selectedNode.parentId}
+                style={{
+                  opacity: selectedNode && selectedNode.parentId ? 1 : 0.5,
+                  cursor: selectedNode && selectedNode.parentId ? 'pointer' : 'default',
+                  padding: 4,
+                  background: 'none',
+                  border: 'none',
+                  color: '#666',
+                  position: 'relative'
+                }}
+                title="Add Sibling"
+              >
+                <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
+                <ArrowDropDown sx={{ fontSize: 18 }} />
+              </button>
+              <button
+                onClick={() => selectedNode && treeStateMethods.removeNode(selectedNode.id)}
+                disabled={!selectedNode || selectedNode.id === 'root'}
+                style={{
+                  opacity: selectedNode && selectedNode.id !== 'root' ? 1 : 0.5,
+                  cursor: selectedNode && selectedNode.id !== 'root' ? 'pointer' : 'default',
+                  padding: 4,
+                  background: 'none',
+                  border: 'none',
+                  color: '#666'
+                }}
+                title="Delete"
+              >
+                <Delete sx={{ fontSize: 18 }} />
+              </button>
+            </div>
           </div>
           <HTable
             rootNode={rootNode}
             selectedNode={selectedNode}
             selectNodeById={selectNodeById}
             treeStateMethods={treeStateMethods}
+            editingNodeId={editingNodeId}
+            setEditingNodeId={setEditingNodeId}
           />
         </div>
       </main>

@@ -20,6 +20,8 @@ interface TreeNodeProps {
   handleDragLeave: () => void
   indexInParent: number,
   parentNode?: TreeNode // if undefined, this is the root node
+  editingNodeId?: string | null
+  setEditingNodeId: (id: string | null) => void
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -37,6 +39,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
   handleDragLeave,
   indexInParent,
   parentNode,
+  editingNodeId,
+  setEditingNodeId,
 }) => {
   const { setNodeParent, isParentOf } = treeStateMethods
   const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
@@ -59,6 +63,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
       inputRef.current?.select()
     }
   }, [isEditing])
+
+  useEffect(() => {
+    if (editingNodeId === node.id) {
+      setIsEditing(true)
+      setEditingNodeId(null)
+    }
+  }, [editingNodeId, node.id])
 
   const handleRowClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('.toggle-button')) {
@@ -159,6 +170,48 @@ export const HTableRow: FC<TreeNodeProps> = ({
       {formatReadinessLevel(level)}
     </div>
   )
+
+  // Add this effect for keyboard handling
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isSelected) return
+
+      switch (e.key) {
+        case 'Enter':
+          if (!isEditing) {
+            setIsEditing(true)
+            e.preventDefault()
+          }
+          break
+
+        case 'ArrowLeft':
+          e.preventDefault()
+          if (node.children.length > 0 && expanded) {
+            toggleNode(node.id)
+          } else if (parentNode) {
+            selectNodeById(parentNode.id)
+          }
+          break
+
+        case 'ArrowRight':
+          e.preventDefault()
+          if (node.children.length > 0) {
+            if (!expanded) {
+              toggleNode(node.id)
+            } else {
+              // Select first child
+              selectNodeById(node.children[0].id)
+            }
+          }
+          break
+      }
+    }
+
+    if (isSelected) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isSelected, isEditing, node, expanded, parentNode, toggleNode, selectNodeById])
 
   return (
     <>
@@ -278,6 +331,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           handleDragLeave={handleDragLeave}
           indexInParent={index}
           parentNode={node}
+          editingNodeId={editingNodeId}
+          setEditingNodeId={setEditingNodeId}
         />
       ))}
     </>
