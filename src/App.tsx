@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './partials'
-import { createNode, TreeNode } from './models'
+import { createNode, getParentMap, getIndexInParentMap } from './models'
 import { useTreeState } from './useTreeState'
 import {
   Undo, Redo, Add,
@@ -51,14 +51,6 @@ const App = () => {
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({ root: true })
-
-  const toggleNode = useCallback((id: string) => {
-    setExpandedNodes(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }))
-  }, [])
 
   const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
     createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
@@ -75,6 +67,13 @@ const App = () => {
   const [selectedNodeId, selectNodeById] = useState<string | null>(rootNode.id)
 
   const selectedNode = selectedNodeId ? nodesById[selectedNodeId] : null
+
+  const [parentMap, indexInParentMap] = useMemo(() => {
+    return [
+      getParentMap(rootNode),
+      getIndexInParentMap(rootNode)
+    ]
+  }, [rootNode])
 
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
@@ -122,6 +121,8 @@ const App = () => {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo])
+
+  const selectedNodeParent = selectedNode && parentMap[selectedNode.id]
 
   return (
     <div style={styles.layout}>
@@ -179,11 +180,7 @@ const App = () => {
                     const newNodeId = treeStateMethods.addNode({
                       name: 'New Item',
                       readinessLevel: 0,
-                      parentId: selectedNode.id,
-                    })
-                    if (!expandedNodes[selectedNode.id]) {  // If parent isn't expanded
-                      toggleNode(selectedNode.id)  // Expand it
-                    }
+                    }, selectedNode.id)
                     selectNodeById(newNodeId)
                     setEditingNodeId(newNodeId)
                   }
@@ -205,21 +202,19 @@ const App = () => {
               </button>
               <button
                 onClick={() => {
-                  if (selectedNode && selectedNode.parentId) {
+                  if (selectedNodeParent) {
                     const newNodeId = treeStateMethods.addNode({
                       name: 'New Item',
                       readinessLevel: 0,
-                      parentId: selectedNode.parentId,
-                      afterId: selectedNode.id,
-                    })
+                    }, selectedNodeParent.id)
                     selectNodeById(newNodeId)
                     setEditingNodeId(newNodeId)
                   }
                 }}
-                disabled={!selectedNode || !selectedNode.parentId}
+                disabled={!selectedNodeParent}
                 style={{
-                  opacity: selectedNode && selectedNode.parentId ? 1 : 0.5,
-                  cursor: selectedNode && selectedNode.parentId ? 'pointer' : 'default',
+                  opacity: selectedNodeParent ? 1 : 0.5,
+                  cursor: selectedNodeParent ? 'pointer' : 'default',
                   padding: 4,
                   background: 'none',
                   border: 'none',
@@ -255,8 +250,8 @@ const App = () => {
             treeStateMethods={treeStateMethods}
             editingNodeId={editingNodeId}
             setEditingNodeId={setEditingNodeId}
-            expandedNodes={expandedNodes}
-            toggleNode={toggleNode}
+            parentMap={parentMap}
+            indexInParentMap={indexInParentMap}
           />
         </div>
       </main>

@@ -1,6 +1,6 @@
 import { useState, type FC, useRef, useMemo } from 'react'
 import React from 'react'
-import { TreeNode, TreeNodeProperties } from '../../models'
+import { TreeNode, getDisplayOrder } from '../../models'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
@@ -13,50 +13,28 @@ interface HTableProps {
   treeStateMethods: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
-  expandedNodes: Record<string, boolean>
-  toggleNode: (id: string) => void
+  parentMap: Record<string, TreeNode>
+  indexInParentMap: Record<string, number>
 }
 
-type NonFlattenedIdList = (NonFlattenedIdList | string | null | undefined)[]
-
-const getDisplayOrder = (node: TreeNode, expandedNodes: Record<string, boolean>): string[] => {
-  if (expandedNodes[node.id]) {
-    return [node.id, ...node.children.map(child => getDisplayOrder(child, expandedNodes)).flat()]
-  }
-  return [node.id]
-}
-
-const getParentMap = (node: TreeNode, parentNode: TreeNode | undefined = undefined, out: Record<string, TreeNode> = {}): Record<string, TreeNode> => {
-  if (parentNode) out[node.id] = parentNode
-  node.children.forEach(child => getParentMap(child, node, out))
-  return out
-}
-
-const getIndexInParentMap = (node: TreeNode, indexInParent: number = 0, out: Record<string, number> = {}): Record<string, number> => {
-  out[node.id] = indexInParent
-  node.children.forEach((child, index) => getIndexInParentMap(child, index, out))
-  return out
-}
-
-export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId, expandedNodes, toggleNode }) => {
+export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId, parentMap, indexInParentMap }) => {
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({})
 
-  const [displayOrder, parentMap, indexInParentMap] = useMemo(() => {
-    return [
-      getDisplayOrder(rootNode, expandedNodes),
-      getParentMap(rootNode),
-      getIndexInParentMap(rootNode)
-    ]
-  }, [rootNode, expandedNodes])
+  const toggleNode = (id: string) => {
+    setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
   const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
     top: 0,
     show: false,
     isLine: false,
   })
+
+  const displayOrder = useMemo(() => getDisplayOrder(rootNode, expandedNodes), [rootNode, expandedNodes])
 
   const handleDragOver = (nodeId: string, indexInParent: number) => (e: React.DragEvent) => {
     e.preventDefault()

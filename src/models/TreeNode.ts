@@ -95,3 +95,26 @@ export const getTreeWithNodeAdded = (sourceTree: TreeNode, toAdd: TreeNode, newP
       )
       : [...parent.children, toAdd]  // append if null/undefined
   })) as TreeNode
+
+
+//*************************************************
+// Helpers
+//*************************************************
+export const getDisplayOrder = (node: TreeNode, expandedNodes: Record<string, boolean>): string[] => {
+  if (expandedNodes[node.id]) {
+    return [node.id, ...node.children.map(child => getDisplayOrder(child, expandedNodes)).flat()]
+  }
+  return [node.id]
+}
+
+export const getParentMap = (node: TreeNode, parentNode: TreeNode | undefined = undefined, out: Record<string, TreeNode> = {}): Record<string, TreeNode> => {
+  if (parentNode) out[node.id] = parentNode
+  node.children.forEach(child => getParentMap(child, node, out))
+  return out
+}
+
+export const getIndexInParentMap = (node: TreeNode, indexInParent: number = 0, out: Record<string, number> = {}): Record<string, number> => {
+  out[node.id] = indexInParent
+  node.children.forEach((child, index) => getIndexInParentMap(child, index, out))
+  return out
+}

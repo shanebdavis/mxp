@@ -3,7 +3,7 @@ export type { TreeNode, TreeNodeProperties }
 import { TreeNode, TreeNodeProperties, createNode, getTreeWithNodeAdded, getTreeWithNodeParentChanged, getTreeWithNodeRemoved, getTreeWithNodeUpdated, isParentOfInTree } from './models'
 
 export interface TreeStateMethods {
-  addNode: (node: TreeNodeProperties) => string
+  addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => string
   updateNode: (nodeId: string, properties: Partial<TreeNodeProperties>) => void
   setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => void
   removeNode: (nodeId: string) => void
@@ -40,13 +40,13 @@ export const useTreeState = (initialTree: TreeNode): TreeState => {
     setRootNode(newTree)
   }, [rootNode])
 
-  const addNode = useCallback((node: TreeNodeProperties): string => {
+  const addNode = useCallback((node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null): string => {
     const newNode = createNode(node)
     const newTree = getTreeWithNodeAdded(
       rootNode,
       newNode,
-      node.parentId || 'root',
-      node.afterId ? null : undefined
+      parentNodeId,
+      insertAtIndex
     )
     saveState(newTree)
     return newNode.id  // Return the new node's ID

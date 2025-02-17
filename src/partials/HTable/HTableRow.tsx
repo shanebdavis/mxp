@@ -126,9 +126,26 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
+  const handleBlankName = () => {
+    if (editValue.trim() === '') {
+      if (node.children.length > 0) {
+        treeStateMethods.updateNode(node.id, { name: '(blank)' })
+      } else {
+        const currentIndex = displayOrder.indexOf(node.id)
+        const nextSelectedId = displayOrder[currentIndex - 1]
+        treeStateMethods.removeNode(node.id)
+        if (nextSelectedId) {
+          selectNodeById(nextSelectedId)
+        }
+      }
+      return true
+    }
+    return false
+  }
+
   const handleInputBlur = () => {
     setIsEditing(false)
-    if (editValue !== node.name) {
+    if (!handleBlankName() && editValue !== node.name) {
       treeStateMethods.updateNode(node.id, { name: editValue })
     }
   }
@@ -138,37 +155,37 @@ export const HTableRow: FC<TreeNodeProps> = ({
       e.preventDefault()
       e.stopPropagation()
 
-      // Save current edits
-      if (editValue !== node.name) {
-        treeStateMethods.updateNode(node.id, { name: editValue })
-      }
-
-      // Handle node creation
-      if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
-        const newNodeId = treeStateMethods.addNode({
-          name: 'New Item',
-          readinessLevel: 0,
-          parentId: node.id,
-        })
-        if (!expandedNodes[node.id]) {
-          toggleNode(node.id)
+      // Handle blank name first
+      if (!handleBlankName()) {
+        // Save current edits if needed
+        if (editValue !== node.name) {
+          treeStateMethods.updateNode(node.id, { name: editValue })
         }
-        selectNodeById(newNodeId)
-        setEditingNodeId(newNodeId)
-      } else {  // Regular Enter - add sibling
-        if (parentNode) {  // Only if we have a parent (not root)
+
+        // Handle node creation
+        if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
           const newNodeId = treeStateMethods.addNode({
-            name: 'New Item',
+            name: '',  // Empty name for new nodes
             readinessLevel: 0,
-            parentId: parentNode.id,
-            afterId: node.id,
-          })
+          }, node.id)
+          if (!expandedNodes[node.id]) {
+            toggleNode(node.id)
+          }
           selectNodeById(newNodeId)
           setEditingNodeId(newNodeId)
+        } else {  // Regular Enter - add sibling
+          if (parentNode) {  // Only if we have a parent (not root)
+            const newNodeId = treeStateMethods.addNode({
+              name: '',  // Empty name for new nodes
+              readinessLevel: 0,
+            }, parentNode.id)
+            selectNodeById(newNodeId)
+            setEditingNodeId(newNodeId)
+          }
         }
       }
     } else if (e.key === 'Escape') {
-      setEditValue(node.name)
+      handleBlankName()  // Handle blank name on escape
       setIsEditing(false)
     }
   }
@@ -215,14 +232,28 @@ export const HTableRow: FC<TreeNodeProps> = ({
       if (isEditing) return  // Add this line to prevent handling keys while editing
 
       switch (e.key) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+          e.preventDefault()
+          const level = parseInt(e.key)
+          if (level !== node.readinessLevel) {
+            treeStateMethods.updateNode(node.id, { readinessLevel: level })
+          }
+          break
+
         case 'Enter':
           e.preventDefault()
           if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter
             const newNodeId = treeStateMethods.addNode({
-              name: 'New Item',
+              name: '',
               readinessLevel: 0,
-              parentId: node.id,
-            })
+            }, node.id)
+
             if (!expandedNodes[node.id]) {
               toggleNode(node.id)
             }
@@ -231,15 +262,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
           } else {  // Regular Enter - add sibling
             if (parentNode) {  // Only if we have a parent (not root)
               const newNodeId = treeStateMethods.addNode({
-                name: 'New Item',
+                name: '',
                 readinessLevel: 0,
-                parentId: parentNode.id,
-                afterId: node.id,
-              })
+              }, parentNode.id)
+
               selectNodeById(newNodeId)
               setEditingNodeId(newNodeId)
             }
           }
+          break
+
+        case 'Escape':
+          setEditValue(node.name)
+          setIsEditing(false)
           break
 
         case ' ':  // Space key
