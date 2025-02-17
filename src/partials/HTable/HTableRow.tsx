@@ -11,13 +11,13 @@ interface TreeNodeProps {
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
   selectNode: (node: TreeNode) => void
-  selectedNode?: TreeNode
+  selectedNode: TreeNode | null
   treeStateMethods: TreeStateMethods
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
   dragTarget: DragTarget
-  onDragOver: (nodeId: string, indexInParent: number) => (e: React.DragEvent) => void
-  onDragLeave: () => void
+  handleDragOver: (nodeId: string, indexInParent: number) => (e: React.DragEvent) => void
+  handleDragLeave: () => void
   indexInParent: number,
   parentNode?: TreeNode // if undefined, this is the root node
 }
@@ -33,8 +33,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
   draggedNode,
   setDraggedNode,
   dragTarget,
-  onDragOver,
-  onDragLeave,
+  handleDragOver,
+  handleDragLeave,
   indexInParent,
   parentNode,
 }) => {
@@ -104,13 +104,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
           ...(isDragTarget && dragTarget.position === 'inside' ? styles.dropTarget.inside : {}),
           ...(isDragTarget && dragTarget.position === 'before' ? { boxShadow: '0 -1px 0 #2196f3, inset 0 1px 0 #2196f3' } : {}),
           ...(isDragTarget && dragTarget.position === 'after' ? { boxShadow: '0 1px 0 #2196f3, inset 0 -1px 0 #2196f3' } : {}),
+          ...(selectedNode?.id === node.id ? { backgroundColor: '#e3f2fd' } : {}),
         }}
         onClick={handleRowClick}
         draggable={!isRoot}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragOver={onDragOver(node.id, indexInParent)}
-        onDragLeave={onDragLeave}
+        onDragOver={handleDragOver(node.id, indexInParent)}
+        onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <td style={styles.cell}>
@@ -154,8 +155,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           draggedNode={draggedNode}
           setDraggedNode={setDraggedNode}
           dragTarget={dragTarget}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
+          handleDragOver={handleDragOver}
+          handleDragLeave={handleDragLeave}
           indexInParent={index}
           parentNode={node}
         />

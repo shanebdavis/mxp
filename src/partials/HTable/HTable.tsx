@@ -7,8 +7,8 @@ import { HTableRow } from './HTableRow'
 import { TreeStateMethods } from '../../useTreeState'
 type HTableProps = {
   rootNode: TreeNode
-  selectedNode?: TreeNode
-  selectNode?: (node: TreeNode) => void
+  selectedNode: TreeNode | null
+  selectNode: (node: TreeNode) => void
   treeStateMethods: TreeStateMethods
 }
 
@@ -135,17 +135,20 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNode = () => { }, sele
         </thead>
         <tbody>
           <HTableRow
-            node={rootNode}
-            expandedNodes={expandedNodes}
-            toggleNode={toggleNode}
-            selectNode={selectNode}
-            treeStateMethods={treeStateMethods}
-            draggedNode={draggedNode}
-            setDraggedNode={setDraggedNode}
-            dragTarget={dragTarget}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            indexInParent={0}
+            {...{
+              node: rootNode,
+              expandedNodes,
+              toggleNode,
+              selectNode,
+              selectedNode,
+              treeStateMethods,
+              draggedNode,
+              setDraggedNode,
+              dragTarget,
+              handleDragOver,
+              handleDragLeave,
+              indexInParent: 0,
+            }}
           />
         </tbody>
       </table>

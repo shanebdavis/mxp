@@ -16,8 +16,8 @@ interface TreeNodeProps {
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
   dragTarget: DragTarget
-  onDragOver: (nodeId: string) => (e: React.DragEvent) => void
-  onDragLeave: () => void
+  handleDragOver: (nodeId: string) => (e: React.DragEvent) => void
+  handleDragLeave: () => void
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -31,8 +31,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
   draggedNode,
   setDraggedNode,
   dragTarget,
-  onDragOver,
-  onDragLeave
+  handleDragOver,
+  handleDragLeave
 }) => {
   const isValidTarget = draggedNode && draggedNode.id !== node.id && !isDescendant(draggedNode, node.id)
   const isDragTarget = dragTarget.nodeId === node.id && isValidTarget
@@ -95,8 +95,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragOver={onDragOver(node.id)}
-        onDragLeave={onDragLeave}
+        handleDragOver={handleDragOver(node.id)}
+        handleDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         <td style={styles.cell}>
@@ -139,8 +139,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           draggedNode={draggedNode}
           setDraggedNode={setDraggedNode}
           dragTarget={dragTarget}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
+          handleDragOver={handleDragOver}
+          handleDragLeave={handleDragLeave}
         />
       ))}
     </>

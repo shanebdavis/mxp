@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './partials'
 import { createNode, TreeNode } from './models'
 import { useTreeState } from './useTreeState'
+import { Undo, Redo } from '@mui/icons-material'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -38,8 +39,6 @@ const styles = {
     overflow: 'auto',
     background: '#fff',
   },
-
-
 } as const
 
 const App = () => {
@@ -48,7 +47,7 @@ const App = () => {
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
 
-  const [rootNode, treeStateMethods] = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
+  const [rootNode, { undo, redo, undosAvailable, redosAvailable, ...treeStateMethods }] = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
     createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
       createNode({ name: 'Customer can add product to cart', readinessLevel: 2 }),
       createNode({ name: 'Customer can remove product from cart', readinessLevel: 2 }),
@@ -93,6 +92,21 @@ const App = () => {
     }
   }, [isResizing, resize, stopResize])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {  // metaKey is Command on Mac
+        if (e.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+        e.preventDefault()  // Prevent browser's default undo/redo
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [undo, redo])
+
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
@@ -100,7 +114,50 @@ const App = () => {
       </header>
 
       <main style={styles.main}>
-        <HTable {...{ selectNode, treeStateMethods, rootNode }} />
+        <div className="App">
+          <div style={{
+            position: 'absolute',
+            top: 12,  // Adjusted to align better with header
+            right: 20,  // Match header padding
+            display: 'flex',
+            gap: 4  // Reduced gap
+          }}>
+            <button
+              onClick={undo}
+              disabled={!undosAvailable}
+              style={{
+                opacity: undosAvailable ? 1 : 0.5,
+                cursor: undosAvailable ? 'pointer' : 'default',
+                padding: 4,  // Reduced padding
+                background: 'none',
+                border: 'none',
+                color: '#666'  // More subtle color
+              }}
+            >
+              <Undo sx={{ fontSize: 18 }} />  {/* Smaller icon */}
+            </button>
+            <button
+              onClick={redo}
+              disabled={!redosAvailable}
+              style={{
+                opacity: redosAvailable ? 1 : 0.5,
+                cursor: redosAvailable ? 'pointer' : 'default',
+                padding: 4,  // Reduced padding
+                background: 'none',
+                border: 'none',
+                color: '#666'  // More subtle color
+              }}
+            >
+              <Redo sx={{ fontSize: 18 }} />  {/* Smaller icon */}
+            </button>
+          </div>
+          <HTable
+            rootNode={rootNode}
+            selectedNode={selectedNode}
+            selectNode={selectNode}
+            treeStateMethods={{ undo, redo, undosAvailable, redosAvailable, ...treeStateMethods }}
+          />
+        </div>
       </main>
 
       <DetailsPanel
