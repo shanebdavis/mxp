@@ -1,0 +1,228 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Tree State Management API",
+    "version": "1.0.0",
+    "description": "REST API for managing hierarchical tree data structures"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Tree",
+      "description": "Operations for managing the entire tree"
+    },
+    {
+      "name": "Nodes",
+      "description": "Operations for managing individual nodes"
+    }
+  ],
+  "paths": {
+    "/tree": {
+      "get": {
+        "summary": "Get the entire tree",
+        "operationId": "getTree",
+        "tags": ["Tree"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved the tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TreeNode"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/nodes": {
+      "post": {
+        "summary": "Add a new node to the tree",
+        "operationId": "addNode",
+        "tags": ["Nodes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["node", "parentNodeId"],
+                "properties": {
+                  "node": {
+                    "$ref": "#/components/schemas/TreeNodeProperties"
+                  },
+                  "parentNodeId": {
+                    "type": "string"
+                  },
+                  "insertAtIndex": {
+                    "type": "integer",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Node successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nodeId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}": {
+      "patch": {
+        "summary": "Update a node's properties",
+        "operationId": "updateNode",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TreeNodeProperties"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Node successfully updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a node from the tree",
+        "operationId": "removeNode",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Node successfully removed"
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/parent": {
+      "put": {
+        "summary": "Change a node's parent",
+        "operationId": "setNodeParent",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["newParentId"],
+                "properties": {
+                  "newParentId": {
+                    "type": "string"
+                  },
+                  "insertAtIndex": {
+                    "type": "integer",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Node's parent successfully changed"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TreeNodeProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the node"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description of the node"
+          }
+        }
+      },
+      "TreeNode": {
+        "type": "object",
+        "required": ["id", "children"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the node"
+          },
+          "title": {
+            "type": "string",
+            "description": "The title of the node"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description of the node"
+          },
+          "children": {
+            "type": "array",
+            "description": "Array of child nodes",
+            "items": {
+              "$ref": "#/components/schemas/TreeNode"
+            }
+          }
+        }
+      }
+    }
+  }
+}
