@@ -7,8 +7,11 @@ export interface TreeNodeProperties {
   readinessLevelCalculated?: number
 }
 
+export type TreeNodeType = "problem" | "milestone"
+
 export interface TreeNode extends TreeNodeProperties {
   id: string
+  nodeType: TreeNodeType
   children: TreeNode[]
 }
 
@@ -54,8 +57,8 @@ const applyToMatchingNode = (currentNode: TreeNode, matchNodeId: string, fn: ((n
   }
 }
 
-export const createNode = (properties: TreeNodeProperties, children: TreeNode[] = []): TreeNode => {
-  return getTreeNodeWithUpdatedCalculatedFields({ ...properties, id: uuidv4(), children })
+export const createNode = (properties: TreeNodeProperties, children: TreeNode[] = [], nodeType: TreeNodeType = "problem"): TreeNode => {
+  return getTreeNodeWithUpdatedCalculatedFields({ ...properties, id: uuidv4(), children, nodeType })
 }
 
 export const isParentOfInTree = (currentNode: TreeNode, potentialParentId: string, childId: string): boolean => {

@@ -8,7 +8,6 @@ import {
   type TreeNode,
   getTreeWithNodeUpdated
 } from '../../models/TreeNode'
-import { log } from '../../log'
 
 describe('TreeNode', () => {
   let testTree: TreeNode
@@ -19,12 +18,14 @@ describe('TreeNode', () => {
       id: 'root',
       name: 'Test Root',
       readinessLevel: 1,
+      nodeType: "problem",
       children: [
         {
           id: 'child1',
           name: 'Child 1',
           readinessLevel: 2,
-          children: []
+          children: [],
+          nodeType: "problem"
         }
       ]
     }
@@ -73,22 +74,25 @@ describe('TreeNode', () => {
 
     it('should add nodes at specific indexes', () => {
       // Setup a tree with multiple children
-      const treeWithChildren = {
+      const treeWithChildren: TreeNode = {
         id: 'root',
         name: 'Root',
         readinessLevel: 1,
+        nodeType: "problem",
         children: [
           {
             id: 'child1',
             name: 'Child 1',
             readinessLevel: 2,
-            children: []
+            children: [],
+            nodeType: "problem"
           },
           {
             id: 'child2',
             name: 'Child 2',
             readinessLevel: 2,
-            children: []
+            children: [],
+            nodeType: "problem"
           }
         ]
       }
@@ -114,21 +118,24 @@ describe('TreeNode', () => {
 
     it('should add node at end when index is negative', () => {
       // Setup a tree with multiple children
-      const treeWithChildren = {
+      const treeWithChildren: TreeNode = {
         id: 'root',
         name: 'Root',
         readinessLevel: 1,
+        nodeType: "problem",
         children: [
           {
             id: 'child1',
             name: 'Child 1',
             readinessLevel: 2,
+            nodeType: "problem",
             children: []
           },
           {
             id: 'child2',
             name: 'Child 2',
             readinessLevel: 2,
+            nodeType: "problem",
             children: []
           }
         ]
