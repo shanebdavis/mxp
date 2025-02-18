@@ -3,7 +3,7 @@ import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods, TreeNode } from '../../useTreeState'
-import { RlPill, RlPillWithDropdown } from '../../widgets'
+import { RlPill, RlPillWithDropdown, EditableRlPill } from '../../widgets'
 
 interface TreeNodeProps {
   node: TreeNode
@@ -59,9 +59,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(node.name)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const [isEditingRL, setIsEditingRL] = useState(false)
-  const rlRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isEditing) {
@@ -193,32 +190,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
       setIsEditing(false)
     }
   }
-
-  const handleRLClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsEditingRL(true)
-  }
-
-  const handleRLSelect = (e: React.MouseEvent, level: number) => {
-    e.stopPropagation()  // Stop click from bubbling
-    if (level !== node.readinessLevel) {  // Only update if value changed
-      treeStateMethods.updateNode(node.id, { readinessLevel: level })
-    }
-    setIsEditingRL(false)  // Always close picker
-  }
-
-  useEffect(() => {
-    if (isEditingRL) {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (rlRef.current && !rlRef.current.contains(e.target as Node)) {
-          setIsEditingRL(false)
-        }
-      }
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isEditingRL])
-
 
   // Add this effect for keyboard handling
   useEffect(() => {
@@ -440,13 +411,12 @@ export const HTableRow: FC<TreeNodeProps> = ({
           </div>
         </td>
         <td
-          style={{ ...styles.cell, ...styles.readinessLevel }}
-          onClick={handleRLClick}
+          style={{ ...styles.cell, }}
         >
-          <div style={{ position: 'relative' }} ref={rlRef}>
-            <RlPill level={node.readinessLevel} />
-            {isEditingRL && <RlPillWithDropdown level={node.readinessLevel} handleRLSelect={handleRLSelect} />}
-          </div>
+          <EditableRlPill
+            node={node}
+            updateNode={treeStateMethods.updateNode}
+          />
         </td>
       </tr>
       {expanded && node.children.map((child, index) => (
