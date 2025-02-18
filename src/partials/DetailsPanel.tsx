@@ -1,6 +1,5 @@
 import { TreeNode, TreeNodeProperties } from "../models"
 import { PanelHeader } from "./PanelHeader"
-import { formatReadinessLevel } from '../presenters'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
@@ -11,7 +10,7 @@ interface CodeComponentProps {
   node?: unknown
   inline?: boolean
   className?: string
-  children: React.ReactNode
+  children?: React.ReactNode
   [key: string]: unknown
 }
 
@@ -50,6 +49,13 @@ const styles = {
     fontFamily: 'inherit',
     resize: 'none' as const,
   },
+  fieldLabel: {
+    color: 'var(--text-secondary)',
+    fontWeight: 600,
+    fontSize: '13px',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.5px',
+  },
 }
 
 export const DetailsPanel = ({
@@ -60,6 +66,8 @@ export const DetailsPanel = ({
   selectedNode,
   isResizing,
   treeStateMethods,
+  nameColumnHeader = "Name",
+  readinessColumnHeader = "Readiness Level",
 }: {
   isRightPanelCollapsed: boolean
   rightPanelWidth: number
@@ -68,6 +76,8 @@ export const DetailsPanel = ({
   selectedNode: TreeNode | null
   isResizing: boolean
   treeStateMethods: { updateNode: (id: string, props: Partial<TreeNodeProperties>) => void }
+  nameColumnHeader?: string
+  readinessColumnHeader?: string
 }) => {
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')
@@ -112,61 +122,77 @@ export const DetailsPanel = ({
         <div style={{ padding: '12px', ...styles.content }}>
           {selectedNode ? (
             <>
-              <h3>{selectedNode.name}</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div className="field-label">{nameColumnHeader}</div>
+                <h3 style={{ margin: 0 }}>{selectedNode.name}</h3>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', margin: '8px 0' }}>
-                <div style={{ fontWeight: 600 }}>Readiness Level:</div>
+                <div className="field-label">{readinessColumnHeader}</div>
                 <EditableRlPill
                   node={selectedNode}
                   updateNode={treeStateMethods.updateNode}
                 />
               </div>
-              {isEditingDescription ? (
-                <textarea
-                  value={descriptionDraft}
-                  onChange={e => setDescriptionDraft(e.target.value)}
-                  onBlur={handleDescriptionBlur}
-                  onKeyDown={handleDescriptionKeyDown}
-                  className="details-text-container"
-                  style={styles.description}
-                  placeholder="Add a description... (Markdown supported)"
-                  autoFocus
-                />
-              ) : (
-                <div
-                  onClick={handleDescriptionClick}
-                  className={`details-text-container preview${!selectedNode.description ? ' empty' : ''}`}
-                >
-                  {selectedNode.description ? (
-                    <div className="markdown-content">
-                      <ReactMarkdown
-                        components={{
-                          code({ inline, className, children, ...props }: CodeComponentProps) {
-                            const match = /language-(\w+)/.exec(className || '')
-                            return !inline && match ? (
-                              <SyntaxHighlighter
-                                {...props}
-                                style={vscDarkPlus}
-                                language={match[1]}
-                                PreTag="div"
-                              >
-                                {String(children).replace(/\n$/, '')}
-                              </SyntaxHighlighter>
-                            ) : (
-                              <code {...props} className={className}>
-                                {children}
-                              </code>
-                            )
-                          }
-                        }}
-                      >
-                        {selectedNode.description}
-                      </ReactMarkdown>
-                    </div>
-                  ) : (
-                    'Click to add description... (Markdown supported)'
-                  )}
+              {selectedNode.children.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '8px 0' }}>
+                  <div className="field-label">Solution: {selectedNode.children.length} Sub-problems</div>
+                  <ol style={{ margin: 0, paddingLeft: '1.5em', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    {selectedNode.children.map(child => (
+                      <li key={child.id}>{child.name}</li>
+                    ))}
+                  </ol>
                 </div>
               )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div className="field-label">Description</div>
+                {isEditingDescription ? (
+                  <textarea
+                    value={descriptionDraft}
+                    onChange={e => setDescriptionDraft(e.target.value)}
+                    onBlur={handleDescriptionBlur}
+                    onKeyDown={handleDescriptionKeyDown}
+                    className="details-text-container"
+                    style={styles.description}
+                    placeholder="Add a description... (Markdown supported)"
+                    autoFocus
+                  />
+                ) : (
+                  <div
+                    onClick={handleDescriptionClick}
+                    className={`details-text-container preview${!selectedNode.description ? ' empty' : ''}`}
+                  >
+                    {selectedNode.description ? (
+                      <div className="markdown-content">
+                        <ReactMarkdown
+                          components={{
+                            code: ({ inline, className, children = '', ...props }: CodeComponentProps) => {
+                              const match = /language-(\w+)/.exec(className || '')
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  {...props}
+                                  style={vscDarkPlus}
+                                  language={match[1]}
+                                  PreTag="div"
+                                >
+                                  {String(children).replace(/\n$/, '')}
+                                </SyntaxHighlighter>
+                              ) : (
+                                <code {...props} className={className}>
+                                  {children}
+                                </code>
+                              )
+                            }
+                          } as any}
+                        >
+                          {selectedNode.description}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      'Click to add description... (Markdown supported)'
+                    )}
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <p>Select an item to view details</p>

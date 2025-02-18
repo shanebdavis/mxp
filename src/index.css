@@ -287,3 +287,11 @@ body.resizing * {
 .details-text-container.preview.empty {
   color: var(--text-secondary);
 }
+
+.field-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

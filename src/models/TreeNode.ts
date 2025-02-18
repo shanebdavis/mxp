@@ -55,7 +55,7 @@ const applyToMatchingNode = (currentNode: TreeNode, matchNodeId: string, fn: ((n
 }
 
 export const createNode = (properties: TreeNodeProperties, children: TreeNode[] = []): TreeNode => {
-  return { ...properties, id: uuidv4(), children }
+  return getTreeNodeWithUpdatedCalculatedFields({ ...properties, id: uuidv4(), children })
 }
 
 export const isParentOfInTree = (currentNode: TreeNode, potentialParentId: string, childId: string): boolean => {

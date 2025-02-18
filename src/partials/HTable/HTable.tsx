@@ -140,8 +140,8 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
         </colgroup>
         <thead>
           <tr>
-            <th style={{ ...styles.headerCell, ...styles.nameColumn }}>{nameColumnHeader}</th>
-            <th style={{ ...styles.headerCell, ...styles.levelColumn }}>{readinessColumnHeader}</th>
+            <th style={{ ...styles.headerCell, ...styles.nameColumn }} className="field-label">{nameColumnHeader}</th>
+            <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">{readinessColumnHeader}</th>
           </tr>
         </thead>
         <tbody>

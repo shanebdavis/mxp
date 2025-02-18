@@ -53,14 +53,14 @@ const App = () => {
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
-  const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Delight with Roll Hexfinity', readinessLevel: 0 }, [
-    createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
-      createNode({ name: 'Customer can add product to cart', readinessLevel: 2 }),
-      createNode({ name: 'Customer can remove product from cart', readinessLevel: 2 }),
-      createNode({ name: 'Customer can view cart', readinessLevel: 2 }),
+  const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Delight with Roll Hexfinity' }, [
+    createNode({ name: 'Customer can order products' }, [
+      createNode({ name: 'Customer can add product to cart', readinessLevel: 3 }),
+      createNode({ name: 'Customer can remove product from cart', readinessLevel: 5 }),
+      createNode({ name: 'Customer can view cart', readinessLevel: 4 }),
     ]),
-    createNode({ name: 'Fulfillment can process orders', readinessLevel: 1 }, [
-      createNode({ name: 'Fulfillment can process orders', readinessLevel: 2 }),
+    createNode({ name: 'Fulfillment can process orders' }, [
+      createNode({ name: 'Fulfillment can process orders', readinessLevel: 3 }),
       createNode({ name: 'Fulfillment can view order history', readinessLevel: 2 }),
     ]),
   ]))
@@ -267,6 +267,8 @@ const App = () => {
         selectedNode={selectedNode}
         isResizing={isResizing}
         treeStateMethods={treeStateMethods}
+        nameColumnHeader="Problem"
+        readinessColumnHeader="Solution Readiness"
       />
       <CommentsPanel
         isFooterCollapsed={isFooterCollapsed}
