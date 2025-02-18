@@ -38,7 +38,9 @@ const getChildNodes = (nodes: TreeNodeMap, nodeId: string): TreeNode2[] =>
   getChildIds(nodes, nodeId).map(id => nodes[id])
 
 const calculateMetrics = (children: TreeNode2[]): Metrics => ({
-  readinessLevel: Math.min(...children.map(child => child.calculatedMetrics.readinessLevel))
+  readinessLevel: children.length > 0
+    ? Math.min(...children.map(child => child.calculatedMetrics.readinessLevel))
+    : 0
 })
 
 const metricsAreSame = (a: Metrics, b: Metrics): boolean =>
