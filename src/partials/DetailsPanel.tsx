@@ -4,6 +4,16 @@ import { formatReadinessLevel } from '../presenters'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
+interface CodeComponentProps {
+  node?: unknown
+  inline?: boolean
+  className?: string
+  children: React.ReactNode
+  [key: string]: unknown
+}
 
 const styles = {
   rightPanel: {
@@ -128,7 +138,29 @@ export const DetailsPanel = ({
                 >
                   {selectedNode.description ? (
                     <div className="markdown-content">
-                      <ReactMarkdown>{selectedNode.description}</ReactMarkdown>
+                      <ReactMarkdown
+                        components={{
+                          code({ inline, className, children, ...props }: CodeComponentProps) {
+                            const match = /language-(\w+)/.exec(className || '')
+                            return !inline && match ? (
+                              <SyntaxHighlighter
+                                {...props}
+                                style={vscDarkPlus}
+                                language={match[1]}
+                                PreTag="div"
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code {...props} className={className}>
+                                {children}
+                              </code>
+                            )
+                          }
+                        }}
+                      >
+                        {selectedNode.description}
+                      </ReactMarkdown>
                     </div>
                   ) : (
                     'Click to add description... (Markdown supported)'

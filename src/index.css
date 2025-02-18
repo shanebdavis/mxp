@@ -218,24 +218,37 @@ body.resizing * {
   background: var(--background-secondary);
 }
 
-.markdown-content code {
-  background: var(--background-secondary);
-  padding: 0.2em 0.4em;
-  border-radius: 3px;
-  font-size: 0.9em;
-  font-family: ui-monospace, monospace;
-}
-
 .markdown-content pre {
-  background: var(--background-secondary);
+  margin: 0.5em 0;
   padding: 1em;
   border-radius: 4px;
   overflow-x: auto;
+  background: var(--background-secondary);
+}
+
+/* Target the immediate div child of pre - this is the syntax highlighter wrapper */
+.markdown-content pre > div:first-child {
+  margin: -1em !important;
+  border-radius: 4px;
+}
+
+.markdown-content code {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  background: var(--background-secondary);
 }
 
 .markdown-content pre code {
+  display: block;
   background: none;
   padding: 0;
+  font-size: 0.9em;
+  white-space: pre;
+  word-break: normal;
+  word-spacing: normal;
+  tab-size: 2;
 }
 
 .markdown-content ul,
