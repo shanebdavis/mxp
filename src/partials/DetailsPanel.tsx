@@ -37,30 +37,9 @@ const styles = {
     color: 'var(--text-primary)',
   },
   description: {
-    flex: 1,
-    minHeight: 0,
-    width: '100%',
-    padding: '8px',
-    border: '1px solid var(--border-color)',
-    borderRadius: '4px',
-    background: 'var(--background-primary)',
-    color: 'var(--text-primary)',
     fontFamily: 'inherit',
-    fontSize: '14px',
     resize: 'none' as const,
-    overflow: 'auto',
   },
-  markdownPreview: {
-    flex: 1,
-    minHeight: 0,
-    width: '100%',
-    padding: '8px',
-    border: '1px solid var(--border-color)',
-    borderRadius: '4px',
-    background: 'var(--background-primary)',
-    color: 'var(--text-primary)',
-    overflow: 'auto',
-  }
 }
 
 export const DetailsPanel = ({
@@ -137,6 +116,7 @@ export const DetailsPanel = ({
                   onChange={e => setDescriptionDraft(e.target.value)}
                   onBlur={handleDescriptionBlur}
                   onKeyDown={handleDescriptionKeyDown}
+                  className="details-text-container"
                   style={styles.description}
                   placeholder="Add a description... (Markdown supported)"
                   autoFocus
@@ -144,7 +124,7 @@ export const DetailsPanel = ({
               ) : (
                 <div
                   onClick={handleDescriptionClick}
-                  style={styles.markdownPreview}
+                  className={`details-text-container preview${!selectedNode.description ? ' empty' : ''}`}
                 >
                   {selectedNode.description ? (
                     <div className="markdown-content">
