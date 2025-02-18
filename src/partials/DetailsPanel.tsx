@@ -3,6 +3,7 @@ import { PanelHeader } from "./PanelHeader"
 import { formatReadinessLevel } from '../presenters'
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import { EditableRlPill } from '../widgets'
 
 const styles = {
   rightPanel: {
@@ -123,7 +124,13 @@ export const DetailsPanel = ({
           {selectedNode ? (
             <>
               <h3>{selectedNode.name}</h3>
-              <p>Readiness Level: {formatReadinessLevel(selectedNode.readinessLevel)}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', margin: '8px 0' }}>
+                <div style={{ fontWeight: 600 }}>Readiness Level:</div>
+                <EditableRlPill
+                  node={selectedNode}
+                  updateNode={treeStateMethods.updateNode}
+                />
+              </div>
               {isEditingDescription ? (
                 <textarea
                   value={descriptionDraft}
