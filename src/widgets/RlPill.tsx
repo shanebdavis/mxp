@@ -2,24 +2,28 @@ import { formatReadinessLevel } from '../presenters/formatting'
 import { styles } from '../partials/HTable/styles'
 import { useEffect, useState, useRef } from 'react'
 import { TreeNode, TreeNodeProperties } from '../models'
+import { AutoMode } from '@mui/icons-material'
 
-export const RlPill = ({ level }: { level: number }) => (
+export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
   <div style={{
     ...styles.readinessLevelPill,
-    backgroundColor: styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors],
-    // Darken text for yellow which needs better contrast
+    backgroundColor: level != null ? styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors] : 'var(--background-secondary)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
   }}>
-    {formatReadinessLevel(level)}
+    {level != null ? formatReadinessLevel(level) : 'auto'}
+    {(auto || level == null) && <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />}
   </div>
 )
 
 export const RlPillWithDropdown = ({ level, handleRLSelect }:
-  { level: number, handleRLSelect: (e: React.MouseEvent, level: number) => void }) =>
+  { level?: number, handleRLSelect: (e: React.MouseEvent, level: number | undefined) => void }) =>
   <div style={{
     position: 'absolute',
     top: 'calc(100% + 4px)',
     left: 0,
-    background: 'var(--background-secondary)',  // Replace hardcoded color with theme variable
+    background: 'var(--background-secondary)',
     border: '1px solid var(--border-color)',
     borderRadius: 4,
     boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
@@ -28,20 +32,30 @@ export const RlPillWithDropdown = ({ level, handleRLSelect }:
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '4px',
-    minWidth: '180px',  // Keep existing width
+    minWidth: '180px',
     whiteSpace: 'nowrap' as const,
   }}>
-    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(level => (
+    <div
+      onClick={(e) => handleRLSelect(e, undefined)}
+      style={{
+        cursor: 'pointer',
+        borderRadius: '4px',
+        padding: '2px',
+      }}
+    >
+      <RlPill auto />
+    </div>
+    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => (
       <div
-        key={level}
-        onClick={(e) => handleRLSelect(e, level)}
+        key={l}
+        onClick={(e) => handleRLSelect(e, l)}
         style={{
           cursor: 'pointer',
           borderRadius: '4px',
           padding: '2px',
         }}
       >
-        <RlPill level={level} />
+        <RlPill level={l} />
       </div>
     ))}
   </div>
@@ -67,13 +81,12 @@ export const EditableRlPill = ({ node, updateNode }:
     }
   }, [isEditingRL])
 
-
-  const handleRLSelect = (e: React.MouseEvent, level: number) => {
-    e.stopPropagation()  // Stop click from bubbling
-    if (level !== node.readinessLevel) {  // Only update if value changed
+  const handleRLSelect = (e: React.MouseEvent, level: number | undefined) => {
+    e.stopPropagation()
+    if (level !== node.readinessLevel) {
       updateNode(node.id, { readinessLevel: level })
     }
-    setIsEditingRL(false)  // Always close picker
+    setIsEditingRL(false)
   }
 
   return <div
@@ -84,8 +97,8 @@ export const EditableRlPill = ({ node, updateNode }:
     }}
   >
     <div style={{ position: 'relative' }} ref={rlRef}>
-      <RlPill level={node.readinessLevel} />
-      {isEditingRL && <RlPillWithDropdown level={node.readinessLevel} handleRLSelect={handleRLSelect} />}
+      <RlPill level={node.readinessLevel ?? node.readinessLevelCalculated ?? 0} auto={node.readinessLevel === undefined} />
+      {isEditingRL && <RlPillWithDropdown level={node.readinessLevel ?? node.readinessLevelCalculated ?? 0} handleRLSelect={handleRLSelect} />}
     </div>
   </div>
 }

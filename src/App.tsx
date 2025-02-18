@@ -53,7 +53,7 @@ const App = () => {
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
-  const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Root', readinessLevel: 0 }, [
+  const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Delight with Roll Hexfinity', readinessLevel: 0 }, [
     createNode({ name: 'Customer can order products', readinessLevel: 1 }, [
       createNode({ name: 'Customer can add product to cart', readinessLevel: 2 }),
       createNode({ name: 'Customer can remove product from cart', readinessLevel: 2 }),
@@ -253,6 +253,8 @@ const App = () => {
             setEditingNodeId={setEditingNodeId}
             parentMap={parentMap}
             indexInParentMap={indexInParentMap}
+            nameColumnHeader="Problem"
+            readinessColumnHeader="Solution Readiness"
           />
         </div>
       </main>

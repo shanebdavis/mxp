@@ -2,13 +2,22 @@ import { v4 as uuidv4 } from 'uuid'
 
 export interface TreeNodeProperties {
   name: string
-  readinessLevel: number
+  readinessLevel?: number
   description?: string
+  readinessLevelCalculated?: number
 }
 
 export interface TreeNode extends TreeNodeProperties {
   id: string
   children: TreeNode[]
+}
+
+export const getTreeNodeWithUpdatedCalculatedFields = (node: TreeNode): TreeNode => {
+  return {
+    ...node,
+    readinessLevelCalculated: node.readinessLevel ?? // min value of all children
+      Math.min(...node.children.map(child => child.readinessLevelCalculated ?? child.readinessLevel ?? 0))
+  }
 }
 
 //*************************************************
@@ -18,10 +27,10 @@ const applyToChildren = (node: TreeNode, fn: (child: TreeNode, index: number) =>
   const newChildren = node.children.map(fn)
   const changed = node.children.find((child, i) => child !== newChildren[i])
   if (changed) {
-    return {
+    return getTreeNodeWithUpdatedCalculatedFields({
       ...node,
       children: newChildren.filter(child => child !== null)
-    }
+    })
   }
   return node
 }
@@ -35,7 +44,11 @@ const applyToMatchingChildRecursive = (currentNode: TreeNode, childNodeId: strin
 
 const applyToMatchingNode = (currentNode: TreeNode, matchNodeId: string, fn: ((node: TreeNode, index: number) => TreeNode | null)): TreeNode | null => {
   if (currentNode.id === matchNodeId) {
-    return fn(currentNode, 0)
+    const node = fn(currentNode, 0)
+    if (node && node != currentNode) {
+      return getTreeNodeWithUpdatedCalculatedFields(node)
+    }
+    return node
   } else {
     return applyToChildren(currentNode, (child, index) => applyToMatchingChildRecursive(child, matchNodeId, fn, index))
   }

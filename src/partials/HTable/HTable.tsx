@@ -15,9 +15,11 @@ interface HTableProps {
   setEditingNodeId: (id: string | null) => void
   parentMap: Record<string, TreeNode>
   indexInParentMap: Record<string, number>
+  nameColumnHeader?: string
+  readinessColumnHeader?: string
 }
 
-export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId, parentMap, indexInParentMap }) => {
+export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId, parentMap, indexInParentMap, nameColumnHeader = "Name", readinessColumnHeader = "Readiness Level" }) => {
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
@@ -138,8 +140,8 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
         </colgroup>
         <thead>
           <tr>
-            <th style={{ ...styles.headerCell, ...styles.nameColumn }}>Name</th>
-            <th style={{ ...styles.headerCell, ...styles.levelColumn }}>Readiness Level</th>
+            <th style={{ ...styles.headerCell, ...styles.nameColumn }}>{nameColumnHeader}</th>
+            <th style={{ ...styles.headerCell, ...styles.levelColumn }}>{readinessColumnHeader}</th>
           </tr>
         </thead>
         <tbody>
