@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
-import { HTable, DetailsPanel, CommentsPanel } from './partials'
+import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
 import { createNode, getParentMap, getIndexInParentMap } from './models'
 import { useTreeState } from './useTreeState'
 import {
@@ -7,6 +7,7 @@ import {
   ArrowRight, ArrowDropDown,
   Delete
 } from '@mui/icons-material'
+import { Tooltip } from '@mui/material'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -143,105 +144,122 @@ const App = () => {
           }}>
             {/* First group: Undo/Redo */}
             <div style={{ display: 'flex', gap: 4 }}>
-              <button
-                onClick={undo}
-                disabled={!undosAvailable}
-                style={{
-                  opacity: undosAvailable ? 1 : 0.5,
-                  cursor: undosAvailable ? 'pointer' : 'default',
-                  padding: 4,
-                  background: 'none',
-                  border: 'none',
-                  color: '#666'
-                }}
-              >
-                <Undo sx={{ fontSize: 18 }} />
-              </button>
-              <button
-                onClick={redo}
-                disabled={!redosAvailable}
-                style={{
-                  opacity: redosAvailable ? 1 : 0.5,
-                  cursor: redosAvailable ? 'pointer' : 'default',
-                  padding: 4,
-                  background: 'none',
-                  border: 'none',
-                  color: '#666'
-                }}
-              >
-                <Redo sx={{ fontSize: 18 }} />
-              </button>
+              <Tooltip title="Undo">
+                <span>
+                  <button
+                    onClick={undo}
+                    disabled={!undosAvailable}
+                    style={{
+                      opacity: undosAvailable ? 1 : 0.5,
+                      cursor: undosAvailable ? 'pointer' : 'default',
+                      padding: 4,
+                      background: 'none',
+                      border: 'none',
+                      color: '#666'
+                    }}
+                  >
+                    <Undo sx={{ fontSize: 18 }} />
+                  </button>
+                </span>
+              </Tooltip>
+              <Tooltip title="Redo">
+                <span>
+                  <button
+                    onClick={redo}
+                    disabled={!redosAvailable}
+                    style={{
+                      opacity: redosAvailable ? 1 : 0.5,
+                      cursor: redosAvailable ? 'pointer' : 'default',
+                      padding: 4,
+                      background: 'none',
+                      border: 'none',
+                      color: '#666'
+                    }}
+                  >
+                    <Redo sx={{ fontSize: 18 }} />
+                  </button>
+                </span>
+              </Tooltip>
             </div>
 
             {/* Second group: Node operations */}
             <div style={{ display: 'flex', gap: 4 }}>
-              <button
-                onClick={() => {
-                  if (selectedNode) {
-                    const newNodeId = treeStateMethods.addNode({
-                      name: '',
-                      readinessLevel: 0,
-                    }, selectedNode.id)
-                    selectNodeById(newNodeId)
-                    setEditingNodeId(newNodeId)
-                  }
-                }}
-                disabled={!selectedNode}
-                style={{
-                  opacity: selectedNode ? 1 : 0.5,
-                  cursor: selectedNode ? 'pointer' : 'default',
-                  padding: 4,
-                  background: 'none',
-                  border: 'none',
-                  color: '#666',
-                  position: 'relative'
-                }}
-                title="Add Child"
-              >
-                <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
-                <ArrowRight sx={{ fontSize: 18 }} />
-              </button>
-              <button
-                onClick={() => {
-                  if (selectedNodeParent) {
-                    const newNodeId = treeStateMethods.addNode({
-                      name: '',
-                      readinessLevel: 0,
-                    }, selectedNodeParent.id)
-                    selectNodeById(newNodeId)
-                    setEditingNodeId(newNodeId)
-                  }
-                }}
-                disabled={!selectedNodeParent}
-                style={{
-                  opacity: selectedNodeParent ? 1 : 0.5,
-                  cursor: selectedNodeParent ? 'pointer' : 'default',
-                  padding: 4,
-                  background: 'none',
-                  border: 'none',
-                  color: '#666',
-                  position: 'relative'
-                }}
-                title="Add Sibling"
-              >
-                <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
-                <ArrowDropDown sx={{ fontSize: 18 }} />
-              </button>
-              <button
-                onClick={() => selectedNode && treeStateMethods.removeNode(selectedNode.id)}
-                disabled={!selectedNode || selectedNode.id === 'root'}
-                style={{
-                  opacity: selectedNode && selectedNode.id !== 'root' ? 1 : 0.5,
-                  cursor: selectedNode && selectedNode.id !== 'root' ? 'pointer' : 'default',
-                  padding: 4,
-                  background: 'none',
-                  border: 'none',
-                  color: '#666'
-                }}
-                title="Delete"
-              >
-                <Delete sx={{ fontSize: 18 }} />
-              </button>
+              <Tooltip title="Add Child">
+                <span>
+                  <button
+                    onClick={() => {
+                      if (selectedNode) {
+                        const newNodeId = treeStateMethods.addNode({
+                          name: '',
+                          readinessLevel: 0,
+                        }, selectedNode.id)
+                        selectNodeById(newNodeId)
+                        setEditingNodeId(newNodeId)
+                      }
+                    }}
+                    disabled={!selectedNode}
+                    style={{
+                      opacity: selectedNode ? 1 : 0.5,
+                      cursor: selectedNode ? 'pointer' : 'default',
+                      padding: 4,
+                      background: 'none',
+                      border: 'none',
+                      color: '#666',
+                      position: 'relative'
+                    }}
+                  >
+                    <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
+                    <ArrowRight sx={{ fontSize: 18 }} />
+                  </button>
+                </span>
+              </Tooltip>
+              <Tooltip title="Add Sibling">
+                <span>
+                  <button
+                    onClick={() => {
+                      if (selectedNodeParent) {
+                        const newNodeId = treeStateMethods.addNode({
+                          name: '',
+                          readinessLevel: 0,
+                        }, selectedNodeParent.id)
+                        selectNodeById(newNodeId)
+                        setEditingNodeId(newNodeId)
+                      }
+                    }}
+                    disabled={!selectedNodeParent}
+                    style={{
+                      opacity: selectedNodeParent ? 1 : 0.5,
+                      cursor: selectedNodeParent ? 'pointer' : 'default',
+                      padding: 4,
+                      background: 'none',
+                      border: 'none',
+                      color: '#666',
+                      position: 'relative'
+                    }}
+                  >
+                    <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
+                    <ArrowDropDown sx={{ fontSize: 18 }} />
+                  </button>
+                </span>
+              </Tooltip>
+              <Tooltip title="Delete node">
+                <span>
+                  <button
+                    onClick={() => selectedNode && treeStateMethods.removeNode(selectedNode.id)}
+                    disabled={!selectedNode || selectedNode.id === 'root'}
+                    style={{
+                      opacity: selectedNode && selectedNode.id !== 'root' ? 1 : 0.5,
+                      cursor: selectedNode && selectedNode.id !== 'root' ? 'pointer' : 'default',
+                      padding: 4,
+                      background: 'none',
+                      border: 'none',
+                      color: '#666'
+                    }}
+                  >
+                    <Delete sx={{ fontSize: 18 }} />
+                  </button>
+                </span>
+              </Tooltip>
             </div>
           </div>
           <HTable

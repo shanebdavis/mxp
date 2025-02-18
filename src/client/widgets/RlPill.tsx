@@ -1,8 +1,9 @@
 import { formatReadinessLevel } from '../presenters/formatting'
 import { styles } from '../partials/HTable/styles'
 import { useEffect, useState, useRef } from 'react'
-import { TreeNode, TreeNodeProperties } from '../models'
+import { TreeNode, TreeNodeProperties } from '../../models'
 import { AutoMode } from '@mui/icons-material'
+import { Tooltip } from '@mui/material'
 
 export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
   <div style={{
@@ -13,7 +14,11 @@ export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
     gap: 4,
   }}>
     {level != null ? formatReadinessLevel(level) : 'auto'}
-    {(auto || level == null) && <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />}
+    {(auto || level == null) && (
+      <Tooltip title="automatically calculated from children">
+        <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />
+      </Tooltip>
+    )}
   </div>
 )
 

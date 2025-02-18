@@ -1,4 +1,4 @@
-import { TreeNode } from "../../models"
+import { TreeNode } from "../../../models"
 
 export interface DragItem {
   id: string

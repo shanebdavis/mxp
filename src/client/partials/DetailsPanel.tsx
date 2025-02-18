@@ -1,4 +1,4 @@
-import { TreeNode, TreeNodeProperties } from "../models"
+import { TreeNode, TreeNodeProperties } from "../../models"
 import { PanelHeader } from "./PanelHeader"
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'

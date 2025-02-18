@@ -2,7 +2,7 @@ import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
-import { TreeStateMethods, TreeNode } from '../../useTreeState'
+import { TreeStateMethods, TreeNode } from '../../../useTreeState'
 import { EditableRlPill } from '../../widgets'
 
 interface TreeNodeProps {

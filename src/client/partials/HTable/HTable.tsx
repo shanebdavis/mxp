@@ -1,10 +1,10 @@
 import { useState, type FC, useRef, useMemo } from 'react'
 import React from 'react'
-import { TreeNode, getDisplayOrder } from '../../models'
+import { TreeNode, getDisplayOrder } from '../../../models'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
-import { TreeStateMethods } from '../../useTreeState'
+import { TreeStateMethods } from '../../../useTreeState'
 
 interface HTableProps {
   rootNode: TreeNode
