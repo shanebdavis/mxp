@@ -91,7 +91,7 @@ export const createNode = (
 })
 
 const getChildrenIdsWithInsertion = (childrenIds: string[], nodeId: string, insertAtIndex?: number | null): string[] =>
-  insertAtIndex
+  insertAtIndex != null && insertAtIndex >= 0
     ? [...childrenIds.slice(0, insertAtIndex), nodeId, ...childrenIds.slice(insertAtIndex)]
     : [...childrenIds, nodeId]
 
@@ -177,8 +177,16 @@ export const getTreeWithNodeRemoved = (
   const updatedNodes = { ...nodes }
   nodesToRemove.forEach(id => delete updatedNodes[id])
 
+  // Remove the node from its parent's childrenIds
+  if (node.parentId) {
+    updatedNodes[node.parentId] = {
+      ...updatedNodes[node.parentId],
+      childrenIds: getChildrenIdsWithRemoval(updatedNodes[node.parentId].childrenIds, nodeId)
+    }
+  }
+
   return node.parentId
-    ? updateNodeMetrics({ ...nodes, ...updatedNodes }, node.parentId)
+    ? updateNodeMetrics(updatedNodes, node.parentId)
     : updatedNodes
 }
 
