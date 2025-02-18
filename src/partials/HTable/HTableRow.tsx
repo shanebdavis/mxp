@@ -3,7 +3,7 @@ import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods, TreeNode } from '../../useTreeState'
-import { RlPill, RlPillWithDropdown, EditableRlPill } from '../../widgets'
+import { EditableRlPill } from '../../widgets'
 
 interface TreeNodeProps {
   node: TreeNode

@@ -13,37 +13,34 @@
   ],
   "tags": [
     {
-      "name": "Tree",
-      "description": "Operations for managing the entire tree"
-    },
-    {
       "name": "Nodes",
-      "description": "Operations for managing individual nodes"
+      "description": "Operations for managing nodes in the tree"
     }
   ],
   "paths": {
-    "/tree": {
+    "/nodes": {
       "get": {
-        "summary": "Get the entire tree",
-        "operationId": "getTree",
-        "tags": ["Tree"],
+        "summary": "Get all nodes",
+        "operationId": "getNodes",
+        "tags": ["Nodes"],
         "responses": {
           "200": {
-            "description": "Successfully retrieved the tree",
+            "description": "Successfully retrieved all nodes",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TreeNode"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
                 }
               }
             }
           }
         }
-      }
-    },
-    "/nodes": {
+      },
       "post": {
-        "summary": "Add a new node to the tree",
+        "summary": "Add a new node",
         "operationId": "addNode",
         "tags": ["Nodes"],
         "requestBody": {
@@ -75,11 +72,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "nodeId": {
-                      "type": "string"
-                    }
+                  "type": "array",
+                  "description": "Array of all nodes that were modified",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
                   }
                 }
               }
@@ -115,12 +111,23 @@
         },
         "responses": {
           "200": {
-            "description": "Node successfully updated"
+            "description": "Node successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "description": "Array of all nodes that were modified",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
           }
         }
       },
       "delete": {
-        "summary": "Remove a node from the tree",
+        "summary": "Remove a node",
         "operationId": "removeNode",
         "tags": ["Nodes"],
         "parameters": [
@@ -134,8 +141,19 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "Node successfully removed"
+          "200": {
+            "description": "Node successfully removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "description": "Array of all nodes that were modified",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -177,7 +195,18 @@
         },
         "responses": {
           "200": {
-            "description": "Node's parent successfully changed"
+            "description": "Node's parent successfully changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "description": "Array of all nodes that were modified",
+                  "items": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -195,12 +224,19 @@
           "description": {
             "type": "string",
             "description": "A detailed description of the node"
+          },
+          "readinessLevel": {
+            "type": "integer",
+            "description": "User-set readiness level (1-9)",
+            "minimum": 1,
+            "maximum": 9,
+            "nullable": true
           }
         }
       },
       "TreeNode": {
         "type": "object",
-        "required": ["id", "children"],
+        "required": ["id", "childIds"],
         "properties": {
           "id": {
             "type": "string",
@@ -214,11 +250,24 @@
             "type": "string",
             "description": "A detailed description of the node"
           },
-          "children": {
+          "readinessLevel": {
+            "type": "integer",
+            "description": "User-set readiness level (1-9)",
+            "minimum": 1,
+            "maximum": 9,
+            "nullable": true
+          },
+          "readinessLevelCalculated": {
+            "type": "integer",
+            "description": "Calculated readiness level based on children (1-9)",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "childIds": {
             "type": "array",
-            "description": "Array of child nodes",
+            "description": "Array of child node IDs",
             "items": {
-              "$ref": "#/components/schemas/TreeNode"
+              "type": "string"
             }
           }
         }
