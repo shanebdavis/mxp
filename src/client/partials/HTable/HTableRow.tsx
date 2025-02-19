@@ -2,34 +2,38 @@ import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
-import { TreeStateMethods, TreeNode } from '../../../useTreeState'
+import { TreeStateMethods } from '../../../useTreeState'
 import { EditableRlPill } from '../../widgets'
+import type { TreeNode2, TreeNodeMap, TreeNodeProperties } from '../../../models/TreeNode2'
 
 interface TreeNodeProps {
-  node: TreeNode
+  nodes: TreeNodeMap
+  nodeId: string
   level?: number
+  itemNumber: number
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
   selectNodeById: (nodeId: string) => void
-  selectedNode: TreeNode | null
+  selectedNode: TreeNode2 | null
   treeStateMethods: TreeStateMethods
-  draggedNode: TreeNode | null
-  setDraggedNode: (node: TreeNode | null) => void
+  draggedNode: TreeNode2 | null
+  setDraggedNode: (node: TreeNode2 | null) => void
   dragTarget: DragTarget
-  handleDragOver: (nodeId: string, indexInParent: number) => (e: React.DragEvent) => void
+  handleDragOver: (e: React.DragEvent) => void
   handleDragLeave: () => void
-  indexInParent: number,
-  parentNode?: TreeNode // if undefined, this is the root node
+  indexInParent: number
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
-  parentMap: Record<string, TreeNode>
+  parentMap: Record<string, TreeNode2>
   indexInParentMap: Record<string, number>
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
-  node,
+  nodes,
+  nodeId,
   level = 0,
+  itemNumber,
   expandedNodes,
   toggleNode,
   selectNodeById,
@@ -41,23 +45,23 @@ export const HTableRow: FC<TreeNodeProps> = ({
   handleDragOver,
   handleDragLeave,
   indexInParent,
-  parentNode,
   editingNodeId,
   setEditingNodeId,
   displayOrder,
   parentMap,
   indexInParentMap,
 }) => {
+  const node = nodes[nodeId]
   const { setNodeParent, isParentOf } = treeStateMethods
-  const isValidTarget = draggedNode && draggedNode.id !== node.id && !isParentOf(node.id, draggedNode.id) // isParentOf will eventually be async
-  const isDragTarget = dragTarget.nodeId === node.id && isValidTarget
+  const isValidTarget = draggedNode && draggedNode.id !== nodeId && !isParentOf(nodeId, draggedNode.id)
+  const isDragTarget = dragTarget.nodeId === nodeId && isValidTarget
 
-  const expanded = expandedNodes[node.id]
-  const isRoot = !parentNode
-  const isSelected = selectedNode?.id === node.id
+  const expanded = expandedNodes[nodeId]
+  const isRoot = !node.parentId
+  const isSelected = selectedNode?.id === nodeId
 
   const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(node.name)
+  const [editValue, setEditValue] = useState(node.title)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -68,31 +72,31 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }, [isEditing])
 
   useEffect(() => {
-    if (editingNodeId === node.id) {
+    if (editingNodeId === nodeId) {
       setIsEditing(true)
       setEditingNodeId(null)
     }
-  }, [editingNodeId, node.id])
+  }, [editingNodeId, nodeId, setEditingNodeId])
 
   const handleRowClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('.toggle-button')) {
       if (isSelected) {
         setIsEditing(true)
       } else {
-        selectNodeById(node.id)
+        selectNodeById(nodeId)
       }
     }
   }
 
   const handleToggleClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    toggleNode(node.id)
+    toggleNode(nodeId)
   }
 
   const handleDragStart = (e: React.DragEvent) => {
     setDraggedNode(node)
     e.dataTransfer.setData('application/json', JSON.stringify({
-      id: node.id,
+      id: nodeId,
       parentId: null,
     }))
   }
@@ -105,17 +109,17 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
-    if (dragItem.id !== node.id && !isParentOf(dragItem.id, node.id)) {
-      if (dragTarget.position === 'inside' && node.children.length > 0 && !expanded) {
-        toggleNode(node.id)
+    if (dragItem.id !== nodeId && !isParentOf(dragItem.id, nodeId)) {
+      if (dragTarget.position === 'inside' && node.childrenIds.length > 0 && !expanded) {
+        toggleNode(nodeId)
       }
 
       if (dragTarget.position === 'inside' || isRoot || (expanded && dragTarget.position !== 'before')) {
-        setNodeParent(dragItem.id, node.id, 0)
-      } else {
+        setNodeParent(dragItem.id, nodeId, 0)
+      } else if (node.parentId) {
         setNodeParent(
           dragItem.id,
-          parentNode?.id,
+          node.parentId,
           dragTarget.position === 'before' ? indexInParent : indexInParent + 1
         )
       }
@@ -125,12 +129,12 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleBlankName = () => {
     if (editValue.trim() === '') {
-      if (node.children.length > 0) {
-        treeStateMethods.updateNode(node.id, { name: '(blank)' })
+      if (node.childrenIds.length > 0) {
+        treeStateMethods.updateNode(nodeId, { title: '(blank)' })
       } else {
-        const currentIndex = displayOrder.indexOf(node.id)
+        const currentIndex = displayOrder.indexOf(nodeId)
         const nextSelectedId = displayOrder[currentIndex - 1]
-        treeStateMethods.removeNode(node.id)
+        treeStateMethods.removeNode(nodeId)
         if (nextSelectedId) {
           selectNodeById(nextSelectedId)
         }
@@ -142,8 +146,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleInputBlur = () => {
     setIsEditing(false)
-    if (!handleBlankName() && editValue !== node.name) {
-      treeStateMethods.updateNode(node.id, { name: editValue })
+    if (!handleBlankName() && editValue !== node.title) {
+      treeStateMethods.updateNode(nodeId, { title: editValue })
     }
   }
 
@@ -155,8 +159,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
       // Handle blank name first
       if (!handleBlankName()) {
         // Save current edits if needed
-        if (editValue !== node.name) {
-          treeStateMethods.updateNode(node.id, { name: editValue })
+        if (editValue !== node.title) {
+          treeStateMethods.updateNode(nodeId, { title: editValue })
         }
 
         // For root node, just close the edit box
@@ -168,19 +172,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
         // Handle node creation for non-root nodes
         if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
           const newNodeId = treeStateMethods.addNode({
-            name: '',
-            readinessLevel: 0,
-          }, node.id)
-          if (!expandedNodes[node.id]) {
-            toggleNode(node.id)
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, nodeId)
+          if (!expandedNodes[nodeId]) {
+            toggleNode(nodeId)
           }
           selectNodeById(newNodeId)
           setEditingNodeId(newNodeId)
-        } else if (parentNode) {  // Regular Enter - add sibling (only if we have a parent)
+        } else if (node.parentId) {  // Regular Enter - add sibling (only if we have a parent)
           const newNodeId = treeStateMethods.addNode({
-            name: '',
-            readinessLevel: 0,
-          }, parentNode.id)
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, node.parentId)
           selectNodeById(newNodeId)
           setEditingNodeId(newNodeId)
         }
@@ -210,8 +214,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
         case '9':
           e.preventDefault()
           const level = parseInt(e.key)
-          if (level !== node.readinessLevel) {
-            treeStateMethods.updateNode(node.id, { readinessLevel: level })
+          if (level !== node.calculatedMetrics.readinessLevel) {
+            treeStateMethods.updateNode(nodeId, { setMetrics: { readinessLevel: level } })
           }
           break
 
@@ -219,21 +223,21 @@ export const HTableRow: FC<TreeNodeProps> = ({
           e.preventDefault()
           if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter
             const newNodeId = treeStateMethods.addNode({
-              name: '',
-              readinessLevel: 0,
-            }, node.id)
+              title: '',
+              setMetrics: { readinessLevel: 0 },
+            }, nodeId)
 
-            if (!expandedNodes[node.id]) {
-              toggleNode(node.id)
+            if (!expandedNodes[nodeId]) {
+              toggleNode(nodeId)
             }
             selectNodeById(newNodeId)
             setEditingNodeId(newNodeId)
           } else {  // Regular Enter - add sibling
-            if (parentNode) {  // Only if we have a parent (not root)
+            if (node.parentId) {  // Only if we have a parent (not root)
               const newNodeId = treeStateMethods.addNode({
-                name: '',
-                readinessLevel: 0,
-              }, parentNode.id)
+                title: '',
+                setMetrics: { readinessLevel: 0 },
+              }, node.parentId)
 
               selectNodeById(newNodeId)
               setEditingNodeId(newNodeId)
@@ -242,207 +246,104 @@ export const HTableRow: FC<TreeNodeProps> = ({
           break
 
         case 'Escape':
-          setEditValue(node.name)
+          setEditValue(node.title)
           setIsEditing(false)
           break
 
         case ' ':  // Space key
           e.preventDefault()
-          setIsEditing(true)
-          break
-
-        case 'ArrowLeft':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Left
-            // Only if we have a parent and grandparent
-            if (parentNode && parentMap[parentNode.id]) {
-              const grandparentId = parentMap[parentNode.id].id
-              const parentIndex = indexInParentMap[parentNode.id]
-              setNodeParent(node.id, grandparentId, parentIndex + 1)
-            }
-          } else {  // Regular left arrow behavior
-            if (node.children.length > 0 && expanded) {
-              toggleNode(node.id)
-            } else if (parentNode) {
-              selectNodeById(parentNode.id)
-            }
-          }
-          break
-
-        case 'ArrowRight':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Right
-            if (parentNode && indexInParent > 0) {
-              const prevSibling = parentNode.children[indexInParent - 1]
-              setNodeParent(node.id, prevSibling.id)  // No index = add to end
-              if (!expandedNodes[prevSibling.id]) {
-                toggleNode(prevSibling.id)  // Expand the target node
-              }
-            }
-          } else {  // Regular right arrow behavior
-            if (node.children.length > 0) {
-              if (!expanded) {
-                toggleNode(node.id)
-              } else {
-                selectNodeById(node.children[0].id)
-              }
-            } else {
-              const idx = displayOrder.indexOf(node.id)
-              if (idx < displayOrder.length - 1) {
-                selectNodeById(displayOrder[idx + 1])
-              }
-            }
-          }
+          toggleNode(nodeId)
           break
 
         case 'ArrowUp':
           e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Up
-            if (parentNode && indexInParent > 0) {
-              setNodeParent(node.id, parentNode.id, indexInParent - 1)
-            }
-          } else {  // Regular up arrow behavior
-            const currentIndex = displayOrder.indexOf(node.id)
-            if (currentIndex > 0) {
-              selectNodeById(displayOrder[currentIndex - 1])
-            }
+          const prevIndex = displayOrder.indexOf(nodeId) - 1
+          if (prevIndex >= 0) {
+            selectNodeById(displayOrder[prevIndex])
           }
           break
 
         case 'ArrowDown':
           e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Down
-            if (parentNode && indexInParent < parentNode.children.length - 1) {
-              setNodeParent(node.id, parentNode.id, indexInParent + 1)  // Move to next position
-            }
-          } else {  // Regular down arrow behavior
-            const idx = displayOrder.indexOf(node.id)
-            if (idx < displayOrder.length - 1) {
-              selectNodeById(displayOrder[idx + 1])
-            }
+          const nextIndex = displayOrder.indexOf(nodeId) + 1
+          if (nextIndex < displayOrder.length) {
+            selectNodeById(displayOrder[nextIndex])
           }
           break
 
-        case 'Delete':
-        case 'Backspace':  // Add both keys for better UX
+        case 'ArrowLeft':
           e.preventDefault()
-          if (!isRoot) {  // Prevent deleting root node
-            const currentIndex = displayOrder.indexOf(node.id)
-            const nextSelectedId = displayOrder[currentIndex + 1]  // Get next node instead of previous
-            treeStateMethods.removeNode(node.id)
-            if (nextSelectedId) {
-              selectNodeById(nextSelectedId)  // Select next node
-            } else if (currentIndex > 0) {
-              // If there is no next node (we're at the end), select the previous node
-              selectNodeById(displayOrder[currentIndex - 1])
-            }
+          if (expanded) {
+            toggleNode(nodeId)
+          } else if (node.parentId) {
+            selectNodeById(node.parentId)
+          }
+          break
+
+        case 'ArrowRight':
+          e.preventDefault()
+          if (!expanded && node.childrenIds.length > 0) {
+            toggleNode(nodeId)
+          } else if (node.childrenIds.length > 0) {
+            selectNodeById(node.childrenIds[0])
           }
           break
       }
     }
 
-    if (isSelected) {
-      document.addEventListener('keydown', handleKeyDown)
-      return () => document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isSelected, isEditing, node, expanded, parentNode, toggleNode, selectNodeById, displayOrder])
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isSelected, isEditing, nodeId, node, expandedNodes, toggleNode, selectNodeById, displayOrder, setEditingNodeId, treeStateMethods])
 
   return (
-    <>
-      <tr
-        className="table-row"
-        style={{
-          ...styles.row,
-          ...(isDragTarget && dragTarget.position === 'inside' ? styles.dropTarget.inside : {}),
-          ...(isDragTarget && dragTarget.position === 'before' ? { boxShadow: '0 -1px 0 #2196f3, inset 0 1px 0 #2196f3' } : {}),
-          ...(isDragTarget && dragTarget.position === 'after' ? { boxShadow: '0 1px 0 #2196f3, inset 0 -1px 0 #2196f3' } : {}),
-          backgroundColor: isSelected ? 'var(--selected-color)' : undefined,
-        }}
-        onClick={handleRowClick}
-        draggable={!isRoot}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragOver={handleDragOver(node.id, indexInParent)}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <td style={styles.cell}>
-          <div style={styles.treeCell}>
-            <span style={{ paddingLeft: `${level * 16}px` }} />
-            <span
-              className={node.children.length > 0 ? "toggle-button" : undefined}
-              onClick={node.children.length > 0 ? handleToggleClick : undefined}
-              style={{
-                ...styles.toggleButton,
-                cursor: node.children.length > 0 ? 'pointer' : 'default',
-                color: node.children.length > 0 ? '#666' : 'transparent',
-              }}
-            >
-              {node.children.length > 0 ? (
-                expanded
-                  ? <ArrowDropDown style={{ width: 16, height: 16 }} />
-                  : <ArrowRight style={{ width: 16, height: 16 }} />
-              ) : (
-                <ArrowRight style={{ width: 16, height: 16, visibility: 'hidden' }} />
-              )}
-            </span>
-            <span style={{ fontSize: '0.8em', color: '#666', marginRight: '2px' }}>{indexInParent + 1}</span>
-            {isEditing ? (
-              <input
-                ref={inputRef}
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                onBlur={handleInputBlur}
-                onKeyDown={handleInputKeyDown}
-                style={{
-                  border: 'none',
-                  background: 'var(--background-primary)',
-                  color: 'var(--text-primary)',
-                  padding: '1px 4px',
-                  margin: '-2px 0',
-                  width: '100%',
-                  fontSize: 'inherit',
-                  fontFamily: 'inherit',
-                }}
-              />
-            ) : (
-              node.name
+    <tr
+      style={{
+        ...styles.row,
+        ...(isSelected ? styles.selectedRow : {}),
+        ...(isDragTarget ? styles.dragTargetRow : {}),
+      }}
+      onClick={handleRowClick}
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <td style={styles.cell}>
+        <div style={{ ...styles.nameCell, paddingLeft: level * 16 }}>
+          <div style={{ width: 24, display: 'inline-flex', justifyContent: 'center' }}>
+            {node.childrenIds.length > 0 && (
+              <button
+                className="toggle-button"
+                onClick={handleToggleClick}
+                style={styles.toggleButton}
+              >
+                {expanded ? <ArrowDropDown /> : <ArrowRight />}
+              </button>
             )}
           </div>
-        </td>
-        <td
-          style={{ ...styles.cell, }}
-        >
-          <EditableRlPill
-            node={node}
-            updateNode={treeStateMethods.updateNode}
-          />
-        </td>
-      </tr>
-      {expanded && node.children.map((child, index) => (
-        <HTableRow
-          key={child.id}
-          node={child}
-          level={level + 1}
-          expandedNodes={expandedNodes}
-          toggleNode={toggleNode}
-          selectNodeById={selectNodeById}
-          selectedNode={selectedNode}
-          treeStateMethods={treeStateMethods}
-          draggedNode={draggedNode}
-          setDraggedNode={setDraggedNode}
-          dragTarget={dragTarget}
-          handleDragOver={handleDragOver}
-          handleDragLeave={handleDragLeave}
-          indexInParent={index}
-          parentNode={node}
-          editingNodeId={editingNodeId}
-          setEditingNodeId={setEditingNodeId}
-          displayOrder={displayOrder}
-          parentMap={parentMap}
-          indexInParentMap={indexInParentMap}
+          <span style={{ marginRight: 8, opacity: 0.5 }}>{itemNumber}</span>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={e => setEditValue(e.target.value)}
+              onBlur={handleInputBlur}
+              onKeyDown={handleInputKeyDown}
+              style={styles.input}
+            />
+          ) : (
+            <span>{node.title || '(blank)'}</span>
+          )}
+        </div>
+      </td>
+      <td style={styles.cell}>
+        <EditableRlPill
+          readinessLevel={node.calculatedMetrics.readinessLevel}
+          onChange={(level: number) => treeStateMethods.updateNode(nodeId, { setMetrics: { readinessLevel: level } })}
         />
-      ))}
-    </>
+      </td>
+    </tr>
   )
 }

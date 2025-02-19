@@ -1,26 +1,53 @@
 import { useState, type FC, useRef, useMemo } from 'react'
 import React from 'react'
-import { TreeNode, getDisplayOrder } from '../../../models'
+import type { TreeNode2, TreeNodeMap } from '../../../models/TreeNode2'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
 import { TreeStateMethods } from '../../../useTreeState'
 
 interface HTableProps {
-  rootNode: TreeNode
-  selectedNode: TreeNode | null
+  nodes: TreeNodeMap
+  rootNodeId: string
+  selectedNode: TreeNode2 | null
   selectNodeById: (nodeId: string) => void
   treeStateMethods: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
-  parentMap: Record<string, TreeNode>
+  parentMap: Record<string, TreeNode2>
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
 }
 
-export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode, treeStateMethods, editingNodeId, setEditingNodeId, parentMap, indexInParentMap, nameColumnHeader = "Name", readinessColumnHeader = "Readiness Level" }) => {
-  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
+const getDisplayOrder = (nodes: TreeNodeMap, rootNodeId: string, expandedNodes: Record<string, boolean>): Array<{ nodeId: string, level: number, itemNumber: number }> => {
+  const result: Array<{ nodeId: string, level: number, itemNumber: number }> = []
+
+  const addToResult = (nodeId: string, level: number) => {
+    const node = nodes[nodeId]
+    result.push({ nodeId, level, itemNumber: node.parentId ? nodes[node.parentId].childrenIds.indexOf(nodeId) + 1 : 1 })
+    if (expandedNodes[nodeId]) {
+      nodes[nodeId].childrenIds.forEach(childId => addToResult(childId, level + 1))
+    }
+  }
+  addToResult(rootNodeId, 0)
+  return result
+}
+
+export const HTable: FC<HTableProps> = ({
+  nodes,
+  rootNodeId,
+  selectNodeById,
+  selectedNode,
+  treeStateMethods,
+  editingNodeId,
+  setEditingNodeId,
+  parentMap,
+  indexInParentMap,
+  nameColumnHeader = "Name",
+  readinessColumnHeader = "Readiness Level"
+}) => {
+  const [draggedNode, setDraggedNode] = useState<TreeNode2 | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
@@ -36,9 +63,12 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
     isLine: false,
   })
 
-  const displayOrder = useMemo(() => getDisplayOrder(rootNode, expandedNodes), [rootNode, expandedNodes])
+  const displayOrder = useMemo(() =>
+    getDisplayOrder(nodes, rootNodeId, expandedNodes),
+    [nodes, rootNodeId, expandedNodes]
+  )
 
-  const handleDragOver = (nodeId: string, indexInParent: number) => (e: React.DragEvent) => {
+  const handleDragOver = (nodeId: string, indexInParent: number, level: number) => (e: React.DragEvent) => {
     e.preventDefault()
     if (!draggedNode || !tableRef.current) return
 
@@ -49,7 +79,6 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
     const tableRect = tableRef.current.getBoundingClientRect()
     const y = e.clientY - rect.top
     const height = rect.height
-    const level = getNodeLevel(rootNode, nodeId)
 
     let position: DropPosition
     if (y < height * 0.25) {
@@ -88,15 +117,6 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
   const handleDragLeave = () => {
     setDragTarget({ nodeId: null, position: null, indexInParent: null })
     setDropIndicator(prev => ({ ...prev, show: false }))
-  }
-
-  const getNodeLevel = (root: TreeNode, targetId: string, level = 0): number => {
-    if (root.id === targetId) return level
-    for (const child of root.children) {
-      const foundLevel = getNodeLevel(child, targetId, level + 1)
-      if (foundLevel !== -1) return foundLevel
-    }
-    return -1
   }
 
   return (
@@ -145,27 +165,33 @@ export const HTable: FC<HTableProps> = ({ rootNode, selectNodeById, selectedNode
           </tr>
         </thead>
         <tbody>
-          <HTableRow
-            {...{
-              node: rootNode,
-              expandedNodes,
-              toggleNode,
-              selectNodeById,
-              selectedNode,
-              treeStateMethods,
-              draggedNode,
-              setDraggedNode,
-              dragTarget,
-              handleDragOver,
-              handleDragLeave,
-              indexInParent: 0,
-              editingNodeId,
-              setEditingNodeId,
-              displayOrder,
-              parentMap,
-              indexInParentMap,
-            }}
-          />
+          {displayOrder.map(({ nodeId, level, itemNumber }, index) => (
+            <HTableRow
+              key={nodeId}
+              {...{
+                nodes,
+                nodeId,
+                level,
+                itemNumber,
+                expandedNodes,
+                toggleNode,
+                selectNodeById,
+                selectedNode,
+                treeStateMethods,
+                draggedNode,
+                setDraggedNode,
+                dragTarget,
+                handleDragOver: handleDragOver(nodeId, index, level),
+                handleDragLeave,
+                indexInParent: index,
+                editingNodeId,
+                setEditingNodeId,
+                displayOrder: displayOrder.map(x => x.nodeId),
+                parentMap,
+                indexInParentMap,
+              }}
+            />
+          ))}
         </tbody>
       </table>
     </div>

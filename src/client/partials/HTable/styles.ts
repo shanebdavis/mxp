@@ -38,10 +38,36 @@ export const styles = {
     userSelect: 'none' as const,
     fontSize: '10px',
     borderRadius: '12px',
+    background: 'none',
+    border: 'none',
   },
   row: {
     cursor: 'pointer',
     position: 'relative' as const,
+  },
+  selectedRow: {
+    backgroundColor: 'var(--selected-color)',
+  },
+  dragTargetRow: {
+    outline: '2px solid #2196f3',
+    outlineOffset: '-2px',
+    borderRadius: '3px',
+  },
+  nameCell: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    userSelect: 'none' as const,
+  },
+  input: {
+    border: 'none',
+    background: 'var(--background-primary)',
+    color: 'var(--text-primary)',
+    padding: '1px 4px',
+    margin: '-2px 0',
+    width: '100%',
+    fontSize: 'inherit',
+    fontFamily: 'inherit',
   },
   nameColumn: {
     width: '70%',

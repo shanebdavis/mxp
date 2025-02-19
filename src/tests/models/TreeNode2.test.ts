@@ -7,26 +7,28 @@ import {
   getTreeWithNodeParentChanged,
   isParentOfInTree,
   type TreeNode2,
-  type TreeNodeMap
+  type TreeNodeMap,
+  inspectTree
 } from '../../models/TreeNode2'
+import { log } from '../../log'
 
 describe('TreeNode2', () => {
   let testNodes: TreeNodeMap
+  let rootNodeId: string
 
   beforeEach(() => {
     // Create a fresh test tree before each test
     const rootNode = createNode({
       title: 'Test Root',
-      setMetrics: { readinessLevel: 1 }
     })
+    rootNodeId = rootNode.id
     const child1 = createNode({
       title: 'Child 1',
-      setMetrics: { readinessLevel: 2 }
     }, rootNode.id)
 
     testNodes = {
-      [rootNode.id]: { ...rootNode, childrenIds: [child1.id], calculatedMetrics: { readinessLevel: 2 } },
-      [child1.id]: { ...child1, calculatedMetrics: { readinessLevel: 0 } }
+      [rootNode.id]: { ...rootNode, childrenIds: [child1.id] },
+      [child1.id]: { ...child1 }
     }
   })
 
@@ -43,7 +45,7 @@ describe('TreeNode2', () => {
       expect(rootNode.childrenIds.length).toBe(2)
       const newAddedNode = nodes2[newNode.id]
       expect(newAddedNode.title).toBe('New Node')
-      expect(newAddedNode.calculatedMetrics.readinessLevel).toBe(0)
+      expect(newAddedNode.calculatedMetrics.readinessLevel).toBe(3)
       expect(newAddedNode.id).toBeDefined()
 
       // now add a node to the new node
@@ -62,8 +64,8 @@ describe('TreeNode2', () => {
       const newNode2Added = nodes3[newNode2.id]
       expect(newNode2Added.title).toBe('New Node 2')
       expect(newNode2Added.id).toBeDefined()
-      expect(newNode2Added.calculatedMetrics.readinessLevel).toBe(0)
-      expect(newNode3.calculatedMetrics.readinessLevel).toBe(0)
+      expect(newNode2Added.calculatedMetrics.readinessLevel).toBe(4)
+      expect(newNode3.calculatedMetrics.readinessLevel).toBe(3)
     })
 
     it('should add a node at specific index', () => {
@@ -80,7 +82,7 @@ describe('TreeNode2', () => {
       expect(rootNode.childrenIds[0]).toBe(newNode.id)
       const newAddedNode = nodes2[newNode.id]
       expect(newAddedNode.title).toBe('New Node')
-      expect(newAddedNode.calculatedMetrics.readinessLevel).toBe(0)
+      expect(newAddedNode.calculatedMetrics.readinessLevel).toBe(3)
     })
 
     it('should add nodes at multiple indexes', () => {
@@ -161,10 +163,10 @@ describe('TreeNode2', () => {
       expect(nodesWithGreatGrandchild[greatGrandChild.id].parentId).toBe(grandChild.id)
 
       // Verify metrics are propagated up
-      expect(nodesWithGreatGrandchild[greatGrandChild.id].calculatedMetrics.readinessLevel).toBe(0)
-      expect(nodesWithGreatGrandchild[grandChild.id].calculatedMetrics.readinessLevel).toBe(0)
-      expect(nodesWithGreatGrandchild[child1Id].calculatedMetrics.readinessLevel).toBe(0)
-      expect(nodesWithGreatGrandchild[rootId].calculatedMetrics.readinessLevel).toBe(0)
+      expect(nodesWithGreatGrandchild[greatGrandChild.id].calculatedMetrics.readinessLevel).toBe(4)
+      expect(nodesWithGreatGrandchild[grandChild.id].calculatedMetrics.readinessLevel).toBe(3)
+      expect(nodesWithGreatGrandchild[child1Id].calculatedMetrics.readinessLevel).toBe(3)
+      expect(nodesWithGreatGrandchild[rootId].calculatedMetrics.readinessLevel).toBe(3)
     })
   })
 
@@ -272,6 +274,79 @@ describe('TreeNode2', () => {
       const updatedNode = nodes2[child1Id]
       expect(updatedNode.title).toBe('Updated Name')
       expect(updatedNode.setMetrics?.readinessLevel).toBe(3)
+    })
+
+    it('should handle setting and clearing readinessLevel', () => {
+      const rootId = Object.keys(testNodes)[0]
+      const child1Id = testNodes[rootId].childrenIds[0]
+
+      // Set readinessLevel
+      const nodesWithSet = getTreeWithNodeUpdated(testNodes, child1Id, {
+        setMetrics: { readinessLevel: 3 }
+      })
+      expect(nodesWithSet[child1Id].setMetrics?.readinessLevel).toBe(3)
+      expect(nodesWithSet[child1Id].calculatedMetrics.readinessLevel).toBe(3)
+
+      // Clear readinessLevel by setting to undefined
+      const nodesWithCleared = getTreeWithNodeUpdated(nodesWithSet, child1Id, {
+        setMetrics: { readinessLevel: null as any }
+      })
+      expect(nodesWithCleared[child1Id].setMetrics?.readinessLevel).toBeUndefined()
+      expect(nodesWithCleared[child1Id].calculatedMetrics.readinessLevel).toBe(0) // No children, so defaults to 0
+    })
+
+    it('should calculate metrics correctly with mixed auto and set values', () => {
+      const rootNode = testNodes[rootNodeId]
+      const child1Id = rootNode.childrenIds[0]
+      expect(rootNode.calculatedMetrics.readinessLevel).toBe(0)
+      expect(testNodes[child1Id].calculatedMetrics.readinessLevel).toBe(0)
+
+      // Add two grandchildren to child1
+      const grandChild1 = createNode({
+        title: 'Grandchild 1',
+        setMetrics: { readinessLevel: 4 }
+      })
+      const nodesWithGrandchild1 = getTreeWithNodeAdded(testNodes, grandChild1, child1Id)
+      expect(nodesWithGrandchild1[child1Id].calculatedMetrics.readinessLevel).toBe(4)
+
+      const grandChild2 = createNode({
+        title: 'Grandchild 2',
+      })
+      const nodesWithBothGrandchildren = getTreeWithNodeAdded(nodesWithGrandchild1, grandChild2, child1Id)
+
+      // Add two great-grandchildren to grandChild1
+      const greatGrandChild1 = createNode({
+        title: 'Great Grandchild 1',
+        setMetrics: { readinessLevel: 1 }
+      })
+      const nodesWithGreatGrandchild1 = getTreeWithNodeAdded(nodesWithBothGrandchildren, greatGrandChild1, grandChild2.id)
+
+      const greatGrandChild2 = createNode({
+        title: 'Great Grandchild 2',
+        setMetrics: { readinessLevel: 3 }
+      })
+      const nodes = getTreeWithNodeAdded(nodesWithGreatGrandchild1, greatGrandChild2, grandChild2.id)
+
+      // Initial state verification
+      expect(nodes[grandChild1.id].calculatedMetrics.readinessLevel).toBe(4) // Min of its children (1, 3)
+      expect(nodes[grandChild2.id].calculatedMetrics.readinessLevel).toBe(1) // Directly set
+      expect(nodes[child1Id].calculatedMetrics.readinessLevel).toBe(1) // Min of grandchildren (1, 2)
+
+      // Set grandChild1 to auto by clearing its setMetrics
+      const nodesWithAuto = getTreeWithNodeUpdated(nodes, grandChild1.id, {
+        setMetrics: { readinessLevel: null as any }
+      })
+      expect(nodesWithAuto[grandChild1.id].setMetrics?.readinessLevel).toBeUndefined()
+      expect(nodesWithAuto[grandChild1.id].calculatedMetrics.readinessLevel).toBe(0) // Still 1 (min of children)
+      expect(nodesWithAuto[child1Id].calculatedMetrics.readinessLevel).toBe(0) // Still 1 (min of 1 and 2)
+
+      // Set grandChild1 to override its children
+      const nodesWithOverride = getTreeWithNodeUpdated(nodesWithAuto, grandChild1.id, {
+        setMetrics: { readinessLevel: 5 }
+      })
+      expect(nodesWithOverride[grandChild1.id].setMetrics?.readinessLevel).toBe(5)
+      expect(nodesWithOverride[grandChild1.id].calculatedMetrics.readinessLevel).toBe(5) // Overridden to 5
+      expect(nodesWithOverride[child1Id].calculatedMetrics.readinessLevel).toBe(1) // Min of 5 and 2
     })
   })
 

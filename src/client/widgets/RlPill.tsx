@@ -1,7 +1,6 @@
 import { formatReadinessLevel } from '../presenters/formatting'
 import { styles } from '../partials/HTable/styles'
 import { useEffect, useState, useRef } from 'react'
-import { TreeNode, TreeNodeProperties } from '../../models'
 import { AutoMode } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 
@@ -46,6 +45,7 @@ export const RlPillWithDropdown = ({ level, handleRLSelect }:
         cursor: 'pointer',
         borderRadius: '4px',
         padding: '2px',
+        background: level == null ? 'var(--selected-color)' : undefined,
       }}
     >
       <RlPill auto />
@@ -58,6 +58,7 @@ export const RlPillWithDropdown = ({ level, handleRLSelect }:
           cursor: 'pointer',
           borderRadius: '4px',
           padding: '2px',
+          background: level === l ? 'var(--selected-color)' : undefined,
         }}
       >
         <RlPill level={l} />
@@ -65,8 +66,12 @@ export const RlPillWithDropdown = ({ level, handleRLSelect }:
     ))}
   </div>
 
-export const EditableRlPill = ({ node, updateNode }:
-  { node: TreeNode, updateNode: (nodeId: string, properties: Partial<TreeNodeProperties>) => void }) => {
+interface EditableRlPillProps {
+  readinessLevel: number
+  onChange: (level: number | undefined) => void
+}
+
+export const EditableRlPill: React.FC<EditableRlPillProps> = ({ readinessLevel, onChange }) => {
   const [isEditingRL, setIsEditingRL] = useState(false)
   const handleRLClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -88,9 +93,7 @@ export const EditableRlPill = ({ node, updateNode }:
 
   const handleRLSelect = (e: React.MouseEvent, level: number | undefined) => {
     e.stopPropagation()
-    if (level !== node.readinessLevel) {
-      updateNode(node.id, { readinessLevel: level })
-    }
+    onChange(level)
     setIsEditingRL(false)
   }
 
@@ -102,8 +105,8 @@ export const EditableRlPill = ({ node, updateNode }:
     }}
   >
     <div style={{ position: 'relative' }} ref={rlRef}>
-      <RlPill level={node.readinessLevel ?? node.readinessLevelCalculated ?? 0} auto={node.readinessLevel === undefined} />
-      {isEditingRL && <RlPillWithDropdown level={node.readinessLevel ?? node.readinessLevelCalculated ?? 0} handleRLSelect={handleRLSelect} />}
+      <RlPill level={readinessLevel} auto={readinessLevel === 0} />
+      {isEditingRL && <RlPillWithDropdown level={readinessLevel} handleRLSelect={handleRLSelect} />}
     </div>
   </div>
 }

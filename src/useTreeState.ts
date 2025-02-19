@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-export type { TreeNode, TreeNodeProperties }
-import { TreeNode, TreeNodeProperties, createNode, getTreeWithNodeAdded, getTreeWithNodeParentChanged, getTreeWithNodeRemoved, getTreeWithNodeUpdated, isParentOfInTree } from './models'
+import type { TreeNode2, TreeNodeMap, TreeNodeProperties } from './models/TreeNode2'
+import { createNode, getTreeWithNodeAdded, getTreeWithNodeParentChanged, getTreeWithNodeRemoved, getTreeWithNodeUpdated, isParentOfInTree } from './models/TreeNode2'
 
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => string
@@ -15,77 +15,77 @@ export interface TreeStateMethods {
 }
 
 interface UndoState {
-  tree: TreeNode
-}
-
-const addAllChildrenToNodesById = (nodesById: Record<string, TreeNode>, node: TreeNode) => {
-  nodesById[node.id] = node
-  node.children.forEach(child => addAllChildrenToNodesById(nodesById, child))
+  nodes: TreeNodeMap
 }
 
 interface TreeState {
-  rootNode: TreeNode
-  nodesById: Record<string, TreeNode>
+  nodes: TreeNodeMap
   treeStateMethods: TreeStateMethods
+  rootNodeId: string
 }
 
-export const useTreeState = (initialTree: TreeNode): TreeState => {
-  const [rootNode, setRootNode] = useState<TreeNode>(initialTree)
+const findRootNodeId = (nodes: TreeNodeMap): string => {
+  const rootId = Object.values(nodes).find(node => !node.parentId)?.id
+  if (!rootId) throw new Error('No root node found in initialNodes')
+  return rootId
+}
+
+export const useTreeState = (initialNodes: TreeNodeMap): TreeState => {
+  // Find root node once at initialization
+  const rootNodeId = findRootNodeId(initialNodes)
+
+  const [nodes, setNodes] = useState<TreeNodeMap>(initialNodes)
   const [undoStack, setUndoStack] = useState<UndoState[]>([])
   const [redoStack, setRedoStack] = useState<UndoState[]>([])
 
-  const saveState = useCallback((newTree: TreeNode) => {
-    setUndoStack(prev => [...prev, { tree: rootNode }])
+  const saveState = useCallback((newNodes: TreeNodeMap) => {
+    setUndoStack(prev => [...prev, { nodes }])
     setRedoStack([])
-    setRootNode(newTree)
-  }, [rootNode])
+    setNodes(newNodes)
+  }, [nodes])
 
-  const addNode = useCallback((node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null): string => {
-    const newNode = createNode(node)
-    const newTree = getTreeWithNodeAdded(
-      rootNode,
-      newNode,
-      parentNodeId,
-      insertAtIndex
-    )
-    saveState(newTree)
-    return newNode.id  // Return the new node's ID
-  }, [rootNode, saveState])
+  const addNode = useCallback((nodeProps: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null): string => {
+    const newNode = createNode(nodeProps, parentNodeId)
+    const newNodes = getTreeWithNodeAdded(nodes, newNode, parentNodeId, insertAtIndex)
+    saveState(newNodes)
+    return newNode.id
+  }, [nodes, saveState])
 
-  const updateNode = (nodeId: string, properties: Partial<TreeNodeProperties>) => {
-    const { tree: newTree } = getTreeWithNodeUpdated(rootNode, nodeId, properties)
-    saveState(newTree)
-  }
+  const updateNode = useCallback((nodeId: string, properties: Partial<TreeNodeProperties>) => {
+    const newNodes = getTreeWithNodeUpdated(nodes, nodeId, properties)
+    saveState(newNodes)
+  }, [nodes, saveState])
 
-  const setNodeParent = (nodeId: string, newParentId: string, insertAtIndex?: number | null) => {
-    const newTree = getTreeWithNodeParentChanged(rootNode, nodeId, newParentId, insertAtIndex)
-    saveState(newTree)
-  }
+  const setNodeParent = useCallback((nodeId: string, newParentId: string, insertAtIndex?: number | null) => {
+    const newNodes = getTreeWithNodeParentChanged(nodes, nodeId, newParentId, insertAtIndex)
+    saveState(newNodes)
+  }, [nodes, saveState])
 
-  const removeNode = (nodeId: string) => {
-    if (nodeId === rootNode.id) throw new Error('Cannot remove root node')
-    const { tree: newTree } = getTreeWithNodeRemoved(rootNode, nodeId)
-    if (!newTree) throw new Error('Tree cannot be null')
-    saveState(newTree)
-  }
+  const removeNode = useCallback((nodeId: string) => {
+    if (nodeId === rootNodeId) throw new Error('Cannot remove root node')
+    const newNodes = getTreeWithNodeRemoved(nodes, nodeId)
+    saveState(newNodes)
+  }, [nodes, rootNodeId, saveState])
 
   const undo = useCallback(() => {
     if (undoStack.length === 0) return
-    const { tree } = undoStack[undoStack.length - 1]
-    setRedoStack(prev => [...prev, { tree: rootNode }])
+    const { nodes: prevNodes } = undoStack[undoStack.length - 1]
+    setRedoStack(prev => [...prev, { nodes }])
     setUndoStack(prev => prev.slice(0, -1))
-    setRootNode(tree)
-  }, [rootNode])
+    setNodes(prevNodes)
+  }, [nodes])
 
   const redo = useCallback(() => {
     if (redoStack.length === 0) return
-    const { tree } = redoStack[redoStack.length - 1]
-    setUndoStack(prev => [...prev, { tree: rootNode }])
+    const { nodes: nextNodes } = redoStack[redoStack.length - 1]
+    setUndoStack(prev => [...prev, { nodes }])
     setRedoStack(prev => prev.slice(0, -1))
-    setRootNode(tree)
-  }, [rootNode])
+    setNodes(nextNodes)
+  }, [nodes])
 
-  const isParentOf = (nodeId: string, potentialChildId: string) => isParentOfInTree(rootNode, nodeId, potentialChildId)
+  const isParentOf = useCallback((nodeId: string, potentialChildId: string) =>
+    isParentOfInTree(nodes, nodeId, potentialChildId)
+    , [nodes])
 
   const treeStateMethods: TreeStateMethods = {
     addNode,
@@ -99,8 +99,5 @@ export const useTreeState = (initialTree: TreeNode): TreeState => {
     redosAvailable: redoStack.length > 0,
   }
 
-  const nodesById: Record<string, TreeNode> = {}
-  addAllChildrenToNodesById(nodesById, rootNode)
-
-  return { rootNode, nodesById, treeStateMethods }
+  return { nodes, treeStateMethods, rootNodeId }
 }

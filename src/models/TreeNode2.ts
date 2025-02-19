@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-
+import { log } from '../log'
 export type Metrics = {
   readinessLevel: number
 }
@@ -37,11 +37,21 @@ const getChildIds = (nodes: TreeNodeMap, nodeId: string): string[] =>
 const getChildNodes = (nodes: TreeNodeMap, nodeId: string): TreeNode2[] =>
   getChildIds(nodes, nodeId).map(id => nodes[id])
 
-const calculateMetrics = (children: TreeNode2[]): Metrics => ({
-  readinessLevel: children.length > 0
-    ? Math.min(...children.map(child => child.calculatedMetrics.readinessLevel))
-    : 0
-})
+const calculateMetrics = (node: TreeNode2, children: TreeNode2[]): Metrics => {
+  // If this node has a manually set value, use it
+  if (node.setMetrics?.readinessLevel != null) {
+    return { readinessLevel: node.setMetrics.readinessLevel }
+  }
+
+  // Otherwise calculate from children
+  return {
+    readinessLevel: node.setMetrics?.readinessLevel != null
+      ? node.setMetrics.readinessLevel
+      : children.length > 0
+        ? Math.min(...children.map(child => child.calculatedMetrics.readinessLevel))
+        : 0
+  }
+}
 
 const metricsAreSame = (a: Metrics, b: Metrics): boolean =>
   a.readinessLevel === b.readinessLevel
@@ -54,14 +64,18 @@ const metricsAreSame = (a: Metrics, b: Metrics): boolean =>
  */
 const updateNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap => {
   // create map of only the nodes we're going to modify
-  const updatedNodes: TreeNodeMap = {}
+  const updatedNodes: TreeNodeMap = { ...nodes }
+  let changes = 0
 
   const updateNode = (nodeId: string) => {
-    const node = nodes[nodeId]
+    const node = updatedNodes[nodeId]
     if (!node) return
 
-    const newCalculatedMetrics = calculateMetrics(getChildNodes(nodes, nodeId))
+    const children = getChildNodes(updatedNodes, nodeId)
+    const newCalculatedMetrics = calculateMetrics(node, children)
+
     if (!metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
+      changes++
       updatedNodes[nodeId] = {
         ...node,
         calculatedMetrics: newCalculatedMetrics
@@ -74,8 +88,8 @@ const updateNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap
   updateNode(startNodeId)
 
   // only create a new nodes object if we actually made changes
-  return Object.keys(updatedNodes).length > 0
-    ? { ...nodes, ...updatedNodes }
+  return changes > 0
+    ? updatedNodes
     : nodes
 }
 
@@ -87,7 +101,7 @@ export const createNode = (
   id: uuid(),
   parentId,
   childrenIds: [],
-  calculatedMetrics: calculateMetrics([])
+  calculatedMetrics: { readinessLevel: 0 }
 })
 
 const getChildrenIdsWithInsertion = (childrenIds: string[], nodeId: string, insertAtIndex?: number | null): string[] =>
@@ -100,34 +114,62 @@ const getChildrenIdsWithRemoval = (childrenIds: string[], nodeId: string): strin
 
 export const getTreeWithNodeAdded = (
   nodes: TreeNodeMap,
-  node: TreeNode2,
+  nodeToAdd: TreeNode2,
   parentId: string,
   insertAtIndex?: number | null
 ): TreeNodeMap => {
   if (!nodes[parentId]) throw new Error(`Parent node ${parentId} not found`)
 
-  return updateNodeMetrics({
+  // First add the node to the tree, ensuring it starts with readinessLevel 0
+  const updatedNodes = {
     ...nodes,
     [parentId]: {
       ...nodes[parentId],
-      childrenIds: getChildrenIdsWithInsertion(nodes[parentId].childrenIds, node.id, insertAtIndex)
+      childrenIds: getChildrenIdsWithInsertion(nodes[parentId].childrenIds, nodeToAdd.id, insertAtIndex)
     },
-    [node.id]: { ...node, parentId }
-  }, getRootNodeId(nodes))
+    [nodeToAdd.id]: {
+      ...nodeToAdd,
+      parentId,
+      calculatedMetrics: { readinessLevel: 0 }
+    }
+  }
+
+  // Update the nodes object and recalculate parent metrics
+  return updateNodeMetrics(updatedNodes, nodeToAdd.id)
 }
 
 export const getTreeWithNodeUpdated = (
   nodes: TreeNodeMap,
   nodeId: string,
-  properties: Partial<TreeNodeProperties>
+  updates: Partial<TreeNode2>
 ): TreeNodeMap => {
   const node = nodes[nodeId]
   if (!node) throw new Error(`Node ${nodeId} not found`)
 
+  // Handle setMetrics updates
+  let updatedSetMetrics = node.setMetrics
+  if (updates.setMetrics) {
+    if (Object.values(updates.setMetrics).every(v => v == null)) {
+      updatedSetMetrics = undefined
+    } else {
+      updatedSetMetrics = { ...node.setMetrics, ...updates.setMetrics }
+    }
+  }
+
+  // Create updated node
+  const updatedNode = {
+    ...node,
+    ...updates,
+    setMetrics: updatedSetMetrics
+  }
+
+  // Update the nodes object and recalculate metrics
   const updatedNodes = {
     ...nodes,
-    [nodeId]: { ...node, ...properties, setMetrics: { ...node.setMetrics, ...properties.setMetrics } }
+    [nodeId]: updatedNode
   }
+
+  // Recalculate metrics for this node and its ancestors
   return updateNodeMetrics(updatedNodes, nodeId)
 }
 
@@ -201,3 +243,13 @@ export const isParentOfInTree = (
   if (!child.parentId) return false
   return isParentOfInTree(nodes, parentId, child.parentId)
 }
+
+
+type TreeNodeWithChildren = TreeNode2 & {
+  children: TreeNodeWithChildren[]
+}
+
+export const inspectTree = (nodes: TreeNodeMap, rootNodeId: string): TreeNodeWithChildren => ({
+  ...nodes[rootNodeId],
+  children: nodes[rootNodeId].childrenIds.map(id => inspectTree(nodes, id))
+})

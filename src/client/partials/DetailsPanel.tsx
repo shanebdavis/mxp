@@ -1,4 +1,5 @@
-import { TreeNode, TreeNodeProperties } from "../../models"
+import { TreeNodeProperties } from "../../models/TreeNode2"
+import type { TreeNode2, TreeNodeMap } from "../../models/TreeNode2"
 import { PanelHeader } from "./PanelHeader"
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -68,16 +69,18 @@ export const DetailsPanel = ({
   treeStateMethods,
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
+  nodes,
 }: {
   isRightPanelCollapsed: boolean
   rightPanelWidth: number
   startResize: (e: React.MouseEvent) => void
   setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
-  selectedNode: TreeNode | null
+  selectedNode: TreeNode2 | null
   isResizing: boolean
   treeStateMethods: { updateNode: (id: string, props: Partial<TreeNodeProperties>) => void }
   nameColumnHeader?: string
   readinessColumnHeader?: string
+  nodes: TreeNodeMap
 }) => {
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')
@@ -124,21 +127,21 @@ export const DetailsPanel = ({
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div className="field-label">{nameColumnHeader}</div>
-                <h3 style={{ margin: 0 }}>{selectedNode.name}</h3>
+                <h3 style={{ margin: 0 }}>{selectedNode.title}</h3>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', margin: '8px 0' }}>
                 <div className="field-label">{readinessColumnHeader}</div>
                 <EditableRlPill
-                  node={selectedNode}
-                  updateNode={treeStateMethods.updateNode}
+                  readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
+                  onChange={level => treeStateMethods.updateNode(selectedNode.id, { setMetrics: { readinessLevel: level } })}
                 />
               </div>
-              {selectedNode.children.length > 0 && (
+              {selectedNode.childrenIds.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '8px 0' }}>
-                  <div className="field-label">Solution: {selectedNode.children.length} Sub-problems</div>
+                  <div className="field-label">Solution: {selectedNode.childrenIds.length} Sub-problems</div>
                   <ol style={{ margin: 0, paddingLeft: '1.5em', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    {selectedNode.children.map(child => (
-                      <li key={child.id}>{child.name}</li>
+                    {selectedNode.childrenIds.map(childId => (
+                      <li key={childId}>{nodes[childId].title}</li>
                     ))}
                   </ol>
                 </div>

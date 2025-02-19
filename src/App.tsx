@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
-import { createNode, getParentMap, getIndexInParentMap } from './models'
+import { createNode } from './models/TreeNode2'
 import { useTreeState } from './useTreeState'
 import {
   Undo, Redo, Add,
@@ -8,6 +8,7 @@ import {
   Delete
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
+import type { TreeNode2, TreeNodeMap } from './models/TreeNode2'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -47,6 +48,26 @@ const styles = {
   },
 } as const
 
+const getParentMap = (nodes: TreeNodeMap): Record<string, TreeNode2> => {
+  const result: Record<string, TreeNode2> = {}
+  Object.values(nodes).forEach(node => {
+    node.childrenIds.forEach(childId => {
+      result[childId] = node
+    })
+  })
+  return result
+}
+
+const getIndexInParentMap = (nodes: TreeNodeMap): Record<string, number> => {
+  const result: Record<string, number> = {}
+  Object.values(nodes).forEach(node => {
+    node.childrenIds.forEach((childId, index) => {
+      result[childId] = index
+    })
+  })
+  return result
+}
+
 const App = () => {
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(false)
   const [isFooterCollapsed, setFooterCollapsed] = useState(false)
@@ -54,28 +75,59 @@ const App = () => {
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
-  const { rootNode, nodesById, treeStateMethods } = useTreeState(createNode({ name: 'Delight with Roll Hexfinity' }, [
-    createNode({ name: 'Customer can order products' }, [
-      createNode({ name: 'Customer can add product to cart', readinessLevel: 3 }),
-      createNode({ name: 'Customer can remove product from cart', readinessLevel: 5 }),
-      createNode({ name: 'Customer can view cart', readinessLevel: 4 }),
-    ]),
-    createNode({ name: 'Fulfillment can process orders' }, [
-      createNode({ name: 'Fulfillment can process orders', readinessLevel: 3 }),
-      createNode({ name: 'Fulfillment can view order history', readinessLevel: 2 }),
-    ]),
-  ]))
-  const { undo, redo, undosAvailable, redosAvailable } = treeStateMethods
-  const [selectedNodeId, selectNodeById] = useState<string | null>(rootNode.id)
+  // Create initial tree structure
+  const initialNodes: TreeNodeMap = useMemo(() => {
+    const root = createNode({ title: 'Delight with Roll Hexfinity' })
+    const child1 = createNode({ title: 'Customer can order products' }, root.id)
+    const child2 = createNode({ title: 'Fulfillment can process orders' }, root.id)
 
-  const selectedNode = selectedNodeId ? nodesById[selectedNodeId] : null
+    const child1_1 = createNode({ title: 'Customer can add product to cart', setMetrics: { readinessLevel: 3 } }, child1.id)
+    const child1_2 = createNode({ title: 'Customer can remove product from cart', setMetrics: { readinessLevel: 5 } }, child1.id)
+    const child1_3 = createNode({ title: 'Customer can view cart', setMetrics: { readinessLevel: 4 } }, child1.id)
+
+    const child2_1 = createNode({ title: 'Fulfillment can process orders', setMetrics: { readinessLevel: 3 } }, child2.id)
+    const child2_2 = createNode({ title: 'Fulfillment can view order history', setMetrics: { readinessLevel: 2 } }, child2.id)
+
+    // Create the nodes map with proper childrenIds
+    const nodes: TreeNodeMap = {
+      [root.id]: { ...root, childrenIds: [child1.id, child2.id] },
+      [child1.id]: { ...child1, childrenIds: [child1_1.id, child1_2.id, child1_3.id] },
+      [child2.id]: { ...child2, childrenIds: [child2_1.id, child2_2.id] },
+      [child1_1.id]: { ...child1_1, childrenIds: [] },
+      [child1_2.id]: { ...child1_2, childrenIds: [] },
+      [child1_3.id]: { ...child1_3, childrenIds: [] },
+      [child2_1.id]: { ...child2_1, childrenIds: [] },
+      [child2_2.id]: { ...child2_2, childrenIds: [] },
+    }
+
+    // Calculate metrics from bottom up
+    const calculateMetrics = (nodeId: string): number => {
+      const node = nodes[nodeId]
+      if (node.childrenIds.length === 0) {
+        return node.setMetrics?.readinessLevel ?? 0
+      }
+      const childLevels = node.childrenIds.map(calculateMetrics)
+      const minLevel = Math.min(...childLevels)
+      node.calculatedMetrics = { readinessLevel: minLevel }
+      return minLevel
+    }
+
+    calculateMetrics(root.id)
+    return nodes
+  }, [])
+
+  const { nodes, rootNodeId, treeStateMethods } = useTreeState(initialNodes)
+  const { undo, redo, undosAvailable, redosAvailable } = treeStateMethods
+  const [selectedNodeId, selectNodeById] = useState<string | null>(rootNodeId)
+
+  const selectedNode = selectedNodeId ? nodes[selectedNodeId] : null
 
   const [parentMap, indexInParentMap] = useMemo(() => {
     return [
-      getParentMap(rootNode),
-      getIndexInParentMap(rootNode)
+      getParentMap(nodes),
+      getIndexInParentMap(nodes)
     ]
-  }, [rootNode])
+  }, [nodes])
 
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
@@ -190,8 +242,8 @@ const App = () => {
                     onClick={() => {
                       if (selectedNode) {
                         const newNodeId = treeStateMethods.addNode({
-                          name: '',
-                          readinessLevel: 0,
+                          title: '',
+                          setMetrics: { readinessLevel: 0 },
                         }, selectedNode.id)
                         selectNodeById(newNodeId)
                         setEditingNodeId(newNodeId)
@@ -217,19 +269,19 @@ const App = () => {
                 <span>
                   <button
                     onClick={() => {
-                      if (selectedNodeParent) {
+                      if (selectedNode?.parentId) {
                         const newNodeId = treeStateMethods.addNode({
-                          name: '',
-                          readinessLevel: 0,
-                        }, selectedNodeParent.id)
+                          title: '',
+                          setMetrics: { readinessLevel: 0 },
+                        }, selectedNode.parentId)
                         selectNodeById(newNodeId)
                         setEditingNodeId(newNodeId)
                       }
                     }}
-                    disabled={!selectedNodeParent}
+                    disabled={!selectedNode?.parentId}
                     style={{
-                      opacity: selectedNodeParent ? 1 : 0.5,
-                      cursor: selectedNodeParent ? 'pointer' : 'default',
+                      opacity: selectedNode?.parentId ? 1 : 0.5,
+                      cursor: selectedNode?.parentId ? 'pointer' : 'default',
                       padding: 4,
                       background: 'none',
                       border: 'none',
@@ -246,10 +298,10 @@ const App = () => {
                 <span>
                   <button
                     onClick={() => selectedNode && treeStateMethods.removeNode(selectedNode.id)}
-                    disabled={!selectedNode || selectedNode.id === 'root'}
+                    disabled={!selectedNode || selectedNode.id === rootNodeId}
                     style={{
-                      opacity: selectedNode && selectedNode.id !== 'root' ? 1 : 0.5,
-                      cursor: selectedNode && selectedNode.id !== 'root' ? 'pointer' : 'default',
+                      opacity: selectedNode && selectedNode.id !== rootNodeId ? 1 : 0.5,
+                      cursor: selectedNode && selectedNode.id !== rootNodeId ? 'pointer' : 'default',
                       padding: 4,
                       background: 'none',
                       border: 'none',
@@ -263,7 +315,8 @@ const App = () => {
             </div>
           </div>
           <HTable
-            rootNode={rootNode}
+            nodes={nodes}
+            rootNodeId={rootNodeId}
             selectedNode={selectedNode}
             selectNodeById={selectNodeById}
             treeStateMethods={treeStateMethods}
@@ -287,6 +340,7 @@ const App = () => {
         treeStateMethods={treeStateMethods}
         nameColumnHeader="Problem"
         readinessColumnHeader="Solution Readiness"
+        nodes={nodes}
       />
       <CommentsPanel
         isFooterCollapsed={isFooterCollapsed}
