@@ -6,13 +6,13 @@ import {
   getTreeWithNodeUpdated,
   getTreeWithNodeParentChanged,
   isParentOfInTree,
-  type TreeNode2,
+  type TreeNode,
   type TreeNodeMap,
   inspectTree
-} from '../../models/TreeNode2'
+} from '../../models'
 import { log } from '../../log'
 
-describe('TreeNode2', () => {
+describe('TreeNode', () => {
   let testNodes: TreeNodeMap
   let rootNodeId: string
 

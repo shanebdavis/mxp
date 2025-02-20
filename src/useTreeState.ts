@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
-import type { TreeNode2, TreeNodeMap, TreeNodeProperties } from './models/TreeNode2'
-import { createNode, getTreeWithNodeAdded, getTreeWithNodeParentChanged, getTreeWithNodeRemoved, getTreeWithNodeUpdated, isParentOfInTree } from './models/TreeNode2'
+import type { TreeNode, TreeNodeMap, TreeNodeProperties } from './models'
+import { createNode, getTreeWithNodeAdded, getTreeWithNodeParentChanged, getTreeWithNodeRemoved, getTreeWithNodeUpdated, isParentOfInTree } from './models'
 
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => string

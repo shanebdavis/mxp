@@ -4,7 +4,7 @@ import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useTreeState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode2, TreeNodeMap, TreeNodeProperties } from '../../../models/TreeNode2'
+import type { TreeNode, TreeNodeMap, TreeNodeProperties } from '../../../models'
 
 interface TreeNodeProps {
   nodes: TreeNodeMap
@@ -14,10 +14,10 @@ interface TreeNodeProps {
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
   selectNodeById: (nodeId: string) => void
-  selectedNode: TreeNode2 | null
+  selectedNode: TreeNode | null
   treeStateMethods: TreeStateMethods
-  draggedNode: TreeNode2 | null
-  setDraggedNode: (node: TreeNode2 | null) => void
+  draggedNode: TreeNode | null
+  setDraggedNode: (node: TreeNode | null) => void
   dragTarget: DragTarget
   handleDragOver: (e: React.DragEvent) => void
   handleDragLeave: () => void
@@ -25,7 +25,7 @@ interface TreeNodeProps {
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
-  parentMap: Record<string, TreeNode2>
+  parentMap: Record<string, TreeNode>
   indexInParentMap: Record<string, number>
 }
 

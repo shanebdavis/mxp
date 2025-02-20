@@ -1,5 +1,5 @@
-import { TreeNodeProperties } from "../../models/TreeNode2"
-import type { TreeNode2, TreeNodeMap } from "../../models/TreeNode2"
+import { TreeNodeProperties } from "../../models"
+import type { TreeNode, TreeNodeMap } from "../../models"
 import { PanelHeader } from "./PanelHeader"
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -75,7 +75,7 @@ export const DetailsPanel = ({
   rightPanelWidth: number
   startResize: (e: React.MouseEvent) => void
   setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
-  selectedNode: TreeNode2 | null
+  selectedNode: TreeNode | null
   isResizing: boolean
   treeStateMethods: { updateNode: (id: string, props: Partial<TreeNodeProperties>) => void }
   nameColumnHeader?: string

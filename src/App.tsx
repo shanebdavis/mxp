@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
-import { createNode } from './models/TreeNode2'
+import { createNode } from './models'
 import { useTreeState } from './useTreeState'
 import {
   Undo, Redo, Add,
@@ -8,7 +8,7 @@ import {
   Delete
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
-import type { TreeNode2, TreeNodeMap } from './models/TreeNode2'
+import type { TreeNode, TreeNodeMap } from './models'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -48,8 +48,8 @@ const styles = {
   },
 } as const
 
-const getParentMap = (nodes: TreeNodeMap): Record<string, TreeNode2> => {
-  const result: Record<string, TreeNode2> = {}
+const getParentMap = (nodes: TreeNodeMap): Record<string, TreeNode> => {
+  const result: Record<string, TreeNode> = {}
   Object.values(nodes).forEach(node => {
     node.childrenIds.forEach(childId => {
       result[childId] = node

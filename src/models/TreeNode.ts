@@ -10,14 +10,14 @@ export interface TreeNodeProperties {
   setMetrics?: Record<string, number>
 }
 
-export interface TreeNode2 extends TreeNodeProperties {
+export interface TreeNode extends TreeNodeProperties {
   id: string
   parentId: string | null
   childrenIds: string[]
   calculatedMetrics: Metrics
 }
 
-export type TreeNodeMap = Record<string, TreeNode2>
+export type TreeNodeMap = Record<string, TreeNode>
 
 const getRootNodeId = (nodes: TreeNodeMap): string => {
   let rootNodeId: string | null = null
@@ -34,10 +34,10 @@ const getRootNodeId = (nodes: TreeNodeMap): string => {
 const getChildIds = (nodes: TreeNodeMap, nodeId: string): string[] =>
   nodes[nodeId].childrenIds
 
-const getChildNodes = (nodes: TreeNodeMap, nodeId: string): TreeNode2[] =>
+const getChildNodes = (nodes: TreeNodeMap, nodeId: string): TreeNode[] =>
   getChildIds(nodes, nodeId).map(id => nodes[id])
 
-const calculateMetrics = (node: TreeNode2, children: TreeNode2[]): Metrics => {
+const calculateMetrics = (node: TreeNode, children: TreeNode[]): Metrics => {
   // If this node has a manually set value, use it
   if (node.setMetrics?.readinessLevel != null) {
     return { readinessLevel: node.setMetrics.readinessLevel }
@@ -96,7 +96,7 @@ const updateNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap
 export const createNode = (
   properties: TreeNodeProperties,
   parentId: string | null = null
-): TreeNode2 => ({
+): TreeNode => ({
   ...properties,
   id: uuid(),
   parentId,
@@ -114,7 +114,7 @@ const getChildrenIdsWithRemoval = (childrenIds: string[], nodeId: string): strin
 
 export const getTreeWithNodeAdded = (
   nodes: TreeNodeMap,
-  nodeToAdd: TreeNode2,
+  nodeToAdd: TreeNode,
   parentId: string,
   insertAtIndex?: number | null
 ): TreeNodeMap => {
@@ -141,7 +141,7 @@ export const getTreeWithNodeAdded = (
 export const getTreeWithNodeUpdated = (
   nodes: TreeNodeMap,
   nodeId: string,
-  updates: Partial<TreeNode2>
+  updates: Partial<TreeNode>
 ): TreeNodeMap => {
   const node = nodes[nodeId]
   if (!node) throw new Error(`Node ${nodeId} not found`)
@@ -245,7 +245,7 @@ export const isParentOfInTree = (
 }
 
 
-type TreeNodeWithChildren = TreeNode2 & {
+type TreeNodeWithChildren = TreeNode & {
   children: TreeNodeWithChildren[]
 }
 

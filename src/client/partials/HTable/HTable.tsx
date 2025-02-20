@@ -1,6 +1,6 @@
 import { useState, type FC, useRef, useMemo } from 'react'
 import React from 'react'
-import type { TreeNode2, TreeNodeMap } from '../../../models/TreeNode2'
+import type { TreeNode, TreeNodeMap } from '../../../models'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
@@ -9,12 +9,12 @@ import { TreeStateMethods } from '../../../useTreeState'
 interface HTableProps {
   nodes: TreeNodeMap
   rootNodeId: string
-  selectedNode: TreeNode2 | null
+  selectedNode: TreeNode | null
   selectNodeById: (nodeId: string) => void
   treeStateMethods: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
-  parentMap: Record<string, TreeNode2>
+  parentMap: Record<string, TreeNode>
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
@@ -47,7 +47,7 @@ export const HTable: FC<HTableProps> = ({
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level"
 }) => {
-  const [draggedNode, setDraggedNode] = useState<TreeNode2 | null>(null)
+  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
