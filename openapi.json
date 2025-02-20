@@ -29,8 +29,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
+                  "type": "object",
+                  "additionalProperties": {
                     "$ref": "#/components/schemas/TreeNode"
                   }
                 }
@@ -72,14 +72,63 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "description": "Array of all nodes that were modified",
-                  "items": {
+                  "type": "object",
+                  "additionalProperties": {
                     "$ref": "#/components/schemas/TreeNode"
                   }
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/nodes/undo": {
+      "post": {
+        "summary": "Undo the last operation",
+        "operationId": "undoOperation",
+        "tags": ["Nodes"],
+        "responses": {
+          "200": {
+            "description": "Successfully undid last operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No operations available to undo"
+          }
+        }
+      }
+    },
+    "/nodes/redo": {
+      "post": {
+        "summary": "Redo the last undone operation",
+        "operationId": "redoOperation",
+        "tags": ["Nodes"],
+        "responses": {
+          "200": {
+            "description": "Successfully redid last undone operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No operations available to redo"
           }
         }
       }
@@ -115,9 +164,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "description": "Array of all nodes that were modified",
-                  "items": {
+                  "type": "object",
+                  "additionalProperties": {
                     "$ref": "#/components/schemas/TreeNode"
                   }
                 }
@@ -146,14 +194,16 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "description": "Array of all nodes that were modified",
-                  "items": {
+                  "type": "object",
+                  "additionalProperties": {
                     "$ref": "#/components/schemas/TreeNode"
                   }
                 }
               }
             }
+          },
+          "400": {
+            "description": "Cannot remove root node"
           }
         }
       }
@@ -199,9 +249,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "description": "Array of all nodes that were modified",
-                  "items": {
+                  "type": "object",
+                  "additionalProperties": {
                     "$ref": "#/components/schemas/TreeNode"
                   }
                 }
@@ -236,11 +285,16 @@
       },
       "TreeNode": {
         "type": "object",
-        "required": ["id", "childIds"],
+        "required": ["id", "childIds", "parentId"],
         "properties": {
           "id": {
             "type": "string",
             "description": "Unique identifier for the node"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "ID of the parent node. Null for root node.",
+            "nullable": true
           },
           "title": {
             "type": "string",
