@@ -7,6 +7,7 @@ export type Metrics = {
 export interface TreeNodeProperties {
   title: string
   description?: string
+  metadata?: Record<string, string | number | boolean | Date>
   setMetrics?: Record<string, number>
 }
 
@@ -18,18 +19,6 @@ export interface TreeNode extends TreeNodeProperties {
 }
 
 export type TreeNodeMap = Record<string, TreeNode>
-
-const getRootNodeId = (nodes: TreeNodeMap): string => {
-  let rootNodeId: string | null = null
-  Object.values(nodes).forEach(node => {
-    if (!node.parentId) {
-      if (rootNodeId) throw new Error('Multiple root nodes')
-      rootNodeId = node.id
-    }
-  })
-  if (!rootNodeId) throw new Error('No root node')
-  return rootNodeId
-}
 
 const getChildIds = (nodes: TreeNodeMap, nodeId: string): string[] =>
   nodes[nodeId].childrenIds
