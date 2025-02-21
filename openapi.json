@@ -83,56 +83,6 @@
         }
       }
     },
-    "/nodes/undo": {
-      "post": {
-        "summary": "Undo the last operation",
-        "operationId": "undoOperation",
-        "tags": ["Nodes"],
-        "responses": {
-          "200": {
-            "description": "Successfully undid last operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/TreeNode"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "No operations available to undo"
-          }
-        }
-      }
-    },
-    "/nodes/redo": {
-      "post": {
-        "summary": "Redo the last undone operation",
-        "operationId": "redoOperation",
-        "tags": ["Nodes"],
-        "responses": {
-          "200": {
-            "description": "Successfully redid last undone operation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/TreeNode"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "No operations available to redo"
-          }
-        }
-      }
-    },
     "/nodes/{nodeId}": {
       "patch": {
         "summary": "Update a node's properties",
@@ -171,6 +121,9 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Node not found"
           }
         }
       },
@@ -202,8 +155,8 @@
               }
             }
           },
-          "400": {
-            "description": "Cannot remove root node"
+          "404": {
+            "description": "Node not found"
           }
         }
       }
@@ -256,6 +209,12 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Node not found"
+          },
+          "400": {
+            "description": "Invalid parent (e.g. would create circular reference)"
           }
         }
       }
@@ -285,7 +244,7 @@
       },
       "TreeNode": {
         "type": "object",
-        "required": ["id", "childIds", "parentId"],
+        "required": ["id", "childrenIds", "parentId"],
         "properties": {
           "id": {
             "type": "string",
@@ -317,7 +276,7 @@
             "minimum": 1,
             "maximum": 9
           },
-          "childIds": {
+          "childrenIds": {
             "type": "array",
             "description": "Array of child node IDs",
             "items": {
