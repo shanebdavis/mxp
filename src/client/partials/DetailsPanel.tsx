@@ -3,11 +3,13 @@ import type { TreeNode, TreeNodeMap } from "../../models"
 import { PanelHeader } from "./PanelHeader"
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { EditableRlPill } from '../widgets'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Components } from 'react-markdown'
 import { Switch, FormControlLabel } from '@mui/material'
+import type { CSSProperties } from 'react'
 
 interface CodeProps {
   node?: unknown
@@ -135,7 +137,21 @@ const styles = {
     fontSize: '13px',
     color: 'var(--text-secondary)',
   },
-}
+  table: {
+    borderCollapse: 'collapse' as const,
+    width: '100%',
+    margin: '0.5em 0',
+    fontSize: '13px',
+  },
+  tableCell: {
+    border: '1px solid var(--border-color)',
+    padding: '6px 8px',
+  },
+  tableHeader: {
+    backgroundColor: 'var(--background-secondary)',
+    fontWeight: 600,
+  },
+} satisfies Record<string, CSSProperties>
 
 export const DetailsPanel = ({
   isRightPanelCollapsed,
@@ -182,30 +198,6 @@ export const DetailsPanel = ({
   }
 
   const markdownComponents: Components = {
-    h1: ({ children }) => (
-      <h3 style={{ ...styles.heading, ...styles.h1 }}>{children}</h3>
-    ),
-    h2: ({ children }) => (
-      <h4 style={{ ...styles.heading, ...styles.h2 }}>{children}</h4>
-    ),
-    h3: ({ children }) => (
-      <h5 style={{ ...styles.heading, ...styles.h3 }}>{children}</h5>
-    ),
-    h4: ({ children }) => (
-      <h6 style={{ ...styles.heading, ...styles.h4 }}>{children}</h6>
-    ),
-    h5: ({ children }) => (
-      <div style={{ ...styles.heading, ...styles.h5 }}>{children}</div>
-    ),
-    h6: ({ children }) => (
-      <div style={{ ...styles.heading, ...styles.h6 }}>{children}</div>
-    ),
-    p: ({ children }) => (
-      <p style={styles.markdownParagraph}>{children}</p>
-    ),
-    text: ({ children }) => (
-      <span style={{ fontSize: '13px' }}>{children}</span>
-    ),
     code: ({ inline, className, children, ...props }: CodeProps) => {
       const match = /language-(\w+)/.exec(className || '')
       return !inline && match ? (
@@ -222,7 +214,7 @@ export const DetailsPanel = ({
           {children}
         </code>
       )
-    }
+    },
   }
 
   return (
@@ -309,11 +301,14 @@ export const DetailsPanel = ({
                 ) : (
                   <div
                     onClick={handleDescriptionClick}
-                    className={!selectedNode.description ? 'placeholder' : undefined}
+                    className="markdown-content"
                     style={styles.descriptionPreview}
                   >
                     {selectedNode.description ? (
-                      <ReactMarkdown components={markdownComponents}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={markdownComponents}
+                      >
                         {selectedNode.description}
                       </ReactMarkdown>
                     ) : (

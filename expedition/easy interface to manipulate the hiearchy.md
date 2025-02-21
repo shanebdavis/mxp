@@ -12,3 +12,6 @@ calculatedMetrics:
 draft: false
 
 ---
+Need to be able to quickly edit and update everything in the tree.
+
+> At the speed of thought

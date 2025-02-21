@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
+import matter from 'gray-matter'
 import { TreeNode, TreeNodeProperties, Metrics } from './TreeNode'
 
 interface NodeMetadata {
@@ -34,8 +35,7 @@ export class FileStore {
 
   private async readNodeFile(filePath: string): Promise<TreeNode> {
     const content = await fs.readFile(filePath, 'utf-8')
-    const [, frontMatter = '', description = ''] = content.split('---\n')
-    const metadata = yaml.load(frontMatter) as Partial<NodeMetadata> || {}
+    const { data: metadata = {}, content: description = '' } = matter(content)
 
     // Only use filename as fallback if title field is not present in yaml
     const fallbackTitle = path.basename(filePath, '.md')
@@ -101,14 +101,8 @@ export class FileStore {
       ...(node.setMetrics && { setMetrics: node.setMetrics })
     }
 
-    const content = [
-      '---',
-      yaml.dump(metadata, { quotingType: '"' }), // Force double quotes
-      '---',
-      node.description || ''
-    ].join('\n')
-
-    await fs.writeFile(this.getFilePath(node.title, node.id), content)
+    const fileContent = matter.stringify(node.description || '', metadata)
+    await fs.writeFile(this.getFilePath(node.title, node.id), fileContent)
   }
 
   private async findNodeById(nodeId: string): Promise<[TreeNode, string]> {
@@ -153,30 +147,26 @@ export class FileStore {
     }
   }
 
+  private calculateReadinessLevel(node: TreeNode, children: TreeNode[]): number {
+    // if the node has a manually set readiness level, use that
+    if (node.setMetrics?.readinessLevel != null) return node.setMetrics.readinessLevel
+
+    // default
+    if (children.length === 0) return 0
+
+    // otherwise, use the minimum readiness level from children
+    return children.reduce((min, child) => Math.min(min, child.calculatedMetrics.readinessLevel), Infinity)
+  }
+
   private async calculateMetrics(nodeId: string, allNodes: Record<string, TreeNode>): Promise<Metrics> {
     const node = allNodes[nodeId]
     if (!node) throw new Error(`Node not found: ${nodeId}`)
 
-    // If node has setMetrics, use those values directly
-    if (node.setMetrics?.readinessLevel != null) {
-      return { readinessLevel: node.setMetrics.readinessLevel }
+    const children = node.childrenIds.map(childId => allNodes[childId]).filter(child => !child.draft)
+
+    return {
+      readinessLevel: this.calculateReadinessLevel(node, children)
     }
-
-    // Otherwise, calculate from non-draft children
-    const childMetrics = node.childrenIds
-      .map(childId => allNodes[childId])
-      .filter(child => {
-        if (!child || child.draft) return false  // Skip missing or draft nodes
-        // Include nodes with manually set metrics (even if 0)
-        if (child.setMetrics?.readinessLevel != null) return true
-        // For auto-mode nodes, only include if they have a readiness level > 0
-        return child.calculatedMetrics.readinessLevel > 0
-      })
-      .map(child => child.calculatedMetrics.readinessLevel)
-
-    // If no valid children metrics, use 0
-    // Otherwise, use the minimum readiness level from children
-    return { readinessLevel: childMetrics.length > 0 ? Math.min(...childMetrics) : 0 }
   }
 
   private async updateNodeAndParentMetrics(nodeId: string, allNodes: Record<string, TreeNode>): Promise<void> {
