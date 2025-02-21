@@ -187,7 +187,6 @@ export const HTable: FC<HTableProps> = ({
                   dragTarget,
                   handleDragOver: handleDragOver(nodeId, index, level),
                   handleDragLeave,
-                  indexInParent: index,
                   editingNodeId,
                   setEditingNodeId,
                   displayOrder: displayOrder.map(x => x.nodeId),

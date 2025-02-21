@@ -106,16 +106,15 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     await apiCall(`/nodes/${nodeId}`, 'PATCH', properties)
   }, [apiCall])
 
-  const setNodeParent = useCallback(async (
+  const setNodeParent = useCallback((
     nodeId: string,
     newParentId: string,
     insertAtIndex?: number | null
-  ) => {
-    await apiCall(`/nodes/${nodeId}/parent`, 'PUT', {
-      newParentId,
-      insertAtIndex
-    })
-  }, [apiCall])
+  ) => apiCall(`/nodes/${nodeId}/parent`, 'PUT', {
+    newParentId,
+    insertAtIndex
+  })
+    , [apiCall])
 
   const removeNode = useCallback(async (nodeId: string) => {
     await apiCall(`/nodes/${nodeId}`, 'DELETE')

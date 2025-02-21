@@ -4,7 +4,7 @@ import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode, TreeNodeMap, TreeNodeProperties } from '../../../models'
+import type { TreeNode, TreeNodeMap } from '../../../models'
 
 interface TreeNodeProps {
   nodes: TreeNodeMap
@@ -21,7 +21,6 @@ interface TreeNodeProps {
   dragTarget: DragTarget
   handleDragOver: (e: React.DragEvent) => void
   handleDragLeave: () => void
-  indexInParent: number
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
@@ -44,7 +43,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   dragTarget,
   handleDragOver,
   handleDragLeave,
-  indexInParent,
   editingNodeId,
   setEditingNodeId,
   displayOrder,
@@ -114,13 +112,16 @@ export const HTableRow: FC<TreeNodeProps> = ({
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
     if (dragItem.id !== nodeId && !isParentOf(dragItem.id, nodeId)) {
-      if (dragTarget.position === 'inside' && node.childrenIds.length > 0 && !expanded) {
-        toggleNode(nodeId)
-      }
+      const rect = e.currentTarget.getBoundingClientRect()
 
-      if (dragTarget.position === 'inside' || isRoot || (expanded && dragTarget.position !== 'before')) {
+      if (dragTarget.position === 'inside') {
+        if (node.childrenIds.length > 0 && !expanded) {
+          toggleNode(nodeId)
+        }
         await setNodeParent(dragItem.id, nodeId, 0)
-      } else if (node.parentId) {
+      } else if (!isRoot && node.parentId) {
+        const parent = nodes[node.parentId]
+        const indexInParent = parent.childrenIds.indexOf(nodeId)
         await setNodeParent(
           dragItem.id,
           node.parentId,
