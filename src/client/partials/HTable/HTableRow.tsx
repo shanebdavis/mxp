@@ -27,6 +27,7 @@ interface TreeNodeProps {
   displayOrder: string[]
   parentMap: Record<string, TreeNode>
   indexInParentMap: Record<string, number>
+  isDraftSubtree?: boolean
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -50,11 +51,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
   displayOrder,
   parentMap,
   indexInParentMap,
+  isDraftSubtree = false,
 }) => {
   const node = nodes[nodeId]
   const { setNodeParent, isParentOf } = treeStateMethods
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !isParentOf(nodeId, draggedNode.id)
   const isDragTarget = dragTarget.nodeId === nodeId && isValidTarget
+  const showAsDraft = isDraftSubtree || node.draft
 
   const expanded = expandedNodes[nodeId]
   const isRoot = !node.parentId
@@ -326,6 +329,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
         ...styles.row,
         ...(isSelected ? styles.selectedRow : {}),
         ...(isDragTarget ? styles.dragTargetRow : {}),
+        ...(showAsDraft ? {
+          opacity: 0.5,
+        } : {}),
       }}
       onClick={handleRowClick}
       draggable
@@ -359,7 +365,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               style={styles.input}
             />
           ) : (
-            <span>{node.title || '(blank)'}</span>
+            <span style={{ fontStyle: showAsDraft ? 'italic' : 'normal' }}>{node.title || '(blank)'}</span>
           )}
         </div>
       </td>

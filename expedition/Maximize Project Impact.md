@@ -2,12 +2,14 @@
 id: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 title: Maximize Project Impact
 filename: The King is here - or there.md
+parentId: null
 childrenIds:
   - f5958119-9841-4b17-8c52-c731bd49159f
   - 5de51286-7771-4102-9b86-194c38cda9ec
   - 4423b37f-42d8-44c6-96ae-1a9bf605f8da
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
+draft: false
 
 ---
 # Why?

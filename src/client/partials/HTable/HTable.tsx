@@ -166,33 +166,40 @@ export const HTable: FC<HTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {displayOrder.map(({ nodeId, level, itemNumber }, index) => (
-            <HTableRow
-              key={nodeId}
-              {...{
-                nodes,
-                nodeId,
-                level,
-                itemNumber,
-                expandedNodes,
-                toggleNode,
-                selectNodeById,
-                selectedNode,
-                treeStateMethods,
-                draggedNode,
-                setDraggedNode,
-                dragTarget,
-                handleDragOver: handleDragOver(nodeId, index, level),
-                handleDragLeave,
-                indexInParent: index,
-                editingNodeId,
-                setEditingNodeId,
-                displayOrder: displayOrder.map(x => x.nodeId),
-                parentMap,
-                indexInParentMap,
-              }}
-            />
-          ))}
+          {displayOrder.map(({ nodeId, level, itemNumber }, index) => {
+            const node = nodes[nodeId]
+            const parentNode = node.parentId ? nodes[node.parentId] : null
+            const isDraftSubtree = Boolean(node.draft || (parentNode?.draft))
+
+            return (
+              <HTableRow
+                key={nodeId}
+                {...{
+                  nodes,
+                  nodeId,
+                  level,
+                  itemNumber,
+                  expandedNodes,
+                  toggleNode,
+                  selectNodeById,
+                  selectedNode,
+                  treeStateMethods,
+                  draggedNode,
+                  setDraggedNode,
+                  dragTarget,
+                  handleDragOver: handleDragOver(nodeId, index, level),
+                  handleDragLeave,
+                  indexInParent: index,
+                  editingNodeId,
+                  setEditingNodeId,
+                  displayOrder: displayOrder.map(x => x.nodeId),
+                  parentMap,
+                  indexInParentMap,
+                  isDraftSubtree,
+                }}
+              />
+            )
+          })}
         </tbody>
       </table>
     </div>

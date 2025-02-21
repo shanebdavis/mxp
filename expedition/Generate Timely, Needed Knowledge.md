@@ -2,11 +2,12 @@
 id: 4423b37f-42d8-44c6-96ae-1a9bf605f8da
 title: Generate Timely, Needed Knowledge
 filename: untitled.md
-childrenIds: []
 parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
-setMetrics:
-  readinessLevel: 0
+childrenIds: []
 calculatedMetrics:
+  readinessLevel: 0
+draft: true
+setMetrics:
   readinessLevel: 0
 
 ---

@@ -10,6 +10,7 @@ export interface TreeNodeProperties {
   metadata?: Record<string, string | number | boolean | Date>
   setMetrics?: Record<string, number | null>
   readinessLevel?: number | null
+  draft?: boolean
 }
 
 export interface TreeNode extends TreeNodeProperties {
@@ -34,13 +35,16 @@ const calculateMetrics = (node: TreeNode, children: TreeNode[]): Metrics => {
     return { readinessLevel: node.setMetrics.readinessLevel }
   }
 
-  // Otherwise calculate from children
+  // Otherwise calculate from non-draft children
+  const nonDraftChildren = children.filter(child => !child.draft)
+
+  // If all children are draft, treat as a leaf node
+  if (nonDraftChildren.length === 0) {
+    return { readinessLevel: 0 }
+  }
+
   return {
-    readinessLevel: node.setMetrics?.readinessLevel != null
-      ? node.setMetrics.readinessLevel
-      : children.length > 0
-        ? Math.min(...children.map(child => child.calculatedMetrics.readinessLevel))
-        : 0
+    readinessLevel: Math.min(...nonDraftChildren.map(child => child.calculatedMetrics.readinessLevel))
   }
 }
 

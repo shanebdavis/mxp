@@ -13,6 +13,7 @@ interface NodeMetadata {
   setMetrics?: Record<string, number>
   calculatedMetrics?: { readinessLevel: number }
   filename?: string  // The name of the file storing this node
+  draft?: boolean
 }
 
 export class FileStore {
@@ -51,6 +52,7 @@ export class FileStore {
       childrenIds: Array.isArray(metadata.childrenIds) ? metadata.childrenIds : [],
       parentId: metadata.parentId || null,
       calculatedMetrics: metadata.calculatedMetrics || { readinessLevel: 0 },
+      draft: metadata.draft ?? false,
       ...(metadata.setMetrics && { setMetrics: metadata.setMetrics })
     }
 
@@ -88,15 +90,16 @@ export class FileStore {
     }
 
     // Prepare metadata, omitting description and null/empty values
-    const metadata = cleanObject({
+    const metadata = {
       id: node.id,
-      title: node.title, // Always include title, even if empty string
-      filename: node.filename, // Always include filename
+      title: node.title,
+      filename: node.filename,
+      parentId: node.parentId,
       childrenIds: node.childrenIds,
-      parentId: node.parentId || undefined,
-      setMetrics: node.setMetrics,
-      calculatedMetrics: node.calculatedMetrics
-    })
+      calculatedMetrics: node.calculatedMetrics,
+      draft: node.draft,
+      ...(node.setMetrics && { setMetrics: node.setMetrics })
+    }
 
     const content = [
       '---',
@@ -156,10 +159,16 @@ export class FileStore {
     // Otherwise calculate from children
     if (node.childrenIds.length > 0) {
       const childNodes = nodes
-        ? node.childrenIds.map(id => nodes[id])
+        ? node.childrenIds.map(id => nodes[id]).filter(node => !node.draft)
         : await Promise.all(
           node.childrenIds.map(id => this.findNodeById(id).then(([node]) => node))
-        )
+        ).then(nodes => nodes.filter(node => !node.draft))
+
+      // If all children are draft, treat as a leaf node
+      if (childNodes.length === 0) {
+        return { readinessLevel: 0 }
+      }
+
       return {
         readinessLevel: Math.min(...childNodes.map(child => child.calculatedMetrics.readinessLevel))
       }

@@ -7,6 +7,7 @@ import { EditableRlPill } from '../widgets'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Components } from 'react-markdown'
+import { Switch, FormControlLabel } from '@mui/material'
 
 interface CodeProps {
   node?: unknown
@@ -124,6 +125,16 @@ const styles = {
     fontWeight: 500,
     fontStyle: 'italic',
   },
+  draftToggle: {
+    position: 'absolute' as const,
+    top: 12,
+    right: 12,
+    fontSize: '13px',
+  },
+  draftLabel: {
+    fontSize: '13px',
+    color: 'var(--text-secondary)',
+  },
 }
 
 export const DetailsPanel = ({
@@ -236,6 +247,24 @@ export const DetailsPanel = ({
         <div style={{ padding: '12px', ...styles.content }}>
           {selectedNode ? (
             <>
+              <FormControlLabel
+                style={styles.draftToggle}
+                control={
+                  <Switch
+                    size="small"
+                    checked={!selectedNode.draft}
+                    onChange={async (e) => {
+                      if (selectedNode) {
+                        await treeStateMethods.updateNode(selectedNode.id, {
+                          draft: !e.target.checked
+                        })
+                      }
+                    }}
+                  />
+                }
+                label={<span style={styles.draftLabel}>{selectedNode.draft ? 'draft' : 'active'}</span>}
+                labelPlacement="start"
+              />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div className="field-label">{nameColumnHeader}</div>
                 <h3 style={{ margin: 0 }}>{selectedNode.title}</h3>
