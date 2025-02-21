@@ -9,7 +9,7 @@ childrenIds:
   - 952d4b2d-e66d-421d-8670-f41f89b85ba7
   - d1ed7c14-b07d-4d2a-8b5b-65e119a362ee
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
 draft: false
 ---
 # Track Status, not To-Dos

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { EditableRlPill } from '../widgets'
+import { SolutionItems } from '../widgets/SolutionItems'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Components } from 'react-markdown'
@@ -274,16 +275,10 @@ export const DetailsPanel = ({
                 />
               </div>
               {selectedNode.childrenIds.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '8px 0' }}>
-                  <div className="field-label">Solution: {selectedNode.childrenIds.length} Sub-problems</div>
-                  <ol style={{ margin: 0, paddingLeft: '1.5em', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    {selectedNode.childrenIds
-                      .filter(childId => nodes[childId])
-                      .map(childId => (
-                        <li key={childId}>{nodes[childId].title}</li>
-                      ))}
-                  </ol>
-                </div>
+                <SolutionItems
+                  node={selectedNode}
+                  children={selectedNode.childrenIds.map(id => nodes[id]).filter(Boolean)}
+                />
               )}
               <div style={styles.descriptionContainer}>
                 <div className="field-label">Description</div>

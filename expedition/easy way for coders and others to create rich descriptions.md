@@ -1,6 +1,6 @@
 ---
 id: 76d33e78-22d9-4dd9-a9b3-2e419674395f
-title: markdown
+title: easy way for coders and others to create rich descriptions
 filename: untitled.md
 parentId: d1ed7c14-b07d-4d2a-8b5b-65e119a362ee
 childrenIds: []
