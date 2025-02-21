@@ -4,7 +4,7 @@ import type { TreeNode, TreeNodeMap } from '../../../models'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
-import { TreeStateMethods } from '../../../useTreeState'
+import { TreeStateMethods } from '../../../useApiForState'
 
 interface HTableProps {
   nodes: TreeNodeMap

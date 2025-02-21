@@ -8,7 +8,8 @@ export interface TreeNodeProperties {
   title: string
   description?: string
   metadata?: Record<string, string | number | boolean | Date>
-  setMetrics?: Record<string, number>
+  setMetrics?: Record<string, number | null>
+  readinessLevel?: number | null
 }
 
 export interface TreeNode extends TreeNodeProperties {

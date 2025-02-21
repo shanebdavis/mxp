@@ -1,14 +1,9 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
-import { createNode } from './models'
-import { useTreeState } from './useTreeState'
-import {
-  Undo, Redo, Add,
-  ArrowRight, ArrowDropDown,
-  Delete
-} from '@mui/icons-material'
+import { Add, ArrowRight, ArrowDropDown, Delete } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import type { TreeNode, TreeNodeMap } from './models'
+import { useApiForState } from './useApiForState'
 
 const MIN_PANEL_WIDTH = 200
 const MAX_PANEL_WIDTH = 800
@@ -75,50 +70,15 @@ const App = () => {
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
-  // Create initial tree structure
-  const initialNodes: TreeNodeMap = useMemo(() => {
-    const root = createNode({ title: 'Delight with Roll Hexfinity' })
-    const child1 = createNode({ title: 'Customer can order products' }, root.id)
-    const child2 = createNode({ title: 'Fulfillment can process orders' }, root.id)
-
-    const child1_1 = createNode({ title: 'Customer can add product to cart', setMetrics: { readinessLevel: 3 } }, child1.id)
-    const child1_2 = createNode({ title: 'Customer can remove product from cart', setMetrics: { readinessLevel: 5 } }, child1.id)
-    const child1_3 = createNode({ title: 'Customer can view cart', setMetrics: { readinessLevel: 4 } }, child1.id)
-
-    const child2_1 = createNode({ title: 'Fulfillment can process orders', setMetrics: { readinessLevel: 3 } }, child2.id)
-    const child2_2 = createNode({ title: 'Fulfillment can view order history', setMetrics: { readinessLevel: 2 } }, child2.id)
-
-    // Create the nodes map with proper childrenIds
-    const nodes: TreeNodeMap = {
-      [root.id]: { ...root, childrenIds: [child1.id, child2.id] },
-      [child1.id]: { ...child1, childrenIds: [child1_1.id, child1_2.id, child1_3.id] },
-      [child2.id]: { ...child2, childrenIds: [child2_1.id, child2_2.id] },
-      [child1_1.id]: { ...child1_1, childrenIds: [] },
-      [child1_2.id]: { ...child1_2, childrenIds: [] },
-      [child1_3.id]: { ...child1_3, childrenIds: [] },
-      [child2_1.id]: { ...child2_1, childrenIds: [] },
-      [child2_2.id]: { ...child2_2, childrenIds: [] },
-    }
-
-    // Calculate metrics from bottom up
-    const calculateMetrics = (nodeId: string): number => {
-      const node = nodes[nodeId]
-      if (node.childrenIds.length === 0) {
-        return node.setMetrics?.readinessLevel ?? 0
-      }
-      const childLevels = node.childrenIds.map(calculateMetrics)
-      const minLevel = Math.min(...childLevels)
-      node.calculatedMetrics = { readinessLevel: minLevel }
-      return minLevel
-    }
-
-    calculateMetrics(root.id)
-    return nodes
-  }, [])
-
-  const { nodes, rootNodeId, treeStateMethods } = useTreeState(initialNodes)
-  const { undo, redo, undosAvailable, redosAvailable } = treeStateMethods
+  const { nodes, rootNodeId, treeStateMethods, loading, error } = useApiForState()
   const [selectedNodeId, selectNodeById] = useState<string | null>(rootNodeId)
+
+  // Update selectedNodeId when rootNodeId changes
+  useEffect(() => {
+    if (rootNodeId && !selectedNodeId) {
+      selectNodeById(rootNodeId)
+    }
+  }, [rootNodeId, selectedNodeId])
 
   const selectedNode = selectedNodeId ? nodes[selectedNodeId] : null
 
@@ -161,159 +121,103 @@ const App = () => {
     }
   }, [isResizing, resize, stopResize])
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {  // metaKey is Command on Mac
-        if (e.shiftKey) {
-          redo()
-        } else {
-          undo()
-        }
-        e.preventDefault()  // Prevent browser's default undo/redo
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo])
+  // Add loading and error states
+  if (loading) {
+    return <div style={{ padding: 20 }}>Loading...</div>
+  }
 
-  const selectedNodeParent = selectedNode && parentMap[selectedNode.id]
+  if (error) {
+    return <div style={{ padding: 20, color: 'red' }}>Error: {error.message}</div>
+  }
 
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Expedition Status</h1>
+        <h1 style={styles.title}>Tree Editor</h1>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <Tooltip title="Add Child">
+              <span>
+                <button
+                  onClick={async () => {
+                    if (selectedNode) {
+                      const newNodeId = await treeStateMethods.addNode({
+                        title: '',
+                        setMetrics: { readinessLevel: 0 },
+                      }, selectedNode.id)
+                      selectNodeById(newNodeId)
+                      setEditingNodeId(newNodeId)
+                    }
+                  }}
+                  disabled={!selectedNode}
+                  style={{
+                    opacity: selectedNode ? 1 : 0.5,
+                    cursor: selectedNode ? 'pointer' : 'default',
+                    padding: 4,
+                    background: 'none',
+                    border: 'none',
+                    color: '#666',
+                    position: 'relative'
+                  }}
+                >
+                  <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
+                  <ArrowRight sx={{ fontSize: 18 }} />
+                </button>
+              </span>
+            </Tooltip>
+            <Tooltip title="Add Sibling">
+              <span>
+                <button
+                  onClick={async () => {
+                    if (selectedNode?.parentId) {
+                      const newNodeId = await treeStateMethods.addNode({
+                        title: '',
+                        setMetrics: { readinessLevel: 0 },
+                      }, selectedNode.parentId)
+                      selectNodeById(newNodeId)
+                      setEditingNodeId(newNodeId)
+                    }
+                  }}
+                  disabled={!selectedNode?.parentId}
+                  style={{
+                    opacity: selectedNode?.parentId ? 1 : 0.5,
+                    cursor: selectedNode?.parentId ? 'pointer' : 'default',
+                    padding: 4,
+                    background: 'none',
+                    border: 'none',
+                    color: '#666',
+                    position: 'relative'
+                  }}
+                >
+                  <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
+                  <ArrowDropDown sx={{ fontSize: 18 }} />
+                </button>
+              </span>
+            </Tooltip>
+            <Tooltip title="Delete node">
+              <span>
+                <button
+                  onClick={async () => selectedNode && await treeStateMethods.removeNode(selectedNode.id)}
+                  disabled={!selectedNode || selectedNode.id === rootNodeId}
+                  style={{
+                    opacity: selectedNode && selectedNode.id !== rootNodeId ? 1 : 0.5,
+                    cursor: selectedNode && selectedNode.id !== rootNodeId ? 'pointer' : 'default',
+                    padding: 4,
+                    background: 'none',
+                    border: 'none',
+                    color: '#666'
+                  }}
+                >
+                  <Delete sx={{ fontSize: 18 }} />
+                </button>
+              </span>
+            </Tooltip>
+          </div>
+        </div>
       </header>
 
       <main style={styles.main}>
-        <div className="App">
-          <div style={{
-            position: 'absolute',
-            top: 12,
-            right: 20,
-            display: 'flex',
-            gap: 8,  // Increased gap for visual grouping
-            alignItems: 'center'
-          }}>
-            {/* First group: Undo/Redo */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Tooltip title="Undo">
-                <span>
-                  <button
-                    onClick={undo}
-                    disabled={!undosAvailable}
-                    style={{
-                      opacity: undosAvailable ? 1 : 0.5,
-                      cursor: undosAvailable ? 'pointer' : 'default',
-                      padding: 4,
-                      background: 'none',
-                      border: 'none',
-                      color: '#666'
-                    }}
-                  >
-                    <Undo sx={{ fontSize: 18 }} />
-                  </button>
-                </span>
-              </Tooltip>
-              <Tooltip title="Redo">
-                <span>
-                  <button
-                    onClick={redo}
-                    disabled={!redosAvailable}
-                    style={{
-                      opacity: redosAvailable ? 1 : 0.5,
-                      cursor: redosAvailable ? 'pointer' : 'default',
-                      padding: 4,
-                      background: 'none',
-                      border: 'none',
-                      color: '#666'
-                    }}
-                  >
-                    <Redo sx={{ fontSize: 18 }} />
-                  </button>
-                </span>
-              </Tooltip>
-            </div>
-
-            {/* Second group: Node operations */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Tooltip title="Add Child">
-                <span>
-                  <button
-                    onClick={() => {
-                      if (selectedNode) {
-                        const newNodeId = treeStateMethods.addNode({
-                          title: '',
-                          setMetrics: { readinessLevel: 0 },
-                        }, selectedNode.id)
-                        selectNodeById(newNodeId)
-                        setEditingNodeId(newNodeId)
-                      }
-                    }}
-                    disabled={!selectedNode}
-                    style={{
-                      opacity: selectedNode ? 1 : 0.5,
-                      cursor: selectedNode ? 'pointer' : 'default',
-                      padding: 4,
-                      background: 'none',
-                      border: 'none',
-                      color: '#666',
-                      position: 'relative'
-                    }}
-                  >
-                    <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
-                    <ArrowRight sx={{ fontSize: 18 }} />
-                  </button>
-                </span>
-              </Tooltip>
-              <Tooltip title="Add Sibling">
-                <span>
-                  <button
-                    onClick={() => {
-                      if (selectedNode?.parentId) {
-                        const newNodeId = treeStateMethods.addNode({
-                          title: '',
-                          setMetrics: { readinessLevel: 0 },
-                        }, selectedNode.parentId)
-                        selectNodeById(newNodeId)
-                        setEditingNodeId(newNodeId)
-                      }
-                    }}
-                    disabled={!selectedNode?.parentId}
-                    style={{
-                      opacity: selectedNode?.parentId ? 1 : 0.5,
-                      cursor: selectedNode?.parentId ? 'pointer' : 'default',
-                      padding: 4,
-                      background: 'none',
-                      border: 'none',
-                      color: '#666',
-                      position: 'relative'
-                    }}
-                  >
-                    <Add sx={{ fontSize: 14, position: 'absolute', right: 0, bottom: 0 }} />
-                    <ArrowDropDown sx={{ fontSize: 18 }} />
-                  </button>
-                </span>
-              </Tooltip>
-              <Tooltip title="Delete node">
-                <span>
-                  <button
-                    onClick={() => selectedNode && treeStateMethods.removeNode(selectedNode.id)}
-                    disabled={!selectedNode || selectedNode.id === rootNodeId}
-                    style={{
-                      opacity: selectedNode && selectedNode.id !== rootNodeId ? 1 : 0.5,
-                      cursor: selectedNode && selectedNode.id !== rootNodeId ? 'pointer' : 'default',
-                      padding: 4,
-                      background: 'none',
-                      border: 'none',
-                      color: '#666'
-                    }}
-                  >
-                    <Delete sx={{ fontSize: 18 }} />
-                  </button>
-                </span>
-              </Tooltip>
-            </div>
-          </div>
+        <div>
           <HTable
             nodes={nodes}
             rootNodeId={rootNodeId}
@@ -346,7 +250,6 @@ const App = () => {
         isFooterCollapsed={isFooterCollapsed}
         setFooterCollapsed={setFooterCollapsed}
       />
-
     </div>
   )
 }

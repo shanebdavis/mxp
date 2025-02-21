@@ -38,7 +38,7 @@ describe('FileStore', () => {
       parentId: null,
       childrenIds: [],
       setMetrics: { readinessLevel: 5 },
-      calculatedMetrics: { readinessLevel: 0 }
+      calculatedMetrics: { readinessLevel: 5 }
     })
 
     // Verify the file exists and has the correct name
@@ -163,5 +163,121 @@ describe('FileStore', () => {
     // Verify node data is preserved
     expect(updated.id).toBe(node.id)
     expect(updated.description).toBe('Test')
+  })
+
+  it('updates calculatedMetrics when setMetrics changes', async () => {
+    const { path: testDir } = useTemp()
+    fileStore = new FileStore(testDir)
+
+    // Create a node with initial readinessLevel
+    const node = await fileStore.createNode({
+      title: 'Test Node',
+      description: 'Test Description',
+      setMetrics: { readinessLevel: 5 }
+    }, null)
+
+    // Verify initial state
+    expect(node.setMetrics?.readinessLevel).toBe(5)
+    expect(node.calculatedMetrics.readinessLevel).toBe(5)
+
+    // Update readinessLevel
+    const updatedNode = await fileStore.updateNode(node.id, {
+      setMetrics: { readinessLevel: 7 }
+    })
+
+    // Verify calculatedMetrics was updated
+    expect(updatedNode.setMetrics?.readinessLevel).toBe(7)
+    expect(updatedNode.calculatedMetrics.readinessLevel).toBe(7)
+
+    // Clear setMetrics
+    const clearedNode = await fileStore.updateNode(node.id, {
+      setMetrics: {}
+    })
+
+    // Verify calculatedMetrics defaults to 0 when no setMetrics
+    expect(clearedNode.setMetrics).toBeUndefined()
+    expect(clearedNode.calculatedMetrics.readinessLevel).toBe(0)
+  })
+
+  it('calculates parent metrics from children', async () => {
+    const { path: testDir } = useTemp()
+    fileStore = new FileStore(testDir)
+
+    // Create root node with no setMetrics (auto)
+    const root = await fileStore.createNode({
+      title: 'Root Node'
+    }, null)
+
+    // Create two children with different readiness levels
+    const child1 = await fileStore.createNode({
+      title: 'Child 1',
+      setMetrics: { readinessLevel: 2 }
+    }, root.id)
+
+    const child2 = await fileStore.createNode({
+      title: 'Child 2',
+      setMetrics: { readinessLevel: 3 }
+    }, root.id)
+
+    // Get the updated root node
+    let nodes = await fileStore.getAllNodes()
+    let updatedRoot = nodes[root.id]
+
+    // Root should have calculatedMetrics.readinessLevel = 2 (min of children)
+    expect(updatedRoot.setMetrics).toBeUndefined()
+    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2)
+
+    // Now force root's readiness level to 4
+    await fileStore.updateNode(root.id, {
+      setMetrics: { readinessLevel: 4 }
+    })
+
+    nodes = await fileStore.getAllNodes()
+    updatedRoot = nodes[root.id]
+
+    // Root should now have readinessLevel = 4 (manually set)
+    expect(updatedRoot.setMetrics?.readinessLevel).toBe(4)
+    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(4)
+
+    // Clear root's readiness level to resume auto mode
+    await fileStore.updateNode(root.id, {
+      setMetrics: {}
+    })
+
+    nodes = await fileStore.getAllNodes()
+    updatedRoot = nodes[root.id]
+
+    // Root should return to readinessLevel = 2 (min of children)
+    expect(updatedRoot.setMetrics).toBeUndefined()
+    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2)
+  })
+
+  it('heals files with missing data', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create an empty markdown file
+    await fs.writeFile(path.join(testDir, 'test-node.md'), '')
+
+    // Get all nodes
+    const nodes = await fileStore.getAllNodes()
+
+    // Verify we got exactly one node
+    const nodeIds = Object.keys(nodes)
+    expect(nodeIds).toHaveLength(1)
+
+    // Get the node
+    const node = nodes[nodeIds[0]]
+
+    // Verify the node has an id and title
+    expect(node.id).toBeDefined()
+    expect(node.id).toMatch(/^[0-9a-f-]{36}$/) // UUID format
+    expect(node.title).toBe('test-node')
+
+    // Verify the file was healed
+    const fileContent = await fs.readFile(path.join(testDir, 'test-node.md'), 'utf-8')
+    expect(fileContent).toMatch(/^---\n/)
+    expect(fileContent).toMatch(/\nid: [0-9a-f-]{36}\n/)
+    expect(fileContent).toMatch(/\ntitle: test-node\n/)
   })
 })

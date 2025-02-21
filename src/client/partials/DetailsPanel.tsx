@@ -6,13 +6,13 @@ import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import type { Components } from 'react-markdown'
 
-interface CodeComponentProps {
+interface CodeProps {
   node?: unknown
   inline?: boolean
   className?: string
   children?: React.ReactNode
-  [key: string]: unknown
 }
 
 const styles = {
@@ -77,7 +77,7 @@ export const DetailsPanel = ({
   setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
   selectedNode: TreeNode | null
   isResizing: boolean
-  treeStateMethods: { updateNode: (id: string, props: Partial<TreeNodeProperties>) => void }
+  treeStateMethods: { updateNode: (id: string, props: Partial<TreeNodeProperties>) => Promise<void> }
   nameColumnHeader?: string
   readinessColumnHeader?: string
   nodes: TreeNodeMap
@@ -92,15 +92,35 @@ export const DetailsPanel = ({
     }
   }
 
-  const handleDescriptionBlur = () => {
+  const handleDescriptionBlur = async () => {
     if (selectedNode && descriptionDraft !== selectedNode.description) {
-      treeStateMethods.updateNode(selectedNode.id, { description: descriptionDraft })
+      await treeStateMethods.updateNode(selectedNode.id, { description: descriptionDraft })
     }
     setIsEditingDescription(false)
   }
 
   const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation()
+  }
+
+  const markdownComponents: Components = {
+    code: ({ inline, className, children, ...props }: CodeProps) => {
+      const match = /language-(\w+)/.exec(className || '')
+      return !inline && match ? (
+        <SyntaxHighlighter
+          {...props}
+          style={vscDarkPlus}
+          language={match[1]}
+          PreTag="div"
+        >
+          {String(children).replace(/\n$/, '')}
+        </SyntaxHighlighter>
+      ) : (
+        <code {...props} className={className}>
+          {children}
+        </code>
+      )
+    }
   }
 
   return (
@@ -133,7 +153,11 @@ export const DetailsPanel = ({
                 <div className="field-label">{readinessColumnHeader}</div>
                 <EditableRlPill
                   readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
-                  onChange={level => treeStateMethods.updateNode(selectedNode.id, { setMetrics: { readinessLevel: level } })}
+                  onChange={async level => {
+                    await treeStateMethods.updateNode(selectedNode.id, {
+                      setMetrics: { readinessLevel: level ?? null }
+                    })
+                  }}
                 />
               </div>
               {selectedNode.childrenIds.length > 0 && (
@@ -165,40 +189,20 @@ export const DetailsPanel = ({
                     className={`details-text-container preview${!selectedNode.description ? ' empty' : ''}`}
                   >
                     {selectedNode.description ? (
-                      <div className="markdown-content">
-                        <ReactMarkdown
-                          components={{
-                            code: ({ inline, className, children = '', ...props }: CodeComponentProps) => {
-                              const match = /language-(\w+)/.exec(className || '')
-                              return !inline && match ? (
-                                <SyntaxHighlighter
-                                  {...props}
-                                  style={vscDarkPlus}
-                                  language={match[1]}
-                                  PreTag="div"
-                                >
-                                  {String(children).replace(/\n$/, '')}
-                                </SyntaxHighlighter>
-                              ) : (
-                                <code {...props} className={className}>
-                                  {children}
-                                </code>
-                              )
-                            }
-                          } as any}
-                        >
-                          {selectedNode.description}
-                        </ReactMarkdown>
-                      </div>
+                      <ReactMarkdown components={markdownComponents}>
+                        {selectedNode.description}
+                      </ReactMarkdown>
                     ) : (
-                      'Click to add description... (Markdown supported)'
+                      <span className="placeholder">Add a description... (Markdown supported)</span>
                     )}
                   </div>
                 )}
               </div>
             </>
           ) : (
-            <p>Select an item to view details</p>
+            <div style={{ padding: '12px', color: 'var(--text-secondary)' }}>
+              Select a node to view details
+            </div>
           )}
         </div>
       )}

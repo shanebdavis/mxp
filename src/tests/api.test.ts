@@ -69,7 +69,7 @@ describe('API', () => {
       const childId = Object.keys(childResult).find(id => id !== rootId)!
       const childNode = childResult[childId]
       expect(childNode.title).toBe('Child Node')
-      expect(childNode.readinessLevel).toBe(5)
+      expect(childNode.setMetrics?.readinessLevel).toBe(5)
       expect(childNode.parentId).toBe(rootId)
 
       // Verify root was updated with child
@@ -87,7 +87,7 @@ describe('API', () => {
       expect(updateResponse.status).toBe(200)
       const updateResult = await updateResponse.json()
       expect(updateResult[childId].title).toBe('Updated Child')
-      expect(updateResult[childId].readinessLevel).toBe(7)
+      expect(updateResult[childId].setMetrics?.readinessLevel).toBe(7)
 
       // Create second child for move test
       const createChild2Response = await fetch(`${server.baseUrl}/api/nodes`, {

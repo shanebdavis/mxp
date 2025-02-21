@@ -2,7 +2,7 @@ import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
-import { TreeStateMethods } from '../../../useTreeState'
+import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
 import type { TreeNode, TreeNodeMap, TreeNodeProperties } from '../../../models'
 
@@ -106,7 +106,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
     handleDragLeave()
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
     if (dragItem.id !== nodeId && !isParentOf(dragItem.id, nodeId)) {
@@ -115,9 +115,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
       }
 
       if (dragTarget.position === 'inside' || isRoot || (expanded && dragTarget.position !== 'before')) {
-        setNodeParent(dragItem.id, nodeId, 0)
+        await setNodeParent(dragItem.id, nodeId, 0)
       } else if (node.parentId) {
-        setNodeParent(
+        await setNodeParent(
           dragItem.id,
           node.parentId,
           dragTarget.position === 'before' ? indexInParent : indexInParent + 1
@@ -127,14 +127,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
-  const handleBlankName = () => {
+  const handleBlankName = async () => {
     if (editValue.trim() === '') {
       if (node.childrenIds.length > 0) {
-        treeStateMethods.updateNode(nodeId, { title: '(blank)' })
+        await treeStateMethods.updateNode(nodeId, { title: '(blank)' })
       } else {
         const currentIndex = displayOrder.indexOf(nodeId)
         const nextSelectedId = displayOrder[currentIndex - 1]
-        treeStateMethods.removeNode(nodeId)
+        await treeStateMethods.removeNode(nodeId)
         if (nextSelectedId) {
           selectNodeById(nextSelectedId)
         }
@@ -144,23 +144,23 @@ export const HTableRow: FC<TreeNodeProps> = ({
     return false
   }
 
-  const handleInputBlur = () => {
+  const handleInputBlur = async () => {
     setIsEditing(false)
-    if (!handleBlankName() && editValue !== node.title) {
-      treeStateMethods.updateNode(nodeId, { title: editValue })
+    if (!await handleBlankName() && editValue !== node.title) {
+      await treeStateMethods.updateNode(nodeId, { title: editValue })
     }
   }
 
-  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+  const handleInputKeyDown = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       e.stopPropagation()
 
       // Handle blank name first
-      if (!handleBlankName()) {
+      if (!await handleBlankName()) {
         // Save current edits if needed
         if (editValue !== node.title) {
-          treeStateMethods.updateNode(nodeId, { title: editValue })
+          await treeStateMethods.updateNode(nodeId, { title: editValue })
         }
 
         // For root node, just close the edit box
@@ -171,7 +171,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
         // Handle node creation for non-root nodes
         if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
-          const newNodeId = treeStateMethods.addNode({
+          const newNodeId = await treeStateMethods.addNode({
             title: '',
             setMetrics: { readinessLevel: 0 },
           }, nodeId)
@@ -181,7 +181,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           selectNodeById(newNodeId)
           setEditingNodeId(newNodeId)
         } else if (node.parentId) {  // Regular Enter - add sibling (only if we have a parent)
-          const newNodeId = treeStateMethods.addNode({
+          const newNodeId = await treeStateMethods.addNode({
             title: '',
             setMetrics: { readinessLevel: 0 },
           }, node.parentId)
@@ -190,14 +190,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
         }
       }
     } else if (e.key === 'Escape') {
-      handleBlankName()  // Handle blank name on escape
+      await handleBlankName()  // Handle blank name on escape
       setIsEditing(false)
     }
   }
 
   // Add this effect for keyboard handling
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       if (!isSelected) return
       if (isEditing) return  // Add this line to prevent handling keys while editing
 
@@ -215,14 +215,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
           e.preventDefault()
           const level = parseInt(e.key)
           if (level !== node.calculatedMetrics.readinessLevel) {
-            treeStateMethods.updateNode(nodeId, { setMetrics: { readinessLevel: level } })
+            await treeStateMethods.updateNode(nodeId, { setMetrics: { readinessLevel: level } })
           }
           break
 
         case 'Enter':
           e.preventDefault()
           if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter
-            const newNodeId = treeStateMethods.addNode({
+            const newNodeId = await treeStateMethods.addNode({
               title: '',
               setMetrics: { readinessLevel: 0 },
             }, nodeId)
@@ -234,7 +234,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             setEditingNodeId(newNodeId)
           } else {  // Regular Enter - add sibling
             if (node.parentId) {  // Only if we have a parent (not root)
-              const newNodeId = treeStateMethods.addNode({
+              const newNodeId = await treeStateMethods.addNode({
                 title: '',
                 setMetrics: { readinessLevel: 0 },
               }, node.parentId)
@@ -341,7 +341,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
       <td style={styles.cell}>
         <EditableRlPill
           readinessLevel={node.calculatedMetrics.readinessLevel}
-          onChange={(level: number) => treeStateMethods.updateNode(nodeId, { setMetrics: { readinessLevel: level } })}
+          onChange={async level => {
+            await treeStateMethods.updateNode(nodeId, {
+              setMetrics: { readinessLevel: level ?? null }
+            })
+          }}
         />
       </td>
     </tr>
