@@ -62,18 +62,21 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(node.title)
+  const [justCreated, setJustCreated] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (isEditing) {
+      setEditValue(node.title)  // Reset to current title when starting edit
       inputRef.current?.focus()
       inputRef.current?.select()
     }
-  }, [isEditing])
+  }, [isEditing, node.title])
 
   useEffect(() => {
     if (editingNodeId === nodeId) {
       setIsEditing(true)
+      setJustCreated(true)
       setEditingNodeId(null)
     }
   }, [editingNodeId, nodeId, setEditingNodeId])
@@ -127,28 +130,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
-  const handleBlankName = async () => {
-    if (editValue.trim() === '') {
-      if (node.childrenIds.length > 0) {
-        await treeStateMethods.updateNode(nodeId, { title: '(blank)' })
-      } else {
-        const currentIndex = displayOrder.indexOf(nodeId)
-        const nextSelectedId = displayOrder[currentIndex - 1]
-        await treeStateMethods.removeNode(nodeId)
-        if (nextSelectedId) {
-          selectNodeById(nextSelectedId)
-        }
-      }
-      return true
-    }
-    return false
-  }
-
   const handleInputBlur = async () => {
-    setIsEditing(false)
-    if (!await handleBlankName() && editValue !== node.title) {
-      await treeStateMethods.updateNode(nodeId, { title: editValue })
+    if (justCreated && editValue.trim() === '') {
+      await treeStateMethods.updateNode(nodeId, { title: 'TBD' })
     }
+    setIsEditing(false)
   }
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
@@ -156,44 +142,62 @@ export const HTableRow: FC<TreeNodeProps> = ({
       e.preventDefault()
       e.stopPropagation()
 
-      // Handle blank name first
-      if (!await handleBlankName()) {
+      // Handle blank title
+      if (editValue.trim() === '') {
+        await treeStateMethods.updateNode(nodeId, { title: 'TBD' })
+      } else if (editValue !== node.title) {
         // Save current edits if needed
-        if (editValue !== node.title) {
-          await treeStateMethods.updateNode(nodeId, { title: editValue })
-        }
+        await treeStateMethods.updateNode(nodeId, { title: editValue })
+      }
 
-        // For root node, just close the edit box
-        if (isRoot) {
-          setIsEditing(false)
-          return
-        }
+      // Clear justCreated since we're saving changes
+      setJustCreated(false)
 
-        // Handle node creation based on modifier keys
-        if (e.shiftKey && node.parentId) {  // Shift + Enter - add sibling
-          const newNodeId = await treeStateMethods.addNode({
-            title: '',
-            setMetrics: { readinessLevel: 0 },
-          }, node.parentId)
-          selectNodeById(newNodeId)
-          setEditingNodeId(newNodeId)
-        } else if ((e.metaKey || e.ctrlKey)) {  // Command/Ctrl + Enter - add child
-          const newNodeId = await treeStateMethods.addNode({
-            title: '',
-            setMetrics: { readinessLevel: 0 },
-          }, nodeId)
-          if (!expandedNodes[nodeId]) {
-            toggleNode(nodeId)
-          }
-          selectNodeById(newNodeId)
-          setEditingNodeId(newNodeId)
-        } else {  // Normal Enter - just save and exit editing
-          setIsEditing(false)
+      // For root node, just close the edit box
+      if (isRoot) {
+        setIsEditing(false)
+        return
+      }
+
+      // Handle node creation based on modifier keys
+      if (e.shiftKey && node.parentId) {  // Shift + Enter - add sibling
+        const newNodeId = await treeStateMethods.addNode({
+          title: '',
+          setMetrics: { readinessLevel: 0 },
+        }, node.parentId)
+        selectNodeById(newNodeId)
+        setEditingNodeId(newNodeId)
+      } else if ((e.metaKey || e.ctrlKey)) {  // Command/Ctrl + Enter - add child
+        // If this is the first child, clear parent's setMetrics
+        if (node.childrenIds.length === 0) {
+          await treeStateMethods.updateNode(nodeId, { setMetrics: {} })
         }
+        const newNodeId = await treeStateMethods.addNode({
+          title: '',
+          setMetrics: { readinessLevel: 0 },
+        }, nodeId)
+        if (!expandedNodes[nodeId]) {
+          toggleNode(nodeId)
+        }
+        selectNodeById(newNodeId)
+        setEditingNodeId(newNodeId)
+      } else {  // Normal Enter - just save and exit editing
+        setIsEditing(false)
       }
     } else if (e.key === 'Escape') {
-      await handleBlankName()  // Handle blank name on escape
-      setIsEditing(false)
+      e.preventDefault()
+      e.stopPropagation()
+      if (justCreated) {
+        const currentIndex = displayOrder.indexOf(nodeId)
+        const nextSelectedId = displayOrder[currentIndex - 1]
+        await treeStateMethods.removeNode(nodeId)
+        if (nextSelectedId) {
+          selectNodeById(nextSelectedId)
+        }
+      } else {
+        setEditValue(node.title)  // Restore original title
+        setIsEditing(false)
+      }
     }
   }
 
@@ -224,6 +228,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
         case 'Enter':
           e.preventDefault()
           if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
+            // If this is the first child, clear parent's setMetrics
+            if (node.childrenIds.length === 0) {
+              await treeStateMethods.updateNode(nodeId, { setMetrics: {} })
+            }
             const newNodeId = await treeStateMethods.addNode({
               title: '',
               setMetrics: { readinessLevel: 0 },
@@ -290,6 +298,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
             toggleNode(nodeId)
           } else if (node.childrenIds.length > 0) {
             selectNodeById(node.childrenIds[0])
+          }
+          break
+
+        case 'Delete':
+        case 'Backspace':
+          e.preventDefault()
+          if (!isRoot) {  // Prevent deleting root node
+            const currentIndex = displayOrder.indexOf(nodeId)
+            const nextSelectedId = displayOrder[currentIndex - 1]
+            await treeStateMethods.removeNode(nodeId)
+            if (nextSelectedId) {
+              selectNodeById(nextSelectedId)
+            }
           }
           break
       }
