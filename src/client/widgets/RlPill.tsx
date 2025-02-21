@@ -13,7 +13,7 @@ export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
     gap: 4,
   }}>
     {level != null ? formatReadinessLevel(level) : 'auto'}
-    {(auto || level == null) && (
+    {auto && (
       <Tooltip title="automatically calculated from children">
         <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />
       </Tooltip>

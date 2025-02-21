@@ -162,12 +162,19 @@ export class FileStore {
       return { readinessLevel: node.setMetrics.readinessLevel }
     }
 
-    // Otherwise, calculate from children
+    // Otherwise, calculate from non-draft children
     const childMetrics = node.childrenIds
-      .map(childId => allNodes[childId]?.calculatedMetrics?.readinessLevel ?? 0)
-      .filter(level => level > 0)
+      .map(childId => allNodes[childId])
+      .filter(child => {
+        if (!child || child.draft) return false  // Skip missing or draft nodes
+        // Include nodes with manually set metrics (even if 0)
+        if (child.setMetrics?.readinessLevel != null) return true
+        // For auto-mode nodes, only include if they have a readiness level > 0
+        return child.calculatedMetrics.readinessLevel > 0
+      })
+      .map(child => child.calculatedMetrics.readinessLevel)
 
-    // If no children have readiness levels > 0, use 0
+    // If no valid children metrics, use 0
     // Otherwise, use the minimum readiness level from children
     return { readinessLevel: childMetrics.length > 0 ? Math.min(...childMetrics) : 0 }
   }
@@ -201,6 +208,7 @@ export class FileStore {
       parentId: parentId || null,
       childrenIds: [],
       calculatedMetrics: { readinessLevel: properties.readinessLevel || 0 },
+      draft: properties.draft ?? false,
       ...(properties.readinessLevel && { setMetrics: { readinessLevel: properties.readinessLevel } }),
       ...(properties.setMetrics && { setMetrics: properties.setMetrics })
     }

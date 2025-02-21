@@ -394,4 +394,194 @@ calculatedMetrics:
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
     expect(nodes[grandparent.id].calculatedMetrics.readinessLevel).toBe(3)
   })
+
+  it('excludes draft nodes from readiness level calculations', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create parent node
+    const parent = await fileStore.createNode({
+      title: 'Parent'
+    }, null)
+
+    // Create non-draft child with RL3
+    const nonDraftChild = await fileStore.createNode({
+      title: 'Non-draft Child',
+      setMetrics: { readinessLevel: 3 }
+    }, parent.id)
+
+    // Create draft child with RL2
+    const draftChild = await fileStore.createNode({
+      title: 'Draft Child',
+      setMetrics: { readinessLevel: 2 },
+      draft: true
+    }, parent.id)
+
+    // Verify state
+    const nodes = await fileStore.getAllNodes()
+    expect(nodes[nonDraftChild.id].calculatedMetrics.readinessLevel).toBe(3)
+    expect(nodes[draftChild.id].calculatedMetrics.readinessLevel).toBe(2)
+    // Parent should only consider the non-draft child's readiness level
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
+  })
+
+  it('treats readinessLevel 0 as a valid manual setting', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create parent node with RL0 explicitly set
+    const parent = await fileStore.createNode({
+      title: 'Parent',
+      setMetrics: { readinessLevel: 0 }
+    }, null)
+
+    // Create child with RL3
+    const child = await fileStore.createNode({
+      title: 'Child',
+      setMetrics: { readinessLevel: 3 }
+    }, parent.id)
+
+    // Verify state
+    let nodes = await fileStore.getAllNodes()
+    // Parent should keep its manually set 0, not use child's 3
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[parent.id].setMetrics?.readinessLevel).toBe(0)
+
+    // Now clear the parent's setMetrics
+    await fileStore.updateNode(parent.id, { setMetrics: {} })
+    nodes = await fileStore.getAllNodes()
+    // Now parent should use child's value
+    expect(nodes[parent.id].setMetrics).toBeUndefined()
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
+  })
+
+  it('properly handles readinessLevel 0 in parent calculations', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create parent node with auto metrics
+    const parent = await fileStore.createNode({
+      title: 'Parent'
+    }, null)
+
+    // Create two children, one with RL0 and one with RL3
+    const child1 = await fileStore.createNode({
+      title: 'Child 1',
+      setMetrics: { readinessLevel: 0 }
+    }, parent.id)
+
+    const child2 = await fileStore.createNode({
+      title: 'Child 2',
+      setMetrics: { readinessLevel: 3 }
+    }, parent.id)
+
+    // Verify state
+    let nodes = await fileStore.getAllNodes()
+    // Parent should use minimum of all children, including RL0
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
+
+    // Update child1 to auto mode
+    await fileStore.updateNode(child1.id, { setMetrics: {} })
+    nodes = await fileStore.getAllNodes()
+    // Now parent should only consider child2's value since child1 is in auto mode
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
+    expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
+  })
+
+  it('distinguishes between readinessLevel 0 and draft mode', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create parent node with auto metrics
+    const parent = await fileStore.createNode({
+      title: 'Parent'
+    }, null)
+
+    // Create child with RL0 (not draft)
+    const child1 = await fileStore.createNode({
+      title: 'Child 1',
+      setMetrics: { readinessLevel: 0 }
+    }, parent.id)
+
+    // Create draft child with RL3
+    const child2 = await fileStore.createNode({
+      title: 'Child 2',
+      setMetrics: { readinessLevel: 3 },
+      draft: true
+    }, parent.id)
+
+    // Create normal child with RL5
+    const child3 = await fileStore.createNode({
+      title: 'Child 3',
+      setMetrics: { readinessLevel: 5 }
+    }, parent.id)
+
+    // Verify state
+    let nodes = await fileStore.getAllNodes()
+
+    // Child1 (RL0) should be included in parent's calculation
+    // Child2 (draft) should be excluded
+    // Child3 (RL5) should be included
+    // Parent should be 0 (min of 0 and 5)
+    expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
+    expect(nodes[child3.id].calculatedMetrics.readinessLevel).toBe(5)
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+
+    // Now set child1 to draft mode
+    await fileStore.updateNode(child1.id, { draft: true })
+    nodes = await fileStore.getAllNodes()
+    // Parent should now only consider child3's value since both child1 and child2 are draft
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(5)
+  })
+
+  it('handles complex readinessLevel 0 scenarios', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create a three-level hierarchy
+    const root = await fileStore.createNode({
+      title: 'Root',
+      setMetrics: { readinessLevel: 0 }  // Explicitly set to 0
+    }, null)
+
+    const middle = await fileStore.createNode({
+      title: 'Middle',
+      setMetrics: { readinessLevel: 3 }
+    }, root.id)
+
+    const leaf1 = await fileStore.createNode({
+      title: 'Leaf 1',
+      setMetrics: { readinessLevel: 0 }  // Explicitly set to 0
+    }, middle.id)
+
+    const leaf2 = await fileStore.createNode({
+      title: 'Leaf 2',
+      setMetrics: { readinessLevel: 5 }
+    }, middle.id)
+
+    // Verify initial state
+    let nodes = await fileStore.getAllNodes()
+    expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)    // Manually set to 0
+    expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(3)  // Manually set to 3
+    expect(nodes[leaf1.id].calculatedMetrics.readinessLevel).toBe(0)   // Manually set to 0
+    expect(nodes[leaf2.id].calculatedMetrics.readinessLevel).toBe(5)   // Manually set to 5
+
+    // Clear middle node's setMetrics
+    await fileStore.updateNode(middle.id, { setMetrics: {} })
+    nodes = await fileStore.getAllNodes()
+    // Middle should now calculate from children (min of 0 and 5)
+    expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(0)
+    // Root should still be 0 (manually set)
+    expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
+
+    // Clear root's setMetrics
+    await fileStore.updateNode(root.id, { setMetrics: {} })
+    nodes = await fileStore.getAllNodes()
+    // Root should now calculate from middle node
+    expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
+  })
 })

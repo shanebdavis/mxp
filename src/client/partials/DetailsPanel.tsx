@@ -273,7 +273,7 @@ export const DetailsPanel = ({
                 <div className="field-label">{readinessColumnHeader}</div>
                 <EditableRlPill
                   readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
-                  auto={!selectedNode.setMetrics?.readinessLevel}
+                  auto={selectedNode.setMetrics?.readinessLevel == null}
                   onChange={async level => {
                     await treeStateMethods.updateNode(selectedNode.id, {
                       setMetrics: { readinessLevel: level ?? null }
