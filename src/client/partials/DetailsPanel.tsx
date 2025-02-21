@@ -15,6 +15,21 @@ interface CodeProps {
   children?: React.ReactNode
 }
 
+interface MarkdownNodePosition {
+  start: { offset: number }
+  end: { offset: number }
+}
+
+interface MarkdownNode {
+  position?: MarkdownNodePosition
+  parent?: { position?: MarkdownNodePosition }
+}
+
+interface MarkdownProps {
+  node?: MarkdownNode
+  children?: React.ReactNode
+}
+
 const styles = {
   rightPanel: {
     gridArea: 'right',
@@ -49,6 +64,32 @@ const styles = {
   description: {
     fontFamily: 'inherit',
     resize: 'none' as const,
+    flex: 1,
+    minHeight: 0,
+    fontSize: '13px',
+  },
+  descriptionContainer: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+  descriptionPreview: {
+    flex: 1,
+    overflow: 'auto',
+    padding: 0,
+    fontSize: '13px',
+  },
+  markdownParagraph: {
+    margin: '0.5em 0',
+    fontSize: '13px',
+  },
+  markdownFirstParagraph: {
+    margin: '0 0 0.5em 0',
+  },
+  markdownLastParagraph: {
+    margin: '0.5em 0 0 0',
   },
   fieldLabel: {
     color: 'var(--text-secondary)',
@@ -56,6 +97,32 @@ const styles = {
     fontSize: '13px',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
+  },
+  heading: {
+    margin: '0.5em 0',
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+  },
+  h1: {
+    fontSize: '16px',
+  },
+  h2: {
+    fontSize: '14px',
+  },
+  h3: {
+    fontSize: '13px',
+  },
+  h4: {
+    fontSize: '12px',
+  },
+  h5: {
+    fontSize: '12px',
+    fontWeight: 500,
+  },
+  h6: {
+    fontSize: '12px',
+    fontWeight: 500,
+    fontStyle: 'italic',
   },
 }
 
@@ -104,6 +171,30 @@ export const DetailsPanel = ({
   }
 
   const markdownComponents: Components = {
+    h1: ({ children }) => (
+      <h3 style={{ ...styles.heading, ...styles.h1 }}>{children}</h3>
+    ),
+    h2: ({ children }) => (
+      <h4 style={{ ...styles.heading, ...styles.h2 }}>{children}</h4>
+    ),
+    h3: ({ children }) => (
+      <h5 style={{ ...styles.heading, ...styles.h3 }}>{children}</h5>
+    ),
+    h4: ({ children }) => (
+      <h6 style={{ ...styles.heading, ...styles.h4 }}>{children}</h6>
+    ),
+    h5: ({ children }) => (
+      <div style={{ ...styles.heading, ...styles.h5 }}>{children}</div>
+    ),
+    h6: ({ children }) => (
+      <div style={{ ...styles.heading, ...styles.h6 }}>{children}</div>
+    ),
+    p: ({ children }) => (
+      <p style={styles.markdownParagraph}>{children}</p>
+    ),
+    text: ({ children }) => (
+      <span style={{ fontSize: '13px' }}>{children}</span>
+    ),
     code: ({ inline, className, children, ...props }: CodeProps) => {
       const match = /language-(\w+)/.exec(className || '')
       return !inline && match ? (
@@ -173,7 +264,7 @@ export const DetailsPanel = ({
                   </ol>
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={styles.descriptionContainer}>
                 <div className="field-label">Description</div>
                 {isEditingDescription ? (
                   <textarea
@@ -189,14 +280,15 @@ export const DetailsPanel = ({
                 ) : (
                   <div
                     onClick={handleDescriptionClick}
-                    className={`details-text-container preview${!selectedNode.description ? ' empty' : ''}`}
+                    className={!selectedNode.description ? 'placeholder' : undefined}
+                    style={styles.descriptionPreview}
                   >
                     {selectedNode.description ? (
                       <ReactMarkdown components={markdownComponents}>
                         {selectedNode.description}
                       </ReactMarkdown>
                     ) : (
-                      <span className="placeholder">Add a description... (Markdown supported)</span>
+                      <span>Add a description... (Markdown supported)</span>
                     )}
                   </div>
                 )}

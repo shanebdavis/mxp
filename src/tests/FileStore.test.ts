@@ -39,7 +39,8 @@ describe('FileStore', () => {
       parentId: null,
       childrenIds: [],
       setMetrics: { readinessLevel: 5 },
-      calculatedMetrics: { readinessLevel: 5 }
+      calculatedMetrics: { readinessLevel: 5 },
+      filename: 'My First Node.md'
     })
 
     // Verify the file exists and has the correct name

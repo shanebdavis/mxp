@@ -25,9 +25,10 @@ const getDisplayOrder = (nodes: TreeNodeMap, rootNodeId: string, expandedNodes: 
 
   const addToResult = (nodeId: string, level: number) => {
     const node = nodes[nodeId]
-    result.push({ nodeId, level, itemNumber: node.parentId ? nodes[node.parentId].childrenIds.indexOf(nodeId) + 1 : 1 })
+    if (!node) return
+    result.push({ nodeId, level, itemNumber: node.parentId && nodes[node.parentId] ? nodes[node.parentId].childrenIds.indexOf(nodeId) + 1 : 1 })
     if (expandedNodes[nodeId]) {
-      nodes[nodeId].childrenIds.forEach(childId => addToResult(childId, level + 1))
+      node.childrenIds.forEach(childId => addToResult(childId, level + 1))
     }
   }
   addToResult(rootNodeId, 0)

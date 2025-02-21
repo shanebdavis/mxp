@@ -12,6 +12,7 @@ interface NodeMetadata {
   parentId?: string | null
   setMetrics?: Record<string, number>
   calculatedMetrics?: { readinessLevel: number }
+  filename?: string  // The name of the file storing this node
 }
 
 export class FileStore {
@@ -25,8 +26,7 @@ export class FileStore {
     }
   }
 
-  private getFilePath(title: string): string {
-    // Use "untitled" for empty titles
+  private getFilePath(title: string, id?: string): string {
     const fileName = title.trim() || 'untitled'
     return path.join(this.baseDir, `${fileName}.md`)
   }
@@ -41,9 +41,12 @@ export class FileStore {
     const hasTitle = 'title' in metadata
     const title = hasTitle ? (metadata.title ?? '') : fallbackTitle
 
+    const id = metadata.id || uuid() // generate a new id if missing
+    const filename = metadata.filename || (title.trim() || 'untitled') + '.md'
     const node = {
-      id: metadata.id || uuid(), // generate a new id if missing
+      id,
       title,
+      filename,
       description: description.trim(),
       childrenIds: Array.isArray(metadata.childrenIds) ? metadata.childrenIds : [],
       parentId: metadata.parentId || null,
@@ -53,6 +56,10 @@ export class FileStore {
 
     // If any data was missing, heal the file by writing it back
     if (!metadata.id || !hasTitle || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics) {
+      // If we're healing a file without an ID, rename it to use the ID
+      if (!metadata.id) {
+        await fs.rename(filePath, this.getFilePath(node.title, node.id))
+      }
       await this.writeNodeFile(node)
     }
 
@@ -84,6 +91,7 @@ export class FileStore {
     const metadata = cleanObject({
       id: node.id,
       title: node.title, // Always include title, even if empty string
+      filename: node.filename, // Always include filename
       childrenIds: node.childrenIds,
       parentId: node.parentId || undefined,
       setMetrics: node.setMetrics,
@@ -97,7 +105,7 @@ export class FileStore {
       node.description || ''
     ].join('\n')
 
-    await fs.writeFile(this.getFilePath(node.title), content)
+    await fs.writeFile(this.getFilePath(node.title, node.id), content)
   }
 
   private async findNodeById(nodeId: string): Promise<[TreeNode, string]> {
@@ -170,6 +178,7 @@ export class FileStore {
       childrenIds: [],
       parentId: parentId || null,
       calculatedMetrics: { readinessLevel: 0 },
+      filename: `${properties.title || 'untitled'}.md`,
       ...(properties.readinessLevel && { setMetrics: { readinessLevel: properties.readinessLevel } }),
       ...(properties.setMetrics && { setMetrics: properties.setMetrics })
     }
@@ -201,7 +210,7 @@ export class FileStore {
   }
 
   async updateNode(nodeId: string, properties: Partial<TreeNodeProperties>): Promise<TreeNode> {
-    const [node, filePath] = await this.findNodeById(nodeId)
+    const [node] = await this.findNodeById(nodeId)
 
     // Handle setMetrics updates
     let updatedSetMetrics = node.setMetrics
@@ -221,10 +230,14 @@ export class FileStore {
       setMetrics: updatedSetMetrics
     }
 
-    // Write the node first
-    if (properties.title && properties.title !== node.title) {
-      await fs.unlink(filePath)
+    // Handle file rename if title changed
+    if (properties.title !== undefined && properties.title !== node.title) {
+      const oldPath = this.getFilePath(node.title, node.id)
+      const newPath = this.getFilePath(properties.title, node.id)
+      await fs.rename(oldPath, newPath)
     }
+
+    // Write the node
     await this.writeNodeFile(updatedNode)
 
     // Now calculate and update metrics
@@ -330,23 +343,20 @@ export class FileStore {
           parentId: rootNode.id
         }
         healedNodes[node.id] = updatedNode
-        rootNode.childrenIds.push(node.id)
+        if (!rootNode.childrenIds.includes(node.id)) {
+          rootNode.childrenIds.push(node.id)
+        }
 
         // Update the file with the new parent ID
-        const filePath = path.join(this.baseDir, this.getFilename(node.title))
-        const content = await fs.readFile(filePath, 'utf-8')
-        const [, frontMatter = '', description = ''] = content.split('---\n')
-        const metadata = yaml.load(frontMatter) as Partial<NodeMetadata> || {}
-        metadata.parentId = rootNode.id
-
-        const newContent = [
-          '---',
-          yaml.dump(metadata, { quotingType: '"' }),
-          '---',
-          description
-        ].join('\n')
-
-        await fs.writeFile(filePath, newContent)
+        await this.writeNodeFile(updatedNode)
+      } else {
+        // Parent exists, make sure this node is in parent's childrenIds
+        const parent = healedNodes[node.parentId]
+        if (!parent.childrenIds.includes(node.id)) {
+          needsHealing = true
+          parent.childrenIds.push(node.id)
+          await this.writeNodeFile(parent)
+        }
       }
     }
 
@@ -360,6 +370,29 @@ export class FileStore {
 
   private getFilename(title: string): string {
     return (title || 'untitled') + '.md'
+  }
+
+  private async healChildrenIds(nodes: Record<string, TreeNode>): Promise<Record<string, TreeNode>> {
+    const healedNodes = { ...nodes }
+    let needsHealing = false
+
+    // First, collect all valid node IDs
+    const validNodeIds = new Set(Object.keys(nodes))
+
+    // Then, for each node, remove any childrenIds that don't exist
+    for (const node of Object.values(healedNodes)) {
+      const validChildren = node.childrenIds.filter(id => validNodeIds.has(id))
+      if (validChildren.length !== node.childrenIds.length) {
+        needsHealing = true
+        healedNodes[node.id] = {
+          ...node,
+          childrenIds: validChildren
+        }
+        await this.writeNodeFile(healedNodes[node.id])
+      }
+    }
+
+    return healedNodes
   }
 
   async getAllNodes(): Promise<Record<string, TreeNode>> {
@@ -376,7 +409,8 @@ export class FileStore {
       nodes[node.id] = node
     }
 
-    // Heal any invalid parentIds
-    return this.healParentIds(nodes)
+    // Heal any invalid parentIds and childrenIds
+    const healedParents = await this.healParentIds(nodes)
+    return this.healChildrenIds(healedParents)
   }
 }

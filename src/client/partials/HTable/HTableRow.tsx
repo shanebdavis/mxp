@@ -169,8 +169,15 @@ export const HTableRow: FC<TreeNodeProps> = ({
           return
         }
 
-        // Handle node creation for non-root nodes
-        if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
+        // Handle node creation based on modifier keys
+        if (e.shiftKey && node.parentId) {  // Shift + Enter - add sibling
+          const newNodeId = await treeStateMethods.addNode({
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, node.parentId)
+          selectNodeById(newNodeId)
+          setEditingNodeId(newNodeId)
+        } else if ((e.metaKey || e.ctrlKey)) {  // Command/Ctrl + Enter - add child
           const newNodeId = await treeStateMethods.addNode({
             title: '',
             setMetrics: { readinessLevel: 0 },
@@ -180,13 +187,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           }
           selectNodeById(newNodeId)
           setEditingNodeId(newNodeId)
-        } else if (node.parentId) {  // Regular Enter - add sibling (only if we have a parent)
-          const newNodeId = await treeStateMethods.addNode({
-            title: '',
-            setMetrics: { readinessLevel: 0 },
-          }, node.parentId)
-          selectNodeById(newNodeId)
-          setEditingNodeId(newNodeId)
+        } else {  // Normal Enter - just save and exit editing
+          setIsEditing(false)
         }
       }
     } else if (e.key === 'Escape') {
@@ -221,7 +223,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
         case 'Enter':
           e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter
+          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
             const newNodeId = await treeStateMethods.addNode({
               title: '',
               setMetrics: { readinessLevel: 0 },
@@ -232,7 +234,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             }
             selectNodeById(newNodeId)
             setEditingNodeId(newNodeId)
-          } else {  // Regular Enter - add sibling
+          } else if (e.shiftKey) {  // Shift + Enter - add sibling
             if (node.parentId) {  // Only if we have a parent (not root)
               const newNodeId = await treeStateMethods.addNode({
                 title: '',
@@ -242,6 +244,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
               selectNodeById(newNodeId)
               setEditingNodeId(newNodeId)
             }
+          } else {  // Regular Enter - start editing current node
+            setIsEditing(true)
           }
           break
 

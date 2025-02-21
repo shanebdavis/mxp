@@ -17,6 +17,7 @@ export interface TreeNode extends TreeNodeProperties {
   parentId: string | null
   childrenIds: string[]
   calculatedMetrics: Metrics
+  filename: string  // The name of the file storing this node
 }
 
 export type TreeNodeMap = Record<string, TreeNode>
@@ -91,7 +92,8 @@ export const createNode = (
   id: uuid(),
   parentId,
   childrenIds: [],
-  calculatedMetrics: { readinessLevel: 0 }
+  calculatedMetrics: { readinessLevel: 0 },
+  filename: `${properties.title || 'untitled'}.md`
 })
 
 const getChildrenIdsWithInsertion = (childrenIds: string[], nodeId: string, insertAtIndex?: number | null): string[] =>

@@ -133,7 +133,7 @@ const App = () => {
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Tree Editor</h1>
+        <h1 style={styles.title}>Expedition Map</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <div style={{ display: 'flex', gap: 4 }}>
             <Tooltip title="Add Child">
