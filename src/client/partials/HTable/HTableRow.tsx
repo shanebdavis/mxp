@@ -381,7 +381,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       onDrop={handleDrop}
     >
       <td style={styles.cell}>
-        <div style={{ ...styles.nameCell, paddingLeft: level * 16 }}>
+        <div style={{ ...styles.nameCell, paddingLeft: level * 21 }}>
           <div style={{ width: 24, display: 'inline-flex', justifyContent: 'center' }}>
             {node.childrenIds.length > 0 && (
               <button

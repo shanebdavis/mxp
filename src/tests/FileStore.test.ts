@@ -40,7 +40,8 @@ describe('FileStore', () => {
       childrenIds: [],
       setMetrics: { readinessLevel: 5 },
       calculatedMetrics: { readinessLevel: 5 },
-      filename: 'My First Node.md'
+      filename: 'My First Node.md',
+      draft: false
     })
 
     // Verify the file exists and has the correct name
@@ -356,5 +357,41 @@ calculatedMetrics:
     // Verify the title was added to the file
     const healedContent = await fs.readFile(path.join(testDir, 'test-file.md'), 'utf-8')
     expect(healedContent).toContain('\ntitle: test-file\n')
+  })
+
+  it('propagates readiness level changes through multiple generations', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create a three-generation hierarchy
+    const grandparent = await fileStore.createNode({
+      title: 'Grandparent'
+    }, null)
+
+    const parent = await fileStore.createNode({
+      title: 'Parent'
+    }, grandparent.id)
+
+    const child = await fileStore.createNode({
+      title: 'Child',
+      setMetrics: { readinessLevel: 2 }
+    }, parent.id)
+
+    // Verify initial state
+    let nodes = await fileStore.getAllNodes()
+    expect(nodes[child.id].calculatedMetrics.readinessLevel).toBe(2)
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(2)
+    expect(nodes[grandparent.id].calculatedMetrics.readinessLevel).toBe(2)
+
+    // Update child's readiness level
+    await fileStore.updateNode(child.id, {
+      setMetrics: { readinessLevel: 3 }
+    })
+
+    // Verify updated state
+    nodes = await fileStore.getAllNodes()
+    expect(nodes[child.id].calculatedMetrics.readinessLevel).toBe(3)
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
+    expect(nodes[grandparent.id].calculatedMetrics.readinessLevel).toBe(3)
   })
 })

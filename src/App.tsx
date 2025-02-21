@@ -215,18 +215,24 @@ const App = () => {
 
       <main style={styles.main}>
         <div>
-          <HTable
-            nodes={nodes}
-            rootNodeId={rootNodeId}
-            selectedNode={selectedNode}
-            selectNodeById={selectNodeById}
-            treeStateMethods={treeStateMethods}
-            editingNodeId={editingNodeId}
-            setEditingNodeId={setEditingNodeId}
-            indexInParentMap={indexInParentMap}
-            nameColumnHeader="Problem"
-            readinessColumnHeader="Solution Readiness"
-          />
+          {rootNodeId ? (
+            <HTable
+              nodes={nodes}
+              rootNodeId={rootNodeId}
+              selectedNode={selectedNode}
+              selectNodeById={selectNodeById}
+              treeStateMethods={treeStateMethods}
+              editingNodeId={editingNodeId}
+              setEditingNodeId={setEditingNodeId}
+              indexInParentMap={indexInParentMap}
+              nameColumnHeader="Problem"
+              readinessColumnHeader="Solution Readiness"
+            />
+          ) : (
+            <div style={{ padding: 20, color: 'var(--text-secondary)' }}>
+              No nodes found. Create your first node to get started.
+            </div>
+          )}
         </div>
       </main>
 

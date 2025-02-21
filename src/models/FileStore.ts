@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
-import type { TreeNode, TreeNodeProperties } from './TreeNode'
+import { TreeNode, TreeNodeProperties, Metrics } from './TreeNode'
 
 interface NodeMetadata {
   id?: string
@@ -27,9 +27,9 @@ export class FileStore {
     }
   }
 
-  private getFilePath(title: string, id?: string): string {
-    const fileName = title.trim() || 'untitled'
-    return path.join(this.baseDir, `${fileName}.md`)
+  private getFilePath(title: string | undefined | null, id?: string): string {
+    const fileName = (typeof title === 'string' ? title.trim() : '') || 'untitled'
+    return path.join(this.baseDir, `${fileName.replace(/[<>:"/\\|?*]/g, '_')}.md`)
   }
 
   private async readNodeFile(filePath: string): Promise<TreeNode> {
@@ -137,8 +137,8 @@ export class FileStore {
     return [...filteredIds, nodeId]
   }
 
-  private getChildrenIdsWithRemoval(childrenIds: string[] | undefined, nodeId: string): string[] {
-    return (childrenIds || []).filter(id => id !== nodeId)
+  private getChildrenIdsWithRemoval(childrenIds: string[], nodeId: string): string[] {
+    return childrenIds.filter(id => id !== nodeId)
   }
 
   private async isParentOf(parentId: string, childId: string): Promise<boolean> {
@@ -153,57 +153,68 @@ export class FileStore {
     }
   }
 
-  private async calculateMetrics(node: TreeNode, nodes?: Record<string, TreeNode>): Promise<{ readinessLevel: number }> {
-    // If this node has a manually set value, use it
+  private async calculateMetrics(nodeId: string, allNodes: Record<string, TreeNode>): Promise<Metrics> {
+    const node = allNodes[nodeId]
+    if (!node) throw new Error(`Node not found: ${nodeId}`)
+
+    // If node has setMetrics, use those values directly
     if (node.setMetrics?.readinessLevel != null) {
       return { readinessLevel: node.setMetrics.readinessLevel }
     }
 
-    // Otherwise calculate from children
-    if (node.childrenIds.length > 0) {
-      const childNodes = nodes
-        ? node.childrenIds.map(id => nodes[id]).filter(node => !node.draft)
-        : await Promise.all(
-          node.childrenIds.map(id => this.findNodeById(id).then(([node]) => node))
-        ).then(nodes => nodes.filter(node => !node.draft))
+    // Otherwise, calculate from children
+    const childMetrics = node.childrenIds
+      .map(childId => allNodes[childId]?.calculatedMetrics?.readinessLevel ?? 0)
+      .filter(level => level > 0)
 
-      // If all children are draft, treat as a leaf node
-      if (childNodes.length === 0) {
-        return { readinessLevel: 0 }
-      }
-
-      return {
-        readinessLevel: Math.min(...childNodes.map(child => child.calculatedMetrics.readinessLevel))
-      }
-    }
-
-    return { readinessLevel: 0 }
+    // If no children have readiness levels > 0, use 0
+    // Otherwise, use the minimum readiness level from children
+    return { readinessLevel: childMetrics.length > 0 ? Math.min(...childMetrics) : 0 }
   }
 
-  async createNode(properties: TreeNodeProperties, parentId: string | null, insertAtIndex?: number | null): Promise<TreeNode> {
+  private async updateNodeAndParentMetrics(nodeId: string, allNodes: Record<string, TreeNode>): Promise<void> {
+    const node = allNodes[nodeId]
+    if (!node) return
+
+    // Calculate new metrics for this node
+    const newMetrics = await this.calculateMetrics(nodeId, allNodes)
+
+    // Always update the node's metrics and write it back
+    const updatedNode = { ...node, calculatedMetrics: newMetrics }
+    await this.writeNodeFile(updatedNode)
+    allNodes[nodeId] = updatedNode
+
+    // If parent exists, update parent
+    if (node.parentId) {
+      await this.updateNodeAndParentMetrics(node.parentId, allNodes)
+    }
+  }
+
+  async createNode(properties: TreeNodeProperties, parentId: string | null = null, insertAtIndex?: number | null): Promise<TreeNode> {
     await this.ensureBaseDir()
 
     const node: TreeNode = {
       id: uuid(),
-      title: properties.title,
+      title: properties.title || '',
       description: properties.description || '',
-      childrenIds: [],
-      parentId: parentId || null,
-      calculatedMetrics: { readinessLevel: 0 },
       filename: `${properties.title || 'untitled'}.md`,
+      parentId: parentId || null,
+      childrenIds: [],
+      calculatedMetrics: { readinessLevel: properties.readinessLevel || 0 },
       ...(properties.readinessLevel && { setMetrics: { readinessLevel: properties.readinessLevel } }),
       ...(properties.setMetrics && { setMetrics: properties.setMetrics })
     }
 
     // Calculate initial metrics for the new node
-    node.calculatedMetrics = await this.calculateMetrics(node)
+    const newMetrics = await this.calculateMetrics(node.id, { [node.id]: node })
+    node.calculatedMetrics = newMetrics
 
     // Write the node first
     await this.writeNodeFile(node)
 
-    // If there's a parent, update its childrenIds and metrics
-    if (parentId) {
-      const [parentNode] = await this.findNodeById(parentId)
+    // If it has a parent, update parent's childrenIds
+    if (node.parentId) {
+      const [parentNode] = await this.findNodeById(node.parentId)
       const updatedParent = {
         ...parentNode,
         childrenIds: this.getChildrenIdsWithInsertion(parentNode.childrenIds, node.id, insertAtIndex)
@@ -214,8 +225,7 @@ export class FileStore {
 
       // Now get all nodes to calculate metrics accurately
       const allNodes = await this.getAllNodes()
-      updatedParent.calculatedMetrics = await this.calculateMetrics(updatedParent, allNodes)
-      await this.writeNodeFile(updatedParent)
+      await this.updateNodeAndParentMetrics(parentNode.id, allNodes)
     }
 
     return node
@@ -249,38 +259,42 @@ export class FileStore {
       await fs.rename(oldPath, newPath)
     }
 
-    // Write the node
-    await this.writeNodeFile(updatedNode)
+    // Get all nodes to calculate metrics accurately
+    const allNodes = await this.getAllNodes()
+    allNodes[nodeId] = updatedNode
 
-    // Now calculate and update metrics
-    updatedNode.calculatedMetrics = await this.calculateMetrics(updatedNode)
-    await this.writeNodeFile(updatedNode)
+    // Calculate new metrics for this node and its ancestors
+    await this.updateNodeAndParentMetrics(nodeId, allNodes)
 
-    // Update parent's metrics if it exists
-    if (updatedNode.parentId) {
-      const [parentNode] = await this.findNodeById(updatedNode.parentId)
-      const updatedParent = {
-        ...parentNode,
-        calculatedMetrics: await this.calculateMetrics(parentNode)
-      }
-      await this.writeNodeFile(updatedParent)
-    }
-
-    return updatedNode
+    // Get the final node state after metrics update
+    const [finalNode] = await this.findNodeById(nodeId)
+    return finalNode
   }
 
-  async setNodeParent(nodeId: string, newParentId: string, insertAtIndex?: number | null): Promise<TreeNode> {
-    // Validate the move
-    if (await this.isParentOf(nodeId, newParentId)) {
-      throw new Error('Cannot move a node to one of its descendants')
+  async setNodeParent(nodeId: string, newParentId: string | null): Promise<void> {
+    const [node] = await this.findNodeById(nodeId)
+    const oldParentId = node.parentId
+
+    // If new parent is not null, check for circular reference
+    if (newParentId) {
+      const [newParent] = await this.findNodeById(newParentId)
+      let currentParent = newParent
+      while (currentParent.parentId) {
+        if (currentParent.parentId === nodeId) {
+          throw new Error('Cannot move a node to one of its descendants')
+        }
+        const [parent] = await this.findNodeById(currentParent.parentId)
+        currentParent = parent
+      }
     }
 
-    const [node] = await this.findNodeById(nodeId)
-    const [newParent] = await this.findNodeById(newParentId)
+    // Update node's parentId
+    const updatedNode = { ...node, parentId: newParentId }
+    await this.writeNodeFile(updatedNode)
 
-    // Remove from old parent if it exists
-    if (node.parentId) {
-      const [oldParent] = await this.findNodeById(node.parentId)
+    // Remove from old parent's childrenIds if it had a parent
+    if (oldParentId) {
+      const [oldParent] = await this.findNodeById(oldParentId)
       const updatedOldParent = {
         ...oldParent,
         childrenIds: this.getChildrenIdsWithRemoval(oldParent.childrenIds, nodeId)
@@ -288,50 +302,52 @@ export class FileStore {
       await this.writeNodeFile(updatedOldParent)
     }
 
-    // Add to new parent
-    const updatedNewParent = {
-      ...newParent,
-      childrenIds: this.getChildrenIdsWithInsertion(newParent.childrenIds, nodeId, insertAtIndex)
+    // Add to new parent's childrenIds if it has a new parent
+    if (newParentId) {
+      const [newParent] = await this.findNodeById(newParentId)
+      const updatedNewParent = {
+        ...newParent,
+        childrenIds: this.getChildrenIdsWithInsertion(newParent.childrenIds, nodeId)
+      }
+      await this.writeNodeFile(updatedNewParent)
     }
-    await this.writeNodeFile(updatedNewParent)
 
-    // Update node's parent reference
-    const updatedNode = {
-      ...node,
-      parentId: newParentId
+    // Update metrics for both old and new parent chains
+    const allNodes = await this.getAllNodes()
+    if (oldParentId) {
+      await this.updateNodeAndParentMetrics(oldParentId, allNodes)
     }
-    await this.writeNodeFile(updatedNode)
-
-    return updatedNode
+    if (newParentId) {
+      await this.updateNodeAndParentMetrics(newParentId, allNodes)
+    }
   }
 
   async deleteNode(nodeId: string): Promise<void> {
     const [node, filePath] = await this.findNodeById(nodeId)
 
-    // Remove from parent's childrenIds if it has a parent
+    // If there's a parent, update its childrenIds first
     if (node.parentId) {
       const [parentNode] = await this.findNodeById(node.parentId)
       const updatedParent = {
         ...parentNode,
-        childrenIds: this.getChildrenIdsWithRemoval(parentNode.childrenIds, nodeId)
+        childrenIds: parentNode.childrenIds.filter(id => id !== nodeId)
       }
-
-      // Write parent with updated childrenIds
-      await this.writeNodeFile(updatedParent)
-
-      // Now get all nodes to calculate metrics accurately
-      const allNodes = await this.getAllNodes()
-      updatedParent.calculatedMetrics = await this.calculateMetrics(updatedParent, allNodes)
       await this.writeNodeFile(updatedParent)
     }
 
     // Delete all descendant nodes recursively
-    for (const childId of node.childrenIds) {
+    for (const childId of [...node.childrenIds]) {
       await this.deleteNode(childId)
     }
 
     // Delete the node file
     await fs.unlink(filePath)
+
+    // Now get all nodes to calculate metrics accurately
+    if (node.parentId) {
+      const allNodes = await this.getAllNodes()
+      await this.updateNodeAndParentMetrics(node.parentId, allNodes)
+    }
   }
 
   private async healParentIds(nodes: Record<string, TreeNode>): Promise<Record<string, TreeNode>> {
