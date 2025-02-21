@@ -92,7 +92,7 @@ export class FileStore {
 
     const content = [
       '---',
-      yaml.dump(metadata),
+      yaml.dump(metadata, { quotingType: '"' }), // Force double quotes
       '---',
       node.description || ''
     ].join('\n')
@@ -290,6 +290,13 @@ export class FileStore {
         ...parentNode,
         childrenIds: this.getChildrenIdsWithRemoval(parentNode.childrenIds, nodeId)
       }
+
+      // Write parent with updated childrenIds
+      await this.writeNodeFile(updatedParent)
+
+      // Now get all nodes to calculate metrics accurately
+      const allNodes = await this.getAllNodes()
+      updatedParent.calculatedMetrics = await this.calculateMetrics(updatedParent, allNodes)
       await this.writeNodeFile(updatedParent)
     }
 
@@ -318,9 +325,28 @@ export class FileStore {
       // If parent doesn't exist, attach to root
       if (!healedNodes[node.parentId]) {
         needsHealing = true
-        node.parentId = rootNode.id
+        const updatedNode = {
+          ...node,
+          parentId: rootNode.id
+        }
+        healedNodes[node.id] = updatedNode
         rootNode.childrenIds.push(node.id)
-        await this.writeNodeFile(node)
+
+        // Update the file with the new parent ID
+        const filePath = path.join(this.baseDir, this.getFilename(node.title))
+        const content = await fs.readFile(filePath, 'utf-8')
+        const [, frontMatter = '', description = ''] = content.split('---\n')
+        const metadata = yaml.load(frontMatter) as Partial<NodeMetadata> || {}
+        metadata.parentId = rootNode.id
+
+        const newContent = [
+          '---',
+          yaml.dump(metadata, { quotingType: '"' }),
+          '---',
+          description
+        ].join('\n')
+
+        await fs.writeFile(filePath, newContent)
       }
     }
 
@@ -330,6 +356,10 @@ export class FileStore {
     }
 
     return healedNodes
+  }
+
+  private getFilename(title: string): string {
+    return (title || 'untitled') + '.md'
   }
 
   async getAllNodes(): Promise<Record<string, TreeNode>> {

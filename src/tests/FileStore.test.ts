@@ -292,7 +292,7 @@ describe('FileStore', () => {
     }, null)
 
     // Create node with invalid parent
-    await fs.writeFile(path.join(testDir, 'orphan.md'), `---
+    await fs.writeFile(path.join(testDir, 'Orphan Node.md'), `---
 id: ${uuid()}
 title: Orphan Node
 parentId: invalid-parent-id
@@ -314,7 +314,7 @@ calculatedMetrics:
     expect(nodes[root.id].childrenIds).toContain(orphan?.id)
 
     // Verify the orphan's file was updated
-    const fileContent = await fs.readFile(path.join(testDir, 'orphan.md'), 'utf-8')
+    const fileContent = await fs.readFile(path.join(testDir, 'Orphan Node.md'), 'utf-8')
     expect(fileContent).toContain(`parentId: ${root.id}`)
   })
 
