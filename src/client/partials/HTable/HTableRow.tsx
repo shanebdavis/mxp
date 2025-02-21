@@ -234,6 +234,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
           }
           break
 
+        case ' ':  // Space key - start editing current node
+          e.preventDefault()
+          setIsEditing(true)
+          break
+
         case 'Enter':
           e.preventDefault()
           if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
@@ -251,29 +256,20 @@ export const HTableRow: FC<TreeNodeProps> = ({
             }
             selectNodeById(newNodeId)
             setEditingNodeId(newNodeId)
-          } else if (e.shiftKey) {  // Shift + Enter - add sibling
-            if (node.parentId) {  // Only if we have a parent (not root)
-              const newNodeId = await treeStateMethods.addNode({
-                title: '',
-                setMetrics: { readinessLevel: 0 },
-              }, node.parentId)
+          } else if (node.parentId) {  // Regular Enter - add sibling (if not root)
+            const newNodeId = await treeStateMethods.addNode({
+              title: '',
+              setMetrics: { readinessLevel: 0 },
+            }, node.parentId)
 
-              selectNodeById(newNodeId)
-              setEditingNodeId(newNodeId)
-            }
-          } else {  // Regular Enter - start editing current node
-            setIsEditing(true)
+            selectNodeById(newNodeId)
+            setEditingNodeId(newNodeId)
           }
           break
 
         case 'Escape':
           setEditValue(node.title)
           setIsEditing(false)
-          break
-
-        case ' ':  // Space key
-          e.preventDefault()
-          toggleNode(nodeId)
           break
 
         case 'ArrowUp':
