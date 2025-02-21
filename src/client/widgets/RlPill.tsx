@@ -67,11 +67,12 @@ export const RlPillWithDropdown = ({ level, handleRLSelect }:
   </div>
 
 interface EditableRlPillProps {
-  readinessLevel: number
+  readinessLevel: number | undefined
+  auto?: boolean
   onChange: (level: number | undefined) => Promise<void>
 }
 
-export const EditableRlPill: React.FC<EditableRlPillProps> = ({ readinessLevel, onChange }) => {
+export const EditableRlPill: React.FC<EditableRlPillProps> = ({ readinessLevel, auto, onChange }) => {
   const [isEditingRL, setIsEditingRL] = useState(false)
   const handleRLClick = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -105,7 +106,7 @@ export const EditableRlPill: React.FC<EditableRlPillProps> = ({ readinessLevel, 
     }}
   >
     <div style={{ position: 'relative' }} ref={rlRef}>
-      <RlPill level={readinessLevel} auto={readinessLevel === 0} />
+      <RlPill level={readinessLevel} auto={auto} />
       {isEditingRL && <RlPillWithDropdown level={readinessLevel} handleRLSelect={handleRLSelect} />}
     </div>
   </div>

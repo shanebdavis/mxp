@@ -4,6 +4,7 @@ import path from 'path'
 import os from 'os'
 import { FileStore } from '../models/FileStore'
 import { useTempDir } from './helpers/tempDir'
+import { v4 as uuid } from 'uuid'
 
 describe('FileStore', () => {
   const { useTemp } = useTempDir({ prefix: 'filestore-test-' })
@@ -279,5 +280,80 @@ describe('FileStore', () => {
     expect(fileContent).toMatch(/^---\n/)
     expect(fileContent).toMatch(/\nid: [0-9a-f-]{36}\n/)
     expect(fileContent).toMatch(/\ntitle: test-node\n/)
+  })
+
+  it('heals invalid parentIds by attaching to root', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create root node
+    const root = await fileStore.createNode({
+      title: 'Root Node'
+    }, null)
+
+    // Create node with invalid parent
+    await fs.writeFile(path.join(testDir, 'orphan.md'), `---
+id: ${uuid()}
+title: Orphan Node
+parentId: invalid-parent-id
+childrenIds: []
+calculatedMetrics:
+  readinessLevel: 0
+---
+`)
+
+    // Get all nodes
+    const nodes = await fileStore.getAllNodes()
+
+    // Find the orphan node
+    const orphan = Object.values(nodes).find(n => n.title === 'Orphan Node')
+    expect(orphan).toBeDefined()
+    expect(orphan?.parentId).toBe(root.id)
+
+    // Verify root has the orphan as a child
+    expect(nodes[root.id].childrenIds).toContain(orphan?.id)
+
+    // Verify the orphan's file was updated
+    const fileContent = await fs.readFile(path.join(testDir, 'orphan.md'), 'utf-8')
+    expect(fileContent).toContain(`parentId: ${root.id}`)
+  })
+
+  it('handles empty and missing titles correctly', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create node with empty title
+    const emptyTitleNode = await fileStore.createNode({
+      title: '',
+      description: 'Node with empty title'
+    }, null)
+
+    // Verify node has empty title but file is named "untitled"
+    expect(emptyTitleNode.title).toBe('')
+    const files = await fs.readdir(testDir)
+    expect(files).toContain('untitled.md')
+
+    // Verify the empty title is preserved in the file
+    const content = await fs.readFile(path.join(testDir, 'untitled.md'), 'utf-8')
+    expect(content).toContain('\ntitle: ""\n')
+
+    // Create file with no title field
+    await fs.writeFile(path.join(testDir, 'test-file.md'), `---
+id: ${uuid()}
+childrenIds: []
+calculatedMetrics:
+  readinessLevel: 0
+---
+`)
+
+    // Get all nodes and find our node
+    const nodes = await fileStore.getAllNodes()
+    const noTitleNode = Object.values(nodes).find(n => n.id !== emptyTitleNode.id)
+    expect(noTitleNode).toBeDefined()
+    expect(noTitleNode?.title).toBe('test-file')
+
+    // Verify the title was added to the file
+    const healedContent = await fs.readFile(path.join(testDir, 'test-file.md'), 'utf-8')
+    expect(healedContent).toContain('\ntitle: test-file\n')
   })
 })

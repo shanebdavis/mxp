@@ -153,6 +153,7 @@ export const DetailsPanel = ({
                 <div className="field-label">{readinessColumnHeader}</div>
                 <EditableRlPill
                   readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
+                  auto={!selectedNode.setMetrics?.readinessLevel}
                   onChange={async level => {
                     await treeStateMethods.updateNode(selectedNode.id, {
                       setMetrics: { readinessLevel: level ?? null }
@@ -164,9 +165,11 @@ export const DetailsPanel = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '8px 0' }}>
                   <div className="field-label">Solution: {selectedNode.childrenIds.length} Sub-problems</div>
                   <ol style={{ margin: 0, paddingLeft: '1.5em', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    {selectedNode.childrenIds.map(childId => (
-                      <li key={childId}>{nodes[childId].title}</li>
-                    ))}
+                    {selectedNode.childrenIds
+                      .filter(childId => nodes[childId])
+                      .map(childId => (
+                        <li key={childId}>{nodes[childId].title}</li>
+                      ))}
                   </ol>
                 </div>
               )}

@@ -26,7 +26,9 @@ export class FileStore {
   }
 
   private getFilePath(title: string): string {
-    return path.join(this.baseDir, `${title}.md`)
+    // Use "untitled" for empty titles
+    const fileName = title.trim() || 'untitled'
+    return path.join(this.baseDir, `${fileName}.md`)
   }
 
   private async readNodeFile(filePath: string): Promise<TreeNode> {
@@ -34,12 +36,14 @@ export class FileStore {
     const [, frontMatter = '', description = ''] = content.split('---\n')
     const metadata = yaml.load(frontMatter) as Partial<NodeMetadata> || {}
 
-    // Extract the filename without extension as a fallback title
+    // Only use filename as fallback if title field is not present in yaml
     const fallbackTitle = path.basename(filePath, '.md')
+    const hasTitle = 'title' in metadata
+    const title = hasTitle ? (metadata.title ?? '') : fallbackTitle
 
     const node = {
       id: metadata.id || uuid(), // generate a new id if missing
-      title: metadata.title || fallbackTitle,
+      title,
       description: description.trim(),
       childrenIds: Array.isArray(metadata.childrenIds) ? metadata.childrenIds : [],
       parentId: metadata.parentId || null,
@@ -48,7 +52,7 @@ export class FileStore {
     }
 
     // If any data was missing, heal the file by writing it back
-    if (!metadata.id || !metadata.title || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics) {
+    if (!metadata.id || !hasTitle || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics) {
       await this.writeNodeFile(node)
     }
 
@@ -62,6 +66,7 @@ export class FileStore {
       if (Array.isArray(obj)) return obj
       const result: any = {}
       for (const [key, value] of Object.entries(obj)) {
+        // Keep empty strings (don't skip them)
         if (value === null || value === undefined) continue
         if (typeof value === 'object') {
           const cleaned = cleanObject(value)
@@ -78,7 +83,7 @@ export class FileStore {
     // Prepare metadata, omitting description and null/empty values
     const metadata = cleanObject({
       id: node.id,
-      title: node.title,
+      title: node.title, // Always include title, even if empty string
       childrenIds: node.childrenIds,
       parentId: node.parentId || undefined,
       setMetrics: node.setMetrics,
@@ -297,6 +302,36 @@ export class FileStore {
     await fs.unlink(filePath)
   }
 
+  private async healParentIds(nodes: Record<string, TreeNode>): Promise<Record<string, TreeNode>> {
+    // Find root node (node with no parent)
+    const rootNode = Object.values(nodes).find(node => !node.parentId)
+    if (!rootNode) return nodes // No root node found, can't heal
+
+    // Check each node's parentId
+    let needsHealing = false
+    const healedNodes = { ...nodes }
+
+    for (const node of Object.values(healedNodes)) {
+      // Skip root node
+      if (!node.parentId) continue
+
+      // If parent doesn't exist, attach to root
+      if (!healedNodes[node.parentId]) {
+        needsHealing = true
+        node.parentId = rootNode.id
+        rootNode.childrenIds.push(node.id)
+        await this.writeNodeFile(node)
+      }
+    }
+
+    // If we made changes, write the root node too
+    if (needsHealing) {
+      await this.writeNodeFile(rootNode)
+    }
+
+    return healedNodes
+  }
+
   async getAllNodes(): Promise<Record<string, TreeNode>> {
     await this.ensureBaseDir()
 
@@ -311,6 +346,7 @@ export class FileStore {
       nodes[node.id] = node
     }
 
-    return nodes
+    // Heal any invalid parentIds
+    return this.healParentIds(nodes)
   }
 }

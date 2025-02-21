@@ -341,6 +341,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       <td style={styles.cell}>
         <EditableRlPill
           readinessLevel={node.calculatedMetrics.readinessLevel}
+          auto={!node.setMetrics?.readinessLevel}
           onChange={async level => {
             await treeStateMethods.updateNode(nodeId, {
               setMetrics: { readinessLevel: level ?? null }
