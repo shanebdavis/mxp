@@ -272,10 +272,15 @@ export const HTableRow: FC<TreeNodeProps> = ({
           e.preventDefault()
           if (e.metaKey || e.ctrlKey) {
             // Move node up in current parent
-            if (node.parentId) {
-              const currentIndex = indexInParentMap[nodeId]
+            if (node.parentId && nodes[node.parentId]) {
+              const parent = nodes[node.parentId]
+              const currentIndex = parent.childrenIds.indexOf(nodeId)
               if (currentIndex > 0) {
-                await setNodeParent(nodeId, node.parentId, currentIndex - 1)
+                try {
+                  const result = await setNodeParent(nodeId, node.parentId, currentIndex - 1)
+                } catch (error) {
+                  console.error('Error moving node:', error)
+                }
               }
             }
           } else {
@@ -291,10 +296,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (e.metaKey || e.ctrlKey) {
             // Move node down in current parent
             if (node.parentId && nodes[node.parentId]) {
-              const currentIndex = indexInParentMap[nodeId]
               const parent = nodes[node.parentId]
+              const currentIndex = parent.childrenIds.indexOf(nodeId)
               if (currentIndex < parent.childrenIds.length - 1) {
-                await setNodeParent(nodeId, node.parentId, currentIndex + 1)
+                try {
+                  await setNodeParent(nodeId, node.parentId, currentIndex + 1)
+                } catch (error) {
+                  console.error('Error moving node:', error)
+                }
               }
             }
           } else {
@@ -360,7 +369,22 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isSelected, isEditing, nodeId, node, expandedNodes, toggleNode, selectNodeById, displayOrder, setEditingNodeId, treeStateMethods])
+  }, [
+    isSelected,
+    isEditing,
+    nodeId,
+    node,
+    expandedNodes,
+    toggleNode,
+    selectNodeById,
+    displayOrder,
+    setEditingNodeId,
+    treeStateMethods,
+    setNodeParent,
+    nodes,
+    indexInParentMap,
+    isRoot
+  ])
 
   return (
     <tr

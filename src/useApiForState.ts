@@ -50,10 +50,26 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     }
 
     const result = await response.json() as TreeNodeMap
-    setNodes(result)
-    // Find root node (node with no parent)
-    const rootId = Object.values(result).find(node => !node.parentId)?.id
-    setRootNodeId(rootId ?? null)
+
+    // For GET /nodes, replace the entire state
+    if (method === 'GET' && path === '/nodes') {
+      setNodes(result)
+      const rootId = Object.values(result).find(node => !node.parentId)?.id
+      setRootNodeId(rootId ?? null)
+      return result
+    }
+
+    // For all other calls, merge changes into existing state
+    setNodes(prevNodes => {
+      const updatedNodes = { ...prevNodes, ...result }
+      // Update rootNodeId if needed
+      if (!rootNodeId) {
+        const rootId = Object.values(updatedNodes).find(node => !node.parentId)?.id
+        setRootNodeId(rootId ?? null)
+      }
+      return updatedNodes
+    })
+
     return result
   }, [baseUrl])
 

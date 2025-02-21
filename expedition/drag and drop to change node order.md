@@ -5,9 +5,9 @@ filename: untitled.md
 parentId: 6e1216a9-533d-4d9e-819f-d60719ad6e9e
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 4
+  readinessLevel: 1
 draft: false
 setMetrics:
-  readinessLevel: 4
+  readinessLevel: 1
 
 ---

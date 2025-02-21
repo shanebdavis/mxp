@@ -6,8 +6,9 @@ parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 childrenIds:
   - 6e1216a9-533d-4d9e-819f-d60719ad6e9e
   - 59a15be7-4837-4229-87f6-9e4cba09cecc
+  - 952d4b2d-e66d-421d-8670-f41f89b85ba7
 calculatedMetrics:
-  readinessLevel: 3
+  readinessLevel: 1
 draft: false
 
 ---

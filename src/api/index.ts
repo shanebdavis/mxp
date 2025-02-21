@@ -71,9 +71,19 @@ export const createApiRouter = (config: ApiConfig): Router => {
   // Change a node's parent
   router.put('/nodes/:nodeId/parent', async (req, res) => {
     try {
-      const { newParentId } = req.body
-      await fileStore.setNodeParent(req.params.nodeId, newParentId)
-      res.json(await fileStore.getAllNodes())
+      const { newParentId, insertAtIndex } = req.body
+      const oldNodes = await fileStore.getAllNodes()
+      await fileStore.setNodeParent(req.params.nodeId, newParentId, insertAtIndex)
+      const newNodes = await fileStore.getAllNodes()
+
+      // Only return nodes that have changed
+      const changedNodes: Record<string, any> = {}
+      Object.keys(newNodes).forEach(id => {
+        if (JSON.stringify(oldNodes[id]) !== JSON.stringify(newNodes[id])) {
+          changedNodes[id] = newNodes[id]
+        }
+      })
+      res.json(changedNodes)
     } catch (error: any) {
       if (error.message?.includes('not found')) {
         res.status(404).json({ error: `Node ${req.params.nodeId} not found` })

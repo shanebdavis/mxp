@@ -196,4 +196,74 @@ describe('API', () => {
       await server.stop()
     }
   })
+
+  it('reorders children and returns only changed nodes', async () => {
+    const { path: storageFolder } = useTemp()
+    const server = await startTestServer({ storageFolder })
+
+    try {
+      // Create parent node
+      const parentResponse = await fetch(`${server.baseUrl}/api/nodes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          node: { title: 'Parent' },
+          parentNodeId: null
+        })
+      })
+      const parent = (await parentResponse.json())[Object.keys(await parentResponse.json())[0]]
+
+      // Create 4 children
+      const childResponses = await Promise.all([1, 2, 3, 4].map(i =>
+        fetch(`${server.baseUrl}/api/nodes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            node: { title: `Child ${i}` },
+            parentNodeId: parent.id
+          })
+        })
+      ))
+      const children = await Promise.all(childResponses.map(r => r.json()))
+      const childIds = children.map(c => Object.keys(c)[0])
+
+      // Move the 4th child to the 3rd position
+      const moveResponse = await fetch(`${server.baseUrl}/api/nodes/${childIds[3]}/parent`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newParentId: parent.id,
+          insertAtIndex: 2
+        })
+      })
+
+      // Verify response
+      expect(moveResponse.ok).toBe(true)
+      const changedNodes = await moveResponse.json()
+
+      // Should only return the parent node since it's the only one that changed
+      expect(Object.keys(changedNodes)).toHaveLength(1)
+      expect(Object.keys(changedNodes)).toContain(parent.id)
+
+      // Verify the order in the parent's childrenIds
+      expect(changedNodes[parent.id].childrenIds).toEqual([
+        childIds[0],
+        childIds[1],
+        childIds[3],
+        childIds[2]
+      ])
+
+      // Verify full state through a separate request
+      const finalResponse = await fetch(`${server.baseUrl}/api/nodes`)
+      const finalNodes = await finalResponse.json()
+      expect(finalNodes[parent.id].childrenIds).toEqual([
+        childIds[0],
+        childIds[1],
+        childIds[3],
+        childIds[2]
+      ])
+    } finally {
+      await server.stop()
+    }
+  })
 })

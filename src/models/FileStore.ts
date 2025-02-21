@@ -279,7 +279,7 @@ export class FileStore {
     return finalNode
   }
 
-  async setNodeParent(nodeId: string, newParentId: string | null): Promise<void> {
+  async setNodeParent(nodeId: string, newParentId: string | null, insertAtIndex?: number | null): Promise<void> {
     const [node] = await this.findNodeById(nodeId)
     const oldParentId = node.parentId
 
@@ -315,7 +315,7 @@ export class FileStore {
       const [newParent] = await this.findNodeById(newParentId)
       const updatedNewParent = {
         ...newParent,
-        childrenIds: this.getChildrenIdsWithInsertion(newParent.childrenIds, nodeId)
+        childrenIds: this.getChildrenIdsWithInsertion(newParent.childrenIds, nodeId, insertAtIndex)
       }
       await this.writeNodeFile(updatedNewParent)
     }

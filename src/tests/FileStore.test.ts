@@ -584,4 +584,36 @@ calculatedMetrics:
     // Root should now calculate from middle node
     expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
   })
+
+  it('correctly reorders children within the same parent', async () => {
+    const { path: testDir } = useTemp()
+    const fileStore = new FileStore(testDir)
+
+    // Create parent node
+    const parent = await fileStore.createNode({
+      title: 'Parent',
+      description: 'Parent node'
+    }, null)
+
+    // Create 4 children in sequence
+    const child1 = await fileStore.createNode({ title: 'Child 1' }, parent.id)
+    const child2 = await fileStore.createNode({ title: 'Child 2' }, parent.id)
+    const child3 = await fileStore.createNode({ title: 'Child 3' }, parent.id)
+    const child4 = await fileStore.createNode({ title: 'Child 4' }, parent.id)
+
+    // Verify initial order
+    let nodes = await fileStore.getAllNodes()
+    expect(nodes[parent.id].childrenIds).toEqual([
+      child1.id, child2.id, child3.id, child4.id
+    ])
+
+    // Move child4 to position 2 (before child3)
+    await fileStore.setNodeParent(child4.id, parent.id, 2)
+
+    // Verify new order
+    nodes = await fileStore.getAllNodes()
+    expect(nodes[parent.id].childrenIds).toEqual([
+      child1.id, child2.id, child4.id, child3.id
+    ])
+  })
 })
