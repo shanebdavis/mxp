@@ -82,12 +82,9 @@ const App = () => {
 
   const selectedNode = selectedNodeId ? nodes[selectedNodeId] : null
 
-  const [parentMap, indexInParentMap] = useMemo(() => {
-    return [
-      getParentMap(nodes),
-      getIndexInParentMap(nodes)
-    ]
-  }, [nodes])
+  const indexInParentMap = useMemo(() =>
+    getIndexInParentMap(nodes)
+    , [nodes])
 
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
@@ -226,7 +223,6 @@ const App = () => {
             treeStateMethods={treeStateMethods}
             editingNodeId={editingNodeId}
             setEditingNodeId={setEditingNodeId}
-            parentMap={parentMap}
             indexInParentMap={indexInParentMap}
             nameColumnHeader="Problem"
             readinessColumnHeader="Solution Readiness"

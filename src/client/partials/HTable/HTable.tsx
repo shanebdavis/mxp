@@ -14,7 +14,6 @@ interface HTableProps {
   treeStateMethods: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
-  parentMap: Record<string, TreeNode>
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
@@ -43,7 +42,6 @@ export const HTable: FC<HTableProps> = ({
   treeStateMethods,
   editingNodeId,
   setEditingNodeId,
-  parentMap,
   indexInParentMap,
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level"
@@ -193,7 +191,6 @@ export const HTable: FC<HTableProps> = ({
                   editingNodeId,
                   setEditingNodeId,
                   displayOrder: displayOrder.map(x => x.nodeId),
-                  parentMap,
                   indexInParentMap,
                   isDraftSubtree,
                 }}

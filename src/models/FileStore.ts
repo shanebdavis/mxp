@@ -128,10 +128,13 @@ export class FileStore {
 
   private getChildrenIdsWithInsertion(childrenIds: string[] | undefined, nodeId: string, insertAtIndex?: number | null): string[] {
     const currentIds = childrenIds || []
+    // First, remove any existing instances of nodeId to prevent duplicates
+    const filteredIds = currentIds.filter(id => id !== nodeId)
+
     if (insertAtIndex != null && insertAtIndex >= 0) {
-      return [...currentIds.slice(0, insertAtIndex), nodeId, ...currentIds.slice(insertAtIndex)]
+      return [...filteredIds.slice(0, insertAtIndex), nodeId, ...filteredIds.slice(insertAtIndex)]
     }
-    return [...currentIds, nodeId]
+    return [...filteredIds, nodeId]
   }
 
   private getChildrenIdsWithRemoval(childrenIds: string[] | undefined, nodeId: string): string[] {

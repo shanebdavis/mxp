@@ -25,7 +25,6 @@ interface TreeNodeProps {
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
-  parentMap: Record<string, TreeNode>
   indexInParentMap: Record<string, number>
   isDraftSubtree?: boolean
 }
@@ -49,7 +48,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   editingNodeId,
   setEditingNodeId,
   displayOrder,
-  parentMap,
   indexInParentMap,
   isDraftSubtree = false,
 }) => {
@@ -272,23 +270,52 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
         case 'ArrowUp':
           e.preventDefault()
-          const prevIndex = displayOrder.indexOf(nodeId) - 1
-          if (prevIndex >= 0) {
-            selectNodeById(displayOrder[prevIndex])
+          if (e.metaKey || e.ctrlKey) {
+            // Move node up in current parent
+            if (node.parentId) {
+              const currentIndex = indexInParentMap[nodeId]
+              if (currentIndex > 0) {
+                await setNodeParent(nodeId, node.parentId, currentIndex - 1)
+              }
+            }
+          } else {
+            const prevIndex = displayOrder.indexOf(nodeId) - 1
+            if (prevIndex >= 0) {
+              selectNodeById(displayOrder[prevIndex])
+            }
           }
           break
 
         case 'ArrowDown':
           e.preventDefault()
-          const nextIndex = displayOrder.indexOf(nodeId) + 1
-          if (nextIndex < displayOrder.length) {
-            selectNodeById(displayOrder[nextIndex])
+          if (e.metaKey || e.ctrlKey) {
+            // Move node down in current parent
+            if (node.parentId && nodes[node.parentId]) {
+              const currentIndex = indexInParentMap[nodeId]
+              const parent = nodes[node.parentId]
+              if (currentIndex < parent.childrenIds.length - 1) {
+                await setNodeParent(nodeId, node.parentId, currentIndex + 1)
+              }
+            }
+          } else {
+            const nextIndex = displayOrder.indexOf(nodeId) + 1
+            if (nextIndex < displayOrder.length) {
+              selectNodeById(displayOrder[nextIndex])
+            }
           }
           break
 
         case 'ArrowLeft':
           e.preventDefault()
-          if (expanded) {
+          if (e.metaKey || e.ctrlKey) {
+            // Move node up one level to join its siblings
+            if (node.parentId && nodes[node.parentId]) {
+              const parent = nodes[node.parentId]
+              if (parent.parentId) {
+                await setNodeParent(nodeId, parent.parentId)
+              }
+            }
+          } else if (expanded) {
             toggleNode(nodeId)
           } else if (node.parentId) {
             selectNodeById(node.parentId)
@@ -297,7 +324,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
         case 'ArrowRight':
           e.preventDefault()
-          if (!expanded && node.childrenIds.length > 0) {
+          if (e.metaKey || e.ctrlKey) {
+            // Make this node a child of its previous sibling
+            if (node.parentId && nodes[node.parentId]) {
+              const currentIndex = indexInParentMap[nodeId]
+              if (currentIndex > 0) {
+                const prevSiblingId = nodes[node.parentId].childrenIds[currentIndex - 1]
+                await setNodeParent(nodeId, prevSiblingId)
+                if (!expandedNodes[prevSiblingId]) {
+                  toggleNode(prevSiblingId)
+                }
+              }
+            }
+          } else if (!expanded && node.childrenIds.length > 0) {
             toggleNode(nodeId)
           } else if (node.childrenIds.length > 0) {
             selectNodeById(node.childrenIds[0])
