@@ -9,7 +9,7 @@ childrenIds:
   - 4423b37f-42d8-44c6-96ae-1a9bf605f8da
   - 01332c38-8082-4081-a7c1-051fc2b78931
 calculatedMetrics:
-  readinessLevel: 1
+  readinessLevel: 3
 draft: false
 
 ---

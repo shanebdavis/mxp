@@ -63,6 +63,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [editValue, setEditValue] = useState(node.title)
   const [justCreated, setJustCreated] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const rowRef = useRef<HTMLTableRowElement>(null)
 
   useEffect(() => {
     if (isEditing) {
@@ -79,6 +80,12 @@ export const HTableRow: FC<TreeNodeProps> = ({
       setEditingNodeId(null)
     }
   }, [editingNodeId, nodeId, setEditingNodeId])
+
+  useEffect(() => {
+    if (isSelected && rowRef.current) {
+      rowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [isSelected])
 
   const handleRowClick = (e: React.MouseEvent) => {
     if (!(e.target as HTMLElement).closest('.toggle-button')) {
@@ -389,6 +396,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   return (
     <tr
+      ref={rowRef}
       style={{
         ...styles.row,
         ...(isSelected ? styles.selectedRow : {}),
