@@ -3,7 +3,7 @@ import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
 import matter from 'gray-matter'
-import { TreeNode, TreeNodeProperties, Metrics } from './TreeNode'
+import { TreeNode, TreeNodeProperties, createNode, NodeType, calculateAllMetricsFromNodeId, mergeMetrics, UpdateTreeNodeProperties, compactMetrics, compactMergeMetrics } from './TreeNode'
 
 interface NodeMetadata {
   id?: string
@@ -15,6 +15,7 @@ interface NodeMetadata {
   calculatedMetrics?: { readinessLevel: number }
   filename?: string  // The name of the file storing this node
   draft?: boolean
+  type?: NodeType
 }
 
 export class FileStore {
@@ -53,11 +54,12 @@ export class FileStore {
       parentId: metadata.parentId || null,
       calculatedMetrics: metadata.calculatedMetrics || { readinessLevel: 0 },
       draft: metadata.draft ?? false,
+      type: metadata.type ?? NodeType.Map,
       ...(metadata.setMetrics && { setMetrics: metadata.setMetrics })
     }
 
     // If any data was missing, heal the file by writing it back
-    if (!metadata.id || !hasTitle || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics) {
+    if (!metadata.id || !hasTitle || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics || !metadata.type) {
       // If we're healing a file without an ID, rename it to use the ID
       if (!metadata.id) {
         await fs.rename(filePath, this.getFilePath(node.title, node.id))
@@ -92,17 +94,22 @@ export class FileStore {
     // Prepare metadata, omitting description and null/empty values
     const metadata = {
       id: node.id,
-      title: node.title,
+      title: node.title === '' ? '' : node.title,
       filename: node.filename,
       parentId: node.parentId,
       childrenIds: node.childrenIds,
       calculatedMetrics: node.calculatedMetrics,
       draft: node.draft,
+      type: node.type,
       ...(node.setMetrics && { setMetrics: node.setMetrics })
     }
 
-    const fileContent = matter.stringify(node.description || '', metadata)
+    // Format the content with frontmatter and description
+    const yamlContent = yaml.dump(metadata, { noRefs: true, quotingType: '"' })
+      .replace(/^title: ''$/m, 'title: ""')
+    const fileContent = `---\n${yamlContent}---\n${node.description || ''}`
     await fs.writeFile(this.getFilePath(node.title, node.id), fileContent)
+    return node
   }
 
   private async findNodeById(nodeId: string): Promise<[TreeNode, string]> {
@@ -151,22 +158,11 @@ export class FileStore {
     // if the node has a manually set readiness level, use that
     if (node.setMetrics?.readinessLevel != null) return node.setMetrics.readinessLevel
 
-    // default
+    // If no children, return 0
     if (children.length === 0) return 0
 
-    // otherwise, use the minimum readiness level from children
-    return children.reduce((min, child) => Math.min(min, child.calculatedMetrics.readinessLevel), Infinity)
-  }
-
-  private async calculateMetrics(nodeId: string, allNodes: Record<string, TreeNode>): Promise<Metrics> {
-    const node = allNodes[nodeId]
-    if (!node) throw new Error(`Node not found: ${nodeId}`)
-
-    const children = node.childrenIds.map(childId => allNodes[childId]).filter(child => !child.draft)
-
-    return {
-      readinessLevel: this.calculateReadinessLevel(node, children)
-    }
+    // Use the minimum readiness level from children
+    return Math.min(...children.map(child => child.calculatedMetrics.readinessLevel))
   }
 
   private async updateNodeAndParentMetrics(nodeId: string, allNodes: Record<string, TreeNode>): Promise<void> {
@@ -174,7 +170,7 @@ export class FileStore {
     if (!node) return
 
     // Calculate new metrics for this node
-    const newMetrics = await this.calculateMetrics(nodeId, allNodes)
+    const newMetrics = await calculateAllMetricsFromNodeId(nodeId, allNodes)
 
     // Always update the node's metrics and write it back
     const updatedNode = { ...node, calculatedMetrics: newMetrics }
@@ -190,29 +186,12 @@ export class FileStore {
   async createNode(properties: TreeNodeProperties, parentId: string | null = null, insertAtIndex?: number | null): Promise<TreeNode> {
     await this.ensureBaseDir()
 
-    const node: TreeNode = {
-      id: uuid(),
-      title: properties.title || '',
-      description: properties.description || '',
-      filename: `${properties.title || 'untitled'}.md`,
-      parentId: parentId || null,
-      childrenIds: [],
-      calculatedMetrics: { readinessLevel: properties.readinessLevel || 0 },
-      draft: properties.draft ?? false,
-      ...(properties.readinessLevel && { setMetrics: { readinessLevel: properties.readinessLevel } }),
-      ...(properties.setMetrics && { setMetrics: properties.setMetrics })
-    }
-
-    // Calculate initial metrics for the new node
-    const newMetrics = await this.calculateMetrics(node.id, { [node.id]: node })
-    node.calculatedMetrics = newMetrics
-
-    // Write the node first
-    await this.writeNodeFile(node)
+    // Write the getFilename first
+    const node = await this.writeNodeFile(createNode(properties, parentId))
 
     // If it has a parent, update parent's childrenIds
-    if (node.parentId) {
-      const [parentNode] = await this.findNodeById(node.parentId)
+    if (parentId) {
+      const [parentNode] = await this.findNodeById(parentId)
       const updatedParent = {
         ...parentNode,
         childrenIds: this.getChildrenIdsWithInsertion(parentNode.childrenIds, node.id, insertAtIndex)
@@ -223,31 +202,19 @@ export class FileStore {
 
       // Now get all nodes to calculate metrics accurately
       const allNodes = await this.getAllNodes()
-      await this.updateNodeAndParentMetrics(parentNode.id, allNodes)
+      await this.updateNodeAndParentMetrics(parentId, allNodes)
     }
 
     return node
   }
 
-  async updateNode(nodeId: string, properties: Partial<TreeNodeProperties>): Promise<TreeNode> {
+  async updateNode(nodeId: string, properties: UpdateTreeNodeProperties): Promise<TreeNode> {
     const [node] = await this.findNodeById(nodeId)
 
-    // Handle setMetrics updates
-    let updatedSetMetrics = node.setMetrics
-    if ('setMetrics' in properties) {
-      if (!properties.setMetrics || Object.keys(properties.setMetrics).length === 0) {
-        updatedSetMetrics = undefined
-      } else {
-        updatedSetMetrics = properties.setMetrics
-      }
-    } else if ('readinessLevel' in properties) {
-      updatedSetMetrics = { readinessLevel: properties.readinessLevel ?? null }
-    }
-
-    const updatedNode = {
+    const updatedNode: TreeNode = {
       ...node,
       ...properties,
-      setMetrics: updatedSetMetrics
+      setMetrics: compactMergeMetrics(node.setMetrics, properties.setMetrics)
     }
 
     // Handle file rename if title changed
@@ -394,8 +361,8 @@ export class FileStore {
     return healedNodes
   }
 
-  private getFilename(title: string): string {
-    return (title || 'untitled') + '.md'
+  private getFilename(node: TreeNode): string {
+    return (node.title || 'untitled') + '.md'
   }
 
   private async healChildrenIds(nodes: Record<string, TreeNode>): Promise<Record<string, TreeNode>> {

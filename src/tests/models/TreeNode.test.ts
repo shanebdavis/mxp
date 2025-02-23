@@ -8,6 +8,7 @@ import {
   isParentOfInTree,
   type TreeNode,
   type TreeNodeMap,
+  NodeType,
   inspectTree
 } from '../../models'
 import { log } from '../../log'
@@ -415,6 +416,41 @@ describe('TreeNode', () => {
       const nodesWithTwoLevels = getTreeWithNodeAdded(testNodes, child2, child1Id)
 
       expect(isParentOfInTree(nodesWithTwoLevels, rootId, child2.id)).toBe(true)
+    })
+  })
+
+  describe('NodeType', () => {
+    it('should default to Map type when not specified', () => {
+      const node = createNode({ title: 'Test Node' })
+      expect(node.type).toBe(NodeType.Map)
+    })
+
+    it('should allow setting different node types', () => {
+      const waypoint = createNode({ title: 'Waypoint Node', type: NodeType.Waypoint })
+      expect(waypoint.type).toBe(NodeType.Waypoint)
+
+      const user = createNode({ title: 'User Node', type: NodeType.User })
+      expect(user.type).toBe(NodeType.User)
+    })
+
+    it('should preserve node type through tree operations', () => {
+      const rootId = Object.keys(testNodes)[0]
+
+      // Add a waypoint node
+      const waypoint = createNode({ title: 'Waypoint', type: NodeType.Waypoint })
+      const treeWithWaypoint = getTreeWithNodeAdded(testNodes, waypoint, rootId)
+      expect(treeWithWaypoint[waypoint.id].type).toBe(NodeType.Waypoint)
+
+      // Update the waypoint node
+      const updatedTree = getTreeWithNodeUpdated(treeWithWaypoint, waypoint.id, { title: 'Updated Waypoint' })
+      expect(updatedTree[waypoint.id].type).toBe(NodeType.Waypoint)
+
+      // Move the waypoint node
+      const user = createNode({ title: 'User', type: NodeType.User })
+      const treeWithUser = getTreeWithNodeAdded(updatedTree, user, rootId)
+      const movedTree = getTreeWithNodeParentChanged(treeWithUser, waypoint.id, user.id)
+      expect(movedTree[waypoint.id].type).toBe(NodeType.Waypoint)
+      expect(movedTree[user.id].type).toBe(NodeType.User)
     })
   })
 })

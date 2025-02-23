@@ -6,7 +6,7 @@ parentId: 82a97424-cd3d-4970-8e11-029dc4a0ecc8
 childrenIds: []
 calculatedMetrics:
   readinessLevel: 0
-draft: false
+draft: true
 setMetrics:
   readinessLevel: 0
 ---

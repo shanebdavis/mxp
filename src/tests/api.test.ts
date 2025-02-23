@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { useTempDir } from './helpers/tempDir'
 import { startTestServer, TestServer } from './helpers/testServer'
-import type { TreeNode } from '../models/TreeNode'
+import { log } from '../log'
 
 describe('API', () => {
   const { useTemp } = useTempDir({ prefix: 'api-test-' })
@@ -58,7 +58,7 @@ describe('API', () => {
           node: {
             title: 'Child Node',
             description: 'A child node',
-            readinessLevel: 5
+            setMetrics: { readinessLevel: 5 }
           },
           parentNodeId: rootId,
           insertAtIndex: 0
@@ -69,6 +69,7 @@ describe('API', () => {
       const childId = Object.keys(childResult).find(id => id !== rootId)!
       const childNode = childResult[childId]
       expect(childNode.title).toBe('Child Node')
+      log({ childNode })
       expect(childNode.setMetrics?.readinessLevel).toBe(5)
       expect(childNode.parentId).toBe(rootId)
 
@@ -81,7 +82,7 @@ describe('API', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: 'Updated Child',
-          readinessLevel: 7
+          setMetrics: { readinessLevel: 7 }
         })
       })
       expect(updateResponse.status).toBe(200)
@@ -211,7 +212,8 @@ describe('API', () => {
           parentNodeId: null
         })
       })
-      const parent = (await parentResponse.json())[Object.keys(await parentResponse.json())[0]]
+      const json = await parentResponse.json()
+      const parent = json[Object.keys(json)[0]]
 
       // Create 4 children
       const childResponses = await Promise.all([1, 2, 3, 4].map(i =>

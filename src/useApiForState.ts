@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { TreeNode, TreeNodeMap, TreeNodeProperties } from './models/TreeNode'
+import type { TreeNode, TreeNodeMap, TreeNodeProperties, UpdateTreeNodeProperties } from './models/TreeNode'
 
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => Promise<string>
-  updateNode: (nodeId: string, properties: Partial<TreeNodeProperties>) => Promise<void>
-  setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => Promise<void>
+  updateNode: (nodeId: string, properties: UpdateTreeNodeProperties) => Promise<void>
+  setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => Promise<TreeNodeMap>
   removeNode: (nodeId: string) => Promise<void>
   isParentOf: (nodeId: string, potentialChildId: string) => boolean
 }
@@ -101,7 +101,7 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
 
   const updateNode = useCallback(async (
     nodeId: string,
-    properties: Partial<TreeNodeProperties>
+    properties: UpdateTreeNodeProperties
   ) => {
     await apiCall(`/nodes/${nodeId}`, 'PATCH', properties)
   }, [apiCall])

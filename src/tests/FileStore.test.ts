@@ -5,15 +5,21 @@ import os from 'os'
 import { FileStore } from '../models/FileStore'
 import { useTempDir } from './helpers/tempDir'
 import { v4 as uuid } from 'uuid'
+import { defaultMetrics, NodeType } from '../models/TreeNode'
+import { log } from '../log'
 
 describe('FileStore', () => {
   const { useTemp } = useTempDir({ prefix: 'filestore-test-' })
   let fileStore: FileStore
 
+  const newTestFileStore = () => {
+    const { path: testDir } = useTemp()
+    return { testDir, fileStore: new FileStore(testDir) }
+  }
+
   it('basic workflow: create and read a node', async () => {
     // Setup: Create a new FileStore in a temp directory
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a node
     const createdNode = await fileStore.createNode({
@@ -41,7 +47,8 @@ describe('FileStore', () => {
       setMetrics: { readinessLevel: 5 },
       calculatedMetrics: { readinessLevel: 5 },
       filename: 'My First Node.md',
-      draft: false
+      draft: false,
+      type: NodeType.Map
     })
 
     // Verify the file exists and has the correct name
@@ -58,8 +65,7 @@ describe('FileStore', () => {
   })
 
   it('creates a node with title and description', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     const node = await fileStore.createNode({
       title: 'Test Node',
@@ -83,8 +89,7 @@ describe('FileStore', () => {
   })
 
   it('maintains parent-child relationships', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create parent node
     const parent = await fileStore.createNode({
@@ -107,8 +112,7 @@ describe('FileStore', () => {
   })
 
   it('prevents circular parent-child relationships', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a chain of nodes
     const node1 = await fileStore.createNode({ title: 'Node 1' }, null)
@@ -122,8 +126,7 @@ describe('FileStore', () => {
   })
 
   it('deletes nodes and updates parent references', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a parent with two children
     const parent = await fileStore.createNode({ title: 'Parent' }, null)
@@ -144,8 +147,7 @@ describe('FileStore', () => {
   })
 
   it('handles file renames when title changes', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a node
     const node = await fileStore.createNode({
@@ -169,8 +171,7 @@ describe('FileStore', () => {
   })
 
   it('updates calculatedMetrics when setMetrics changes', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a node with initial readinessLevel
     const node = await fileStore.createNode({
@@ -194,17 +195,16 @@ describe('FileStore', () => {
 
     // Clear setMetrics
     const clearedNode = await fileStore.updateNode(node.id, {
-      setMetrics: {}
+      setMetrics: { readinessLevel: null }
     })
 
     // Verify calculatedMetrics defaults to 0 when no setMetrics
-    expect(clearedNode.setMetrics).toBeUndefined()
+    expect(clearedNode.setMetrics).toEqual({})
     expect(clearedNode.calculatedMetrics.readinessLevel).toBe(0)
   })
 
   it('calculates parent metrics from children', async () => {
-    const { path: testDir } = useTemp()
-    fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create root node with no setMetrics (auto)
     const root = await fileStore.createNode({
@@ -244,20 +244,19 @@ describe('FileStore', () => {
 
     // Clear root's readiness level to resume auto mode
     await fileStore.updateNode(root.id, {
-      setMetrics: {}
+      setMetrics: { readinessLevel: null }
     })
 
     nodes = await fileStore.getAllNodes()
     updatedRoot = nodes[root.id]
 
     // Root should return to readinessLevel = 2 (min of children)
-    expect(updatedRoot.setMetrics).toBeUndefined()
+    expect(updatedRoot.setMetrics).toEqual({})
     expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2)
   })
 
   it('heals files with missing data', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create an empty markdown file
     await fs.writeFile(path.join(testDir, 'test-node.md'), '')
@@ -285,9 +284,7 @@ describe('FileStore', () => {
   })
 
   it('heals invalid parentIds by attaching to root', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
-
+    const { fileStore, testDir } = newTestFileStore()
     // Create root node
     const root = await fileStore.createNode({
       title: 'Root Node'
@@ -321,8 +318,7 @@ calculatedMetrics:
   })
 
   it('handles empty and missing titles correctly', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create node with empty title
     const emptyTitleNode = await fileStore.createNode({
@@ -360,8 +356,7 @@ calculatedMetrics:
   })
 
   it('propagates readiness level changes through multiple generations', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a three-generation hierarchy
     const grandparent = await fileStore.createNode({
@@ -396,8 +391,7 @@ calculatedMetrics:
   })
 
   it('excludes draft nodes from readiness level calculations', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create parent node
     const parent = await fileStore.createNode({
@@ -426,8 +420,7 @@ calculatedMetrics:
   })
 
   it('treats readinessLevel 0 as a valid manual setting', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create parent node with RL0 explicitly set
     const parent = await fileStore.createNode({
@@ -448,16 +441,15 @@ calculatedMetrics:
     expect(nodes[parent.id].setMetrics?.readinessLevel).toBe(0)
 
     // Now clear the parent's setMetrics
-    await fileStore.updateNode(parent.id, { setMetrics: {} })
+    await fileStore.updateNode(parent.id, { setMetrics: { readinessLevel: null } })
     nodes = await fileStore.getAllNodes()
     // Now parent should use child's value
-    expect(nodes[parent.id].setMetrics).toBeUndefined()
+    expect(nodes[parent.id].setMetrics).toEqual({})
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
   })
 
   it('properly handles readinessLevel 0 in parent calculations', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create parent node with auto metrics
     const parent = await fileStore.createNode({
@@ -483,17 +475,16 @@ calculatedMetrics:
     expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
 
     // Update child1 to auto mode
-    await fileStore.updateNode(child1.id, { setMetrics: {} })
+    await fileStore.updateNode(child1.id, { setMetrics: { readinessLevel: null } })
     nodes = await fileStore.getAllNodes()
     // Now parent should only consider child2's value since child1 is in auto mode
-    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
   })
 
   it('distinguishes between readinessLevel 0 and draft mode', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create parent node with auto metrics
     const parent = await fileStore.createNode({
@@ -539,8 +530,7 @@ calculatedMetrics:
   })
 
   it('handles complex readinessLevel 0 scenarios', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create a three-level hierarchy
     const root = await fileStore.createNode({
@@ -571,7 +561,7 @@ calculatedMetrics:
     expect(nodes[leaf2.id].calculatedMetrics.readinessLevel).toBe(5)   // Manually set to 5
 
     // Clear middle node's setMetrics
-    await fileStore.updateNode(middle.id, { setMetrics: {} })
+    await fileStore.updateNode(middle.id, { setMetrics: { readinessLevel: null } })
     nodes = await fileStore.getAllNodes()
     // Middle should now calculate from children (min of 0 and 5)
     expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(0)
@@ -579,15 +569,14 @@ calculatedMetrics:
     expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
 
     // Clear root's setMetrics
-    await fileStore.updateNode(root.id, { setMetrics: {} })
+    await fileStore.updateNode(root.id, { setMetrics: { readinessLevel: null } })
     nodes = await fileStore.getAllNodes()
     // Root should now calculate from middle node
     expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
   })
 
   it('correctly reorders children within the same parent', async () => {
-    const { path: testDir } = useTemp()
-    const fileStore = new FileStore(testDir)
+    const { fileStore, testDir } = newTestFileStore()
 
     // Create parent node
     const parent = await fileStore.createNode({
