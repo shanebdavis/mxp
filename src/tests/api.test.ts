@@ -216,18 +216,22 @@ describe('API', () => {
       const parent = json[Object.keys(json)[0]]
 
       // Create 4 children
-      const childResponses = await Promise.all([1, 2, 3, 4].map(i =>
-        fetch(`${server.baseUrl}/api/nodes`, {
+      const childIds: string[] = []
+      for (let i = 1; i <= 4; i++) {
+        const response = await fetch(`${server.baseUrl}/api/nodes`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             node: { title: `Child ${i}` },
             parentNodeId: parent.id
           })
-        })
-      ))
-      const children = await Promise.all(childResponses.map(r => r.json()))
-      const childIds = children.map(c => Object.keys(c)[0])
+        });
+        expect(response.status).toBe(201);
+        const store = await response.json();
+        const newId = Object.keys(store).find(id => id !== parent.id && !childIds.includes(id));
+        if (!newId) throw new Error('Failed to create child');
+        childIds.push(newId);
+      }
 
       // Move the 4th child to the 3rd position
       const moveResponse = await fetch(`${server.baseUrl}/api/nodes/${childIds[3]}/parent`, {

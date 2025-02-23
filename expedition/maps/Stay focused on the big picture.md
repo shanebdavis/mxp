@@ -12,6 +12,7 @@ childrenIds:
 calculatedMetrics:
   readinessLevel: 3
 draft: false
+type: map
 ---
 # Track Status, not To-Dos
 

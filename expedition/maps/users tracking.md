@@ -10,5 +10,5 @@ childrenIds:
 calculatedMetrics:
   readinessLevel: 0
 draft: true
+type: map
 ---
-

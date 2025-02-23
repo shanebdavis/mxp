@@ -9,5 +9,5 @@ childrenIds:
 calculatedMetrics:
   readinessLevel: 4
 draft: false
-
+type: map
 ---

@@ -7,6 +7,7 @@ childrenIds: []
 calculatedMetrics:
   readinessLevel: 0
 draft: true
+type: map
 setMetrics:
   readinessLevel: 0
 ---

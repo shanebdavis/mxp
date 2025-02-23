@@ -9,6 +9,7 @@ childrenIds:
   - e0da1792-9c08-4d55-b5b9-73d6c2c184dc
 calculatedMetrics:
   readinessLevel: 0
-draft: false
+draft: true
+type: map
+setMetrics: {}
 ---
-

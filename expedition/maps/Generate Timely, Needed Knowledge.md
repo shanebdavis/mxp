@@ -7,8 +7,8 @@ childrenIds: []
 calculatedMetrics:
   readinessLevel: 0
 draft: true
+type: map
 setMetrics:
   readinessLevel: 0
-
 ---
 make an intentional practice of discovering the "if only we'd known" knowledge in time to take action on it and keep the project squarely targeted towards maximum success.

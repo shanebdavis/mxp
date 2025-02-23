@@ -79,12 +79,26 @@ export const createApiRouter = (config: ApiConfig): Router => {
       // Only return nodes that have changed
       const changedNodes: Record<string, any> = {}
       Object.keys(newNodes).forEach(id => {
-        if (JSON.stringify(oldNodes[id]) !== JSON.stringify(newNodes[id])) {
-          changedNodes[id] = newNodes[id]
+        const oldNode = oldNodes[id]
+        const newNode = newNodes[id]
+        // Compare each property individually to handle array order changes
+        if (
+          oldNode.childrenIds.join(',') !== newNode.childrenIds.join(',') ||
+          oldNode.parentId !== newNode.parentId ||
+          oldNode.title !== newNode.title ||
+          oldNode.description !== newNode.description ||
+          JSON.stringify(oldNode.metadata) !== JSON.stringify(newNode.metadata) ||
+          JSON.stringify(oldNode.setMetrics) !== JSON.stringify(newNode.setMetrics) ||
+          JSON.stringify(oldNode.calculatedMetrics) !== JSON.stringify(newNode.calculatedMetrics) ||
+          oldNode.draft !== newNode.draft ||
+          oldNode.type !== newNode.type
+        ) {
+          changedNodes[id] = newNode
         }
       })
-      res.json(changedNodes)
+      res.status(200).json(changedNodes)
     } catch (error: any) {
+      console.error('Error changing node parent:', error)
       if (error.message?.includes('not found')) {
         res.status(404).json({ error: `Node ${req.params.nodeId} not found` })
       } else if (error.message?.includes('descendants')) {

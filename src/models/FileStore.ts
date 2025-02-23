@@ -19,7 +19,10 @@ interface NodeMetadata {
 }
 
 export class FileStore {
-  constructor(private baseDir: string) { }
+  private baseDir: string
+  constructor(baseDir: string) {
+    this.baseDir = path.join(baseDir, 'maps')
+  }
 
   private async ensureBaseDir() {
     try {
@@ -251,6 +254,18 @@ export class FileStore {
         const [parent] = await this.findNodeById(currentParent.parentId)
         currentParent = parent
       }
+    }
+
+    // If moving within the same parent, just update the childrenIds order
+    if (oldParentId && oldParentId === newParentId) {
+      const [parent] = await this.findNodeById(oldParentId)
+      const updatedParent = {
+        ...parent,
+        childrenIds: this.getChildrenIdsWithRemoval(parent.childrenIds, nodeId)
+      }
+      updatedParent.childrenIds = this.getChildrenIdsWithInsertion(updatedParent.childrenIds, nodeId, insertAtIndex)
+      await this.writeNodeFile(updatedParent)
+      return
     }
 
     // Update node's parentId
