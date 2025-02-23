@@ -103,7 +103,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TreeNodeProperties"
+                "$ref": "#/components/schemas/UpdateTreeNodeProperties"
               }
             }
           }
@@ -222,7 +222,44 @@
   },
   "components": {
     "schemas": {
-      "TreeNodeProperties": {
+      "Metrics": {
+        "type": "object",
+        "required": ["readinessLevel"],
+        "properties": {
+          "readinessLevel": {
+            "type": "number",
+            "description": "Readiness level (0-9)",
+            "minimum": 0,
+            "maximum": 9
+          }
+        }
+      },
+      "PartialMetrics": {
+        "type": "object",
+        "properties": {
+          "readinessLevel": {
+            "type": "number",
+            "description": "Readiness level (0-9)",
+            "minimum": 0,
+            "maximum": 9,
+            "nullable": true
+          }
+        }
+      },
+      "UpdateMetrics": {
+        "type": "object",
+        "description": "Metrics for updates. null values indicate the metric should be cleared.",
+        "properties": {
+          "readinessLevel": {
+            "type": "number",
+            "description": "Readiness level (0-9). null indicates to clear the value.",
+            "minimum": 0,
+            "maximum": 9,
+            "nullable": true
+          }
+        }
+      },
+      "UpdateTreeNodeProperties": {
         "type": "object",
         "properties": {
           "title": {
@@ -233,18 +270,81 @@
             "type": "string",
             "description": "A detailed description of the node"
           },
-          "readinessLevel": {
-            "type": "integer",
-            "description": "User-set readiness level (1-9)",
-            "minimum": 1,
-            "maximum": 9,
-            "nullable": true
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the node",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
+          },
+          "setMetrics": {
+            "$ref": "#/components/schemas/UpdateMetrics"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether this node is a draft"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NodeType"
+          }
+        }
+      },
+      "NodeType": {
+        "type": "string",
+        "enum": ["map", "waypoint", "user"],
+        "description": "The type of the node"
+      },
+      "TreeNodeProperties": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the node"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description of the node"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the node",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
+          },
+          "setMetrics": {
+            "$ref": "#/components/schemas/PartialMetrics"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether this node is a draft"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NodeType"
           }
         }
       },
       "TreeNode": {
         "type": "object",
-        "required": ["id", "childrenIds", "parentId"],
+        "required": [
+          "id",
+          "childrenIds",
+          "parentId",
+          "calculatedMetrics",
+          "filename",
+          "title"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -263,18 +363,30 @@
             "type": "string",
             "description": "A detailed description of the node"
           },
-          "readinessLevel": {
-            "type": "integer",
-            "description": "User-set readiness level (1-9)",
-            "minimum": 1,
-            "maximum": 9,
-            "nullable": true
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the node",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
           },
-          "readinessLevelCalculated": {
-            "type": "integer",
-            "description": "Calculated readiness level based on children (1-9)",
-            "minimum": 1,
-            "maximum": 9
+          "setMetrics": {
+            "$ref": "#/components/schemas/PartialMetrics"
+          },
+          "calculatedMetrics": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether this node is a draft"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NodeType"
           },
           "childrenIds": {
             "type": "array",
@@ -282,6 +394,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "filename": {
+            "type": "string",
+            "description": "The name of the file storing this node"
           }
         }
       }
