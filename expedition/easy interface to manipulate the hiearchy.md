@@ -10,7 +10,6 @@ childrenIds:
 calculatedMetrics:
   readinessLevel: 3
 draft: false
-
 ---
 Need to be able to quickly edit and update everything in the tree.
 

@@ -9,5 +9,7 @@ calculatedMetrics:
 draft: false
 setMetrics:
   readinessLevel: 3
-
 ---
+Drop "between" items should insert between them
+
+- exception is dropping a the bottom edge of an expanded node should just insert at the top of that node's children

@@ -8,6 +8,7 @@ childrenIds:
   - 59a15be7-4837-4229-87f6-9e4cba09cecc
   - 952d4b2d-e66d-421d-8670-f41f89b85ba7
   - d1ed7c14-b07d-4d2a-8b5b-65e119a362ee
+  - 47b91c64-ebb3-4f78-b1df-3f7e12cd3bf9
 calculatedMetrics:
   readinessLevel: 3
 draft: false
