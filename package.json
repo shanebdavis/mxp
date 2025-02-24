@@ -1,6 +1,6 @@
 {
   "name": "mxp",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Method: Expedition - Knowledge Engine for Visionary Projects",
   "main": "./dist/mxp.js",
   "type": "commonjs",
