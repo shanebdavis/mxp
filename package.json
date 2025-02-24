@@ -1,6 +1,6 @@
 {
   "name": "mxp",
-  "version": "0.2.4",
+  "version": "0.2.3",
   "description": "Method: Expedition - Knowledge Engine for Visionary Projects",
   "main": "./dist/mxp.js",
   "type": "commonjs",
@@ -10,7 +10,8 @@
   "files": [
     "dist",
     "src",
-    "mxp"
+    "mxp",
+    "openapi.json"
   ],
   "scripts": {
     "start": "node ./mxp.js",
@@ -22,7 +23,8 @@
     "test-coverage": "vitest run --coverage",
     "test-ui": "vitest --ui",
     "build": "vite build && tsc -p tsconfig.node.json",
-    "publish": "npm run build && npm publish"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@art-suite/chained-test": "^1.6.6",
