@@ -23,8 +23,7 @@
     "test-coverage": "vitest run --coverage",
     "test-ui": "vitest --ui",
     "build": "vite build && tsc -p tsconfig.node.json",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@art-suite/chained-test": "^1.6.6",
