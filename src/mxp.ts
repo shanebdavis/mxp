@@ -98,7 +98,9 @@ export const main = async (startDir: string = process.cwd()) => {
 
   // Start the server
   const { server } = startServer({
-    storageFolder: expeditionDir
+    storageFolder: expeditionDir,
+    port: 0, // let the OS assign a port
+    autoOpenInBrowser: true
   })
 
   return { server }

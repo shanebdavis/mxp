@@ -1,25 +1,27 @@
 import express from 'express'
 import swaggerUi from 'swagger-ui-express'
 import cors from 'cors'
-import { fileURLToPath } from 'url'
 import { join } from 'path'
-import { readFileSync } from 'fs'
+import { readFileSync, realpathSync } from 'fs'
 import { createApiRouter } from './api/index.js'
 import path from 'path'
-
+import open from 'open'
 interface ServerOptions {
   port?: number
   storageFolder?: string
+  autoOpenInBrowser?: boolean
 }
 
 // use process.args to determine the source directory
-const PACKAGE_ROOT = path.join(process.argv[1], '..')
+// resolve symlinks on process.arv[1] first
+const START_SCRIPT = realpathSync(process.argv[1])
+const PACKAGE_ROOT = path.join(START_SCRIPT, '..')
 
 export const startServer = ({
-  port = process.env.PORT ? parseInt(process.env.PORT) : 3001,
-  storageFolder = process.env.STORAGE_FOLDER || join(process.cwd(), 'expedition')
+  port = process.env.PORT != null ? parseInt(process.env.PORT) : 3001,
+  storageFolder = process.env.STORAGE_FOLDER || join(process.cwd(), 'expedition'),
+  autoOpenInBrowser = false
 }: ServerOptions = {}) => {
-
   const app = express()
 
   app.use(cors())
@@ -40,9 +42,13 @@ export const startServer = ({
   app.get('*', (req, res) => res.sendFile(path.join(dist, 'index.html')))
 
   const server = app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`)
-    console.log(`API documentation available at http://localhost:${port}/api-docs`)
+    const actualPort = (server.address() as { port: number }).port
+    console.log(`Server running at http://localhost:${actualPort}`)
+    console.log(`API documentation available at http://localhost:${actualPort}/api-docs`)
     console.log(`Using storage folder: ${storageFolder}`)
+    if (autoOpenInBrowser) {
+      open(`http://localhost:${actualPort}`)
+    }
   })
 
   return { app, server }

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const { main } = require('./dist/mxp.js')
 
 main(process.argv[2]).catch(error => {
