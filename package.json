@@ -1,18 +1,23 @@
 {
-  "name": "tree-state-api",
+  "name": "mxp",
   "version": "1.0.0",
-  "description": "REST API for managing hierarchical tree data structures",
-  "main": "server.ts",
+  "description": "Method: Expedition - Knowledge Engine for Visionary Projects",
+  "main": "dist/mxp.js",
   "type": "module",
+  "bin": {
+    "mxp": "./bin/mxp.js"
+  },
   "scripts": {
-    "start": "node server.js",
+    "start": "node dist/mxp.js",
     "dev:api": "tsx watch server.ts",
     "dev:vite": "vite",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:vite\"",
     "test": "vitest run",
     "test-watch": "vitest",
     "test-coverage": "vitest run --coverage",
-    "test-ui": "vitest --ui"
+    "test-ui": "vitest --ui",
+    "build": "vite build && tsc -p tsconfig.node.json",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@art-suite/chained-test": "^1.6.6",
