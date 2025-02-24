@@ -12,9 +12,8 @@ interface ServerOptions {
   storageFolder?: string
 }
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const PACKAGE_ROOT = path.join(__dirname, '..')
+// use process.args to determine the source directory
+const PACKAGE_ROOT = path.join(process.argv[1], '..')
 
 export const startServer = ({
   port = process.env.PORT ? parseInt(process.env.PORT) : 3001,

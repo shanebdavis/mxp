@@ -1,19 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "allowJs": true,
-    "outDir": "dist",
-    "jsx": "react-jsx",
-    "declaration": true,
-    "sourceMap": true,
-    "lib": ["ESNext", "DOM", "DOM.Iterable"]
+    "outDir": "./dist", // Redirect output structure to the directory
+    "rootDir": "./src", // Specify the root directory of input files
+    "target": "es2018" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+    "module": "commonjs" /* Specify what module code is generated. */,
+    "resolveJsonModule": true /* Enable importing .json files. */,
+    "sourceMap": true /* Create source map files for emitted JavaScript files. */,
+    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
+    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
+    "strict": true /* Enable all strict type-checking options. */,
+    "noUnusedLocals": false /* Disable error reporting for unused local variables. */,
+    "noUnusedParameters": false /* Disable error reporting for unused parameters. */,
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "./src/**/*" // Include all files in the source directory
+  ],
+  "exclude": [
+    "node_modules", // Exclude the node_modules directory
+    "./src/client/**/*",
+    "./src/**/*.tsx",
+    "./src/**/*.jsx"
+  ]
 }

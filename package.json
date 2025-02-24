@@ -2,13 +2,13 @@
   "name": "mxp",
   "version": "1.0.0",
   "description": "Method: Expedition - Knowledge Engine for Visionary Projects",
-  "main": "dist/mxp.js",
-  "type": "module",
+  "main": "./dist/mxp.js",
+  "type": "commonjs",
   "bin": {
-    "mxp": "./bin/mxp.js"
+    "mxp": "./mxp.js"
   },
   "scripts": {
-    "start": "node dist/mxp.js",
+    "start": "node ./mxp.js",
     "dev:api": "tsx watch server.ts",
     "dev:vite": "vite",
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:vite\"",

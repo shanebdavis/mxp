@@ -4,10 +4,6 @@ import { startServer } from './server.js'
 import { FileStore } from './models/FileStore.js'
 import { execSync } from 'child_process'
 import { createInterface } from 'readline'
-import { fileURLToPath } from 'url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 const isGitRepo = (dir: string) => {
   try {
