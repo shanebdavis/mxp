@@ -4,6 +4,7 @@ import { startServer } from './server.js'
 import { FileStore } from './models/FileStore.js'
 import { execSync } from 'child_process'
 import { createInterface } from 'readline'
+import { initFileStore } from './models/FileStoreInit.js'
 
 const isGitRepo = (dir: string) => {
   try {
@@ -57,7 +58,6 @@ Remember: "All problems are solvable with enough knowledge."
 export const main = async (startDir: string = process.cwd()) => {
   // Check if expedition directory exists
   const expeditionDir = path.join(startDir, 'expedition')
-  const mapsDir = path.join(expeditionDir, 'maps')
 
   try {
     await fs.access(expeditionDir)
@@ -76,25 +76,10 @@ export const main = async (startDir: string = process.cwd()) => {
 
     // Create expedition directory and maps subdirectory
     await fs.mkdir(expeditionDir, { recursive: true })
-    await fs.mkdir(mapsDir, { recursive: true })
-  }
-
-  // Check if maps directory exists
-  try {
-    await fs.access(mapsDir)
-  } catch {
-    await fs.mkdir(mapsDir, { recursive: true })
-  }
-
-  // Check if there are any files in maps directory
-  const files = await fs.readdir(mapsDir)
-  if (files.length === 0) {
-    await createRootProblem(mapsDir)
   }
 
   // Initialize FileStore and start server
-  const fileStore = new FileStore(mapsDir)
-  await fileStore.getAllNodes() // This will heal any issues with the files
+  await initFileStore(expeditionDir)
 
   // Start the server
   const { server } = startServer({
