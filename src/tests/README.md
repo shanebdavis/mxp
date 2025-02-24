@@ -53,5 +53,5 @@ npm test
 npm test -- src/tests/models
 
 # Run a specific test file
-npm test -- src/tests/models/TreeNode.test.ts
+npm test -- src/tests/models.test.ts
 ```

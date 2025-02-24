@@ -1,0 +1,406 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Tree State Management API",
+    "version": "1.0.0",
+    "description": "REST API for managing hierarchical tree data structures"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Local development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Nodes",
+      "description": "Operations for managing nodes in the tree"
+    }
+  ],
+  "paths": {
+    "/nodes": {
+      "get": {
+        "summary": "Get all nodes",
+        "operationId": "getNodes",
+        "tags": ["Nodes"],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved all nodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a new node",
+        "operationId": "addNode",
+        "tags": ["Nodes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["node", "parentNodeId"],
+                "properties": {
+                  "node": {
+                    "$ref": "#/components/schemas/TreeNodeProperties"
+                  },
+                  "parentNodeId": {
+                    "type": "string"
+                  },
+                  "insertAtIndex": {
+                    "type": "integer",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Node successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}": {
+      "patch": {
+        "summary": "Update a node's properties",
+        "operationId": "updateNode",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTreeNodeProperties"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Node successfully updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a node",
+        "operationId": "removeNode",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node successfully removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node not found"
+          }
+        }
+      }
+    },
+    "/nodes/{nodeId}/parent": {
+      "put": {
+        "summary": "Change a node's parent",
+        "operationId": "setNodeParent",
+        "tags": ["Nodes"],
+        "parameters": [
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["newParentId"],
+                "properties": {
+                  "newParentId": {
+                    "type": "string"
+                  },
+                  "insertAtIndex": {
+                    "type": "integer",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Node's parent successfully changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/TreeNode"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Node not found"
+          },
+          "400": {
+            "description": "Invalid parent (e.g. would create circular reference)"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Metrics": {
+        "type": "object",
+        "required": ["readinessLevel"],
+        "properties": {
+          "readinessLevel": {
+            "type": "number",
+            "description": "Readiness level (0-9)",
+            "minimum": 0,
+            "maximum": 9
+          }
+        }
+      },
+      "PartialMetrics": {
+        "type": "object",
+        "properties": {
+          "readinessLevel": {
+            "type": "number",
+            "description": "Readiness level (0-9)",
+            "minimum": 0,
+            "maximum": 9,
+            "nullable": true
+          }
+        }
+      },
+      "UpdateMetrics": {
+        "type": "object",
+        "description": "Metrics for updates. null values indicate the metric should be cleared.",
+        "properties": {
+          "readinessLevel": {
+            "type": "number",
+            "description": "Readiness level (0-9). null indicates to clear the value.",
+            "minimum": 0,
+            "maximum": 9,
+            "nullable": true
+          }
+        }
+      },
+      "UpdateTreeNodeProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the node"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description of the node"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the node",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
+          },
+          "setMetrics": {
+            "$ref": "#/components/schemas/UpdateMetrics"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether this node is a draft"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NodeType"
+          }
+        }
+      },
+      "NodeType": {
+        "type": "string",
+        "enum": ["map", "waypoint", "user"],
+        "description": "The type of the node"
+      },
+      "TreeNodeProperties": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The title of the node"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description of the node"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the node",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
+          },
+          "setMetrics": {
+            "$ref": "#/components/schemas/PartialMetrics"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether this node is a draft"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NodeType"
+          }
+        }
+      },
+      "TreeNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "childrenIds",
+          "parentId",
+          "calculatedMetrics",
+          "filename",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the node"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "ID of the parent node. Null for root node.",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "description": "The title of the node"
+          },
+          "description": {
+            "type": "string",
+            "description": "A detailed description of the node"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the node",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "number" },
+                { "type": "boolean" },
+                { "type": "string", "format": "date-time" }
+              ]
+            }
+          },
+          "setMetrics": {
+            "$ref": "#/components/schemas/PartialMetrics"
+          },
+          "calculatedMetrics": {
+            "$ref": "#/components/schemas/Metrics"
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Whether this node is a draft"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NodeType"
+          },
+          "childrenIds": {
+            "type": "array",
+            "description": "Array of child node IDs",
+            "items": {
+              "type": "string"
+            }
+          },
+          "filename": {
+            "type": "string",
+            "description": "The name of the file storing this node"
+          }
+        }
+      }
+    }
+  }
+}

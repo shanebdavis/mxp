@@ -188,7 +188,7 @@ body.resizing * {
 }
 
 .markdown-content p {
-  margin: 0 0 0.75em 0;
+  margin: 0 0 1em 0;
 }
 
 .markdown-content h1,
@@ -214,8 +214,11 @@ body.resizing * {
 .markdown-content blockquote {
   margin: 0.5em 0;
   padding: 0.5em 1em;
-  border-left: 3px solid var(--border-color);
+  border-left: 4px solid var(--text-secondary) !important;
   background: var(--background-secondary);
+  color: var(--text-secondary);
+  position: relative;  /* ensure border is visible */
+  display: block;  /* ensure proper block rendering */
 }
 
 .markdown-content pre {
@@ -254,7 +257,28 @@ body.resizing * {
 .markdown-content ul,
 .markdown-content ol {
   margin: 0.5em 0;
-  padding-left: 2em;
+  padding-left: 1.2em;  /* minimal indent for first level */
+  list-style-position: outside;
+}
+
+/* Style nested lists */
+.markdown-content ul ul,
+.markdown-content ol ol,
+.markdown-content ul ol,
+.markdown-content ol ul {
+  margin: 0;  /* remove vertical margins for nested lists */
+  padding-left: 21px;  /* match HTable indentation */
+}
+
+/* Ensure list content wraps with indentation */
+.markdown-content li {
+  padding-left: 0.3em;  /* small indent for wrapped content */
+  margin-bottom: 0.5em;
+}
+
+/* Ensure wrapped content in nested lists aligns properly */
+.markdown-content li li {
+  padding-left: 0.3em;
 }
 
 .markdown-content a {
@@ -265,6 +289,45 @@ body.resizing * {
 .markdown-content a:hover {
   text-decoration: underline;
 }
+
+/*
+  table: {
+    borderCollapse: 'collapse' as const,
+    width: '100%',
+    margin: '0.5em 0',
+    fontSize: '13px',
+  },
+  tableCell: {
+    border: '1px solid var(--border-color)',
+    padding: '6px 8px',
+  },
+  tableHeader: {
+    backgroundColor: 'var(--background-secondary)',
+    fontWeight: 600,
+  },
+  */
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+  font-size: 13px;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+  border: 1px solid var(--border-color);
+  padding: 6px 8px;
+}
+
+.markdown-content hr {
+  border: 0;
+  height: 1px;
+  background: var(--border-color);
+  margin: 1em 0;
+}
+
+
 
 .details-text-container {
   flex: 1;
