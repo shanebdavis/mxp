@@ -611,8 +611,6 @@ calculatedMetrics:
     // Move child4 to position 2 (before child3)
     await fileStore.setNodeParent(child4.id, parent.id, 2)
 
-    log({ curiosity: { nodes: fileStore.allNodes, compareResults } })
-
     // Verify new order
     expect(fileStore.getNode(parent.id).childrenIds).toEqual([
       child1.id, child2.id, child4.id, child3.id

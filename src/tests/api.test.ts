@@ -69,7 +69,6 @@ describe('API', () => {
       const childId = Object.keys(childResult).find(id => id !== rootId)!
       const childNode = childResult[childId]
       expect(childNode.title).toBe('Child Node')
-      log({ childNode })
       expect(childNode.setMetrics?.readinessLevel).toBe(5)
       expect(childNode.parentId).toBe(rootId)
 

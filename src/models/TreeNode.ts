@@ -23,6 +23,16 @@ const calculatableMetrics: Record<keyof Metrics, CalculatableMetric<number>> = {
   }
 }
 
+
+function moveElementInArray<T>(array: T[], fromIndex: number, toIndex: number): T[] {
+  if (fromIndex < 0 || fromIndex >= array.length) throw new Error(`fromIndex ${fromIndex} is out of bounds for array of length ${array.length}`)
+  if (toIndex < 0) toIndex = 0
+  const newArray = [...array];
+  const [element] = newArray.splice(fromIndex, 1);
+  newArray.splice(toIndex, 0, element);
+  return newArray;
+}
+
 export const defaultMetrics: Record<keyof Metrics, number> = Object.fromEntries(Object.keys(calculatableMetrics).map(metric => [
   metric,
   calculatableMetrics[metric as keyof Metrics].default
@@ -319,8 +329,31 @@ export const getTreeWithNodeParentChanged = (
   if (isParentOfInTree(nodes, nodeId, newParentId)) {
     throw new Error('Cannot move a node to one of its descendants')
   }
+
+  // If moving within the same parent, handle differently
+  if (node.parentId === newParentId) {
+    const parent = nodes[newParentId];
+    const currentIndex = parent.childrenIds.indexOf(nodeId);
+    if (currentIndex === -1) throw new Error(`Node ${nodeId} not found in parent's children`);
+
+    return updateNodeMetrics(
+      {
+        ...nodes,
+        [newParentId]: {
+          ...parent,
+          childrenIds: moveElementInArray(
+            parent.childrenIds,
+            currentIndex,
+            insertAtIndex ?? parent.childrenIds.length
+          )
+        }
+      },
+      newParentId
+    );
+  }
+
+  // Otherwise, handle moving to a new parent
   const oldParent = node.parentId ? nodes[node.parentId] : null
-  // if (!oldParent) throw new Error(`Old parent node ${node.parentId} not found`)
 
   let updatedNodes = {
     ...nodes,

@@ -80,9 +80,7 @@ class FileStore {
     await this.vivifyAllSubDirs()
     await this.loadAllNodes()
     const { nodes, rootNodesByType } = getRootNodesByType(this._allNodes)
-    log({ getRootNodesByType1: { nodes, rootNodesByType } })
     this.setAllNodesAndSaveAnyChanges(nodes)
-    log({ getRootNodesByType2: { allNodes: this._allNodes } })
     this._rootNodesByType = rootNodesByType
 
     for (const [type, dir] of Object.entries(FILESTORE_SUB_DIRS_BY_TYPE)) {
