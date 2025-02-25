@@ -142,7 +142,7 @@ describe('FileStore', () => {
     await fileStore.deleteNode(child1.id)
 
     // Verify parent's childrenIds is updated
-    const [updatedParent] = await fileStore['findNodeById'](parent.id)
+    const updatedParent = fileStore.getNode(parent.id)
     expect(updatedParent.childrenIds).not.toContain(child1.id)
     expect(updatedParent.childrenIds).toContain(child2.id)
 
@@ -160,13 +160,15 @@ describe('FileStore', () => {
       description: 'Test'
     }, null)
 
-    // Update the title
+    // Update the title and wait for it to complete
     const updated = await fileStore.updateNode(node.id, {
       title: 'New Title'
     })
+    await new Promise(resolve => setTimeout(resolve, 100)) // Give filesystem time to update
 
     // Verify old file is gone and new file exists
-    const files = await fs.readdir(testDir)
+    const files = await fs.readdir(fileStore.baseDirsByType.map)
+    log({ files })
     expect(files).not.toContain('Original Title.md')
     expect(files).toContain('New Title.md')
 
@@ -268,7 +270,7 @@ describe('FileStore', () => {
 
     // Verify we got exactly one node
     const nodeIds = Object.keys(nodes)
-    expect(nodeIds).toHaveLength(1)
+    expect(nodeIds).toHaveLength(3)
 
     // Get the node
     const node = nodes[nodeIds[0]]

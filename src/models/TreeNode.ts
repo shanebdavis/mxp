@@ -210,6 +210,10 @@ export const getRootNodesByType = (nodes: TreeNodeMap): Record<NodeType, TreeNod
   return rootNodesByType as Record<NodeType, TreeNode>
 }
 
+export const getDefaultFilename = (properties: TreeNodeProperties): string => {
+  return `${properties.title || 'untitled'}.md`
+}
+
 export const createNode = (
   type: NodeType,
   properties: TreeNodeProperties,
@@ -221,7 +225,7 @@ export const createNode = (
   parentId,
   childrenIds: [],
   calculatedMetrics: calculateAllMetricsFromSetMetricsAndChildrenMetrics(properties.setMetrics ?? {}, []),
-  filename: `${properties.title || 'untitled'}.md`
+  filename: getDefaultFilename(properties)
 })
 
 const getChildrenIdsWithInsertion = (childrenIds: string[], nodeId: string, insertAtIndex?: number | null): string[] =>

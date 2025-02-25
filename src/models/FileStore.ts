@@ -3,9 +3,9 @@ import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
 import matter from 'gray-matter'
-import { TreeNode, TreeNodeProperties, createNode, NodeType, calculateAllMetricsFromNodeId, UpdateTreeNodeProperties, nodesAreEqual, getUpdatedNode, getRootNodesByType, getTreeWithNodeParentChanged, getTreeWithNodeAdded, getTreeWithNodeRemoved, RootNodesByType, ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNode'
+import { TreeNode, TreeNodeProperties, createNode, NodeType, calculateAllMetricsFromNodeId, UpdateTreeNodeProperties, nodesAreEqual, getUpdatedNode, getRootNodesByType, getTreeWithNodeParentChanged, getTreeWithNodeAdded, getTreeWithNodeRemoved, RootNodesByType, ROOT_NODE_DEFAULT_PROPERTIES, getDefaultFilename } from './TreeNode'
 const { eq } = require('art-standard-lib')
-import { array, formattedInspect } from '../ArtStandardLib'
+import { array, formattedInspect, log } from '../ArtStandardLib'
 
 interface NodeMetadata {
   id?: string
@@ -296,17 +296,6 @@ class FileStore {
     return node
   }
 
-  private getChildrenIdsWithInsertion(childrenIds: string[] | undefined, nodeId: string, insertAtIndex?: number | null): string[] {
-    const currentIds = childrenIds || []
-    // First, remove any existing instances of nodeId to prevent duplicates
-    const filteredIds = currentIds.filter(id => id !== nodeId)
-
-    if (insertAtIndex != null && insertAtIndex >= 0) {
-      return [...filteredIds.slice(0, insertAtIndex), nodeId, ...filteredIds.slice(insertAtIndex)]
-    }
-    return [...filteredIds, nodeId]
-  }
-
   private async updateNodeAndParentMetrics(nodeId: string): Promise<void> {
     const node = this.getNode(nodeId)
 
@@ -374,9 +363,13 @@ class FileStore {
   private async saveNode(node: TreeNode) {
     this.ensureInitialized()
     const oldNode = this._allNodes[node.id]
+    log({ oldNode, node })
     if (!nodesAreEqual(oldNode, node)) {
+      log("nodesAreNotEqual")
+      node = { ...node, filename: getDefaultFilename(node) }
       const oldPath = this.getFilePath(oldNode)
       const newPath = this.getFilePath(node)
+      log({ oldPath, newPath })
       if (oldPath !== newPath) await fs.rename(oldPath, newPath)
 
       this._allNodes[node.id] = node
