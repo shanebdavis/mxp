@@ -5,11 +5,35 @@ import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootN
 import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds } from './TreeNodeLib'
 import { calculateAllMetricsFromNode, calculateAllMetricsFromSetMetricsAndChildrenMetrics, compactMergeMetrics, metricsAreSame } from './TreeNodeMetrics'
 
-export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
-  map: { title: 'Root Problem', description: 'What is the root problem you are trying to solve? Trace your "why" back to the fundamental human needs you are serving. Who are you serving? What is the problem you are solving for them? What is the impact of that problem on their lives?' },
-  waypoint: { title: 'Waypoints', description: 'What is the next deliverable? What does it require? When do you need it?' },
-  user: { title: 'Contributors', description: 'Who is contributing to this expedition?' }
-}
+//*******************************************
+// Single Node Creation and Update
+//*******************************************
+export const createNode = (
+  type: NodeType,
+  properties: TreeNodeProperties,
+  parentId: string | null = null,
+): TreeNode => ({
+  ...properties,
+  type,
+  id: uuid(),
+  parentId,
+  childrenIds: [],
+  calculatedMetrics: calculateAllMetricsFromSetMetricsAndChildrenMetrics(properties.setMetrics ?? {}, []),
+  filename: getDefaultFilename(properties)
+})
+
+export const getUpdatedNode = (
+  node: TreeNode,
+  updates: UpdateTreeNodeProperties
+): TreeNode => ({
+  ...node,
+  ...updates,
+  setMetrics: compactMergeMetrics(node.setMetrics, updates.setMetrics)
+})
+
+//*******************************************
+// Whole Tree Mutators
+//*******************************************
 
 /**
  * Update the metrics for a node and all its parents
@@ -17,7 +41,7 @@ export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> 
  * @param startNodeId - The node to start the update from
  * @returns A new nodes object with the all nodes, updated and old
  */
-const updateNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap => {
+const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap => {
   // create map of only the nodes we're going to modify
   const updatedNodes: TreeNodeMap = { ...nodes }
   let changes = 0
@@ -48,19 +72,6 @@ const updateNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap
     : nodes
 }
 
-export const createNode = (
-  type: NodeType,
-  properties: TreeNodeProperties,
-  parentId: string | null = null,
-): TreeNode => ({
-  ...properties,
-  type,
-  id: uuid(),
-  parentId,
-  childrenIds: [],
-  calculatedMetrics: calculateAllMetricsFromSetMetricsAndChildrenMetrics(properties.setMetrics ?? {}, []),
-  filename: getDefaultFilename(properties)
-})
 
 export const getTreeWithNodeAdded = (
   nodes: TreeNodeMap,
@@ -85,17 +96,8 @@ export const getTreeWithNodeAdded = (
   }
 
   // Update the nodes object and recalculate parent metrics
-  return updateNodeMetrics(updatedNodes, nodeToAdd.id)
+  return getTreeWithUpdatedNodeMetrics(updatedNodes, nodeToAdd.id)
 }
-
-export const getUpdatedNode = (
-  node: TreeNode,
-  updates: UpdateTreeNodeProperties
-): TreeNode => ({
-  ...node,
-  ...updates,
-  setMetrics: compactMergeMetrics(node.setMetrics, updates.setMetrics)
-})
 
 export const getTreeWithNodeUpdated = (
   nodes: TreeNodeMap,
@@ -115,7 +117,7 @@ export const getTreeWithNodeUpdated = (
   }
 
   // Recalculate metrics for this node and its ancestors
-  return updateNodeMetrics(updatedNodes, nodeId)
+  return getTreeWithUpdatedNodeMetrics(updatedNodes, nodeId)
 }
 
 /**
@@ -153,7 +155,7 @@ export const getTreeWithNodeParentChanged = (
     // If moving to a later position, we need to account for the removal of the current item
     const adjustedTargetIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
 
-    return updateNodeMetrics(
+    return getTreeWithUpdatedNodeMetrics(
       {
         ...nodes,
         [newParentId]: {
@@ -179,9 +181,9 @@ export const getTreeWithNodeParentChanged = (
   }
   if (oldParent) {
     updatedNodes[oldParent.id] = { ...oldParent, childrenIds: getChildrenIdsWithRemoval(oldParent.childrenIds, nodeId) }
-    updatedNodes = updateNodeMetrics(updatedNodes, oldParent.id)
+    updatedNodes = getTreeWithUpdatedNodeMetrics(updatedNodes, oldParent.id)
   }
-  return updateNodeMetrics(updatedNodes, newParentId)
+  return getTreeWithUpdatedNodeMetrics(updatedNodes, newParentId)
 }
 
 export const getTreeWithNodeRemoved = (
@@ -212,7 +214,7 @@ export const getTreeWithNodeRemoved = (
   }
 
   return node.parentId
-    ? updateNodeMetrics(updatedNodes, node.parentId)
+    ? getTreeWithUpdatedNodeMetrics(updatedNodes, node.parentId)
     : updatedNodes
 }
 
