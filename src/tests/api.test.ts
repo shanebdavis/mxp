@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { useTempDir } from './helpers/tempDir'
 import { startTestServer, TestServer } from './helpers/testServer'
-import { log } from '../log'
+import { log } from '../ArtStandardLib'
 
 describe('API', () => {
   const { useTemp } = useTempDir({ prefix: 'api-test-' })

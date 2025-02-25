@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
 import { useTempDir } from './helpers/tempDir'
+import { createFileStore } from '../models/FileStore'
+import { ROOT_NODE_DEFAULT_PROPERTIES } from '../models/TreeNode'
+import { log, objectKeyCount } from '../ArtStandardLib'
 import { initFileStore } from '../models/FileStoreInit'
-import { NodeType } from '../models/TreeNode'
 
 describe('FileStoreInit', () => {
   const { useTemp } = useTempDir({ prefix: 'filestore-init-test-' })
@@ -12,7 +14,7 @@ describe('FileStoreInit', () => {
     const { path: testDir } = useTemp()
 
     // Initialize FileStore
-    const fileStore = await initFileStore(testDir)
+    const fileStore = await createFileStore(testDir)
 
     // Verify maps directory was created
     const mapsDir = path.join(testDir, 'maps')
@@ -20,17 +22,15 @@ describe('FileStoreInit', () => {
     expect(mapsExists).toBe(true)
 
     // Verify root node was created
-    const nodes = await fileStore.getAllNodes()
-    const nodeArray = Object.values(nodes)
-    expect(nodeArray).toHaveLength(1)
+    const nodes = fileStore.allNodes
+    expect(objectKeyCount(nodes)).toEqual(3)
 
-    const rootNode = nodeArray[0]
-    expect(rootNode).toMatchObject({
-      title: 'Root Problem',
-      description: 'What is the root problem you are trying to solve?',
+    const rootNode = Object.values(nodes).find(node => node.title == ROOT_NODE_DEFAULT_PROPERTIES.map.title)
+    expect(rootNode!).toMatchObject({
+      ...ROOT_NODE_DEFAULT_PROPERTIES.map,
       parentId: null,
       childrenIds: [],
-      type: NodeType.Map
+      type: "map"
     })
   })
 
@@ -42,16 +42,16 @@ describe('FileStoreInit', () => {
     await fs.mkdir(mapsDir, { recursive: true })
 
     // Initialize FileStore first time to create initial root
-    const fileStore1 = await initFileStore(testDir)
-    const nodes1 = await fileStore1.getAllNodes()
+    const fileStore1 = await createFileStore(testDir)
+    const nodes1 = fileStore1.allNodes
     const rootNode1 = Object.values(nodes1)[0]
 
     // Initialize FileStore second time
-    const fileStore2 = await initFileStore(testDir)
-    const nodes2 = await fileStore2.getAllNodes()
+    const fileStore2 = await createFileStore(testDir)
+    const nodes2 = fileStore2.allNodes
 
     // Verify we still have just one root node with the same ID
-    expect(Object.keys(nodes2)).toHaveLength(1)
+    expect(Object.keys(nodes2)).toHaveLength(3)
     const rootNode2 = Object.values(nodes2)[0]
     expect(rootNode2.id).toBe(rootNode1.id)
   })

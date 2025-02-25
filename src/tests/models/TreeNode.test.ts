@@ -11,7 +11,7 @@ import {
   NodeType,
   inspectTree
 } from '../../models'
-import { log } from '../../log'
+import { log } from '../../ArtStandardLib'
 
 describe('TreeNode', () => {
   let testNodes: TreeNodeMap
@@ -19,11 +19,11 @@ describe('TreeNode', () => {
 
   beforeEach(() => {
     // Create a fresh test tree before each test
-    const rootNode = createNode({
+    const rootNode = createNode("map", {
       title: 'Test Root',
     })
     rootNodeId = rootNode.id
-    const child1 = createNode({
+    const child1 = createNode("map", {
       title: 'Child 1',
     }, rootNode.id)
 
@@ -35,7 +35,7 @@ describe('TreeNode', () => {
 
   describe('getTreeWithNodeAdded', () => {
     it('should add a node to the specified parent', () => {
-      const newNode = createNode({
+      const newNode = createNode("map", {
         title: 'New Node',
         setMetrics: { readinessLevel: 3 }
       })
@@ -50,7 +50,7 @@ describe('TreeNode', () => {
       expect(newAddedNode.id).toBeDefined()
 
       // now add a node to the new node
-      const newNode2 = createNode({
+      const newNode2 = createNode("map", {
         title: 'New Node 2',
         setMetrics: { readinessLevel: 4 }
       })
@@ -70,7 +70,7 @@ describe('TreeNode', () => {
     })
 
     it('should add a node at specific index', () => {
-      const newNode = createNode({
+      const newNode = createNode("map", {
         title: 'New Node',
         setMetrics: { readinessLevel: 3 }
       })
@@ -89,26 +89,35 @@ describe('TreeNode', () => {
     it('should add nodes at multiple indexes', () => {
       // Setup a tree with multiple children
       const rootId = Object.keys(testNodes)[0]
-      const child2 = createNode({
+      const child2 = createNode("map", {
         title: 'Child 2',
         setMetrics: { readinessLevel: 2 }
       })
       const nodesWithTwoChildren = getTreeWithNodeAdded(testNodes, child2, rootId)
 
       // Test adding at index 0 (beginning)
-      const newNode1 = createNode({ title: 'First', setMetrics: { readinessLevel: 3 } })
+      const newNode1 = createNode("map", {
+        title: 'First',
+        setMetrics: { readinessLevel: 3 }
+      })
       const result1 = getTreeWithNodeAdded(nodesWithTwoChildren, newNode1, rootId, 0)
       expect(result1[rootId].childrenIds[0]).toBe(newNode1.id)
       expect(result1[rootId].childrenIds.length).toBe(3)
 
       // Test adding at index 1 (middle)
-      const newNode2 = createNode({ title: 'Middle', setMetrics: { readinessLevel: 3 } })
+      const newNode2 = createNode("map", {
+        title: 'Middle',
+        setMetrics: { readinessLevel: 3 }
+      })
       const result2 = getTreeWithNodeAdded(nodesWithTwoChildren, newNode2, rootId, 1)
       expect(result2[rootId].childrenIds[1]).toBe(newNode2.id)
       expect(result2[rootId].childrenIds.length).toBe(3)
 
       // Test adding at index > children.length (should append)
-      const newNode3 = createNode({ title: 'Last', setMetrics: { readinessLevel: 3 } })
+      const newNode3 = createNode("map", {
+        title: 'Last',
+        setMetrics: { readinessLevel: 3 }
+      })
       const result3 = getTreeWithNodeAdded(nodesWithTwoChildren, newNode3, rootId, 999)
       expect(result3[rootId].childrenIds[result3[rootId].childrenIds.length - 1]).toBe(newNode3.id)
       expect(result3[rootId].childrenIds.length).toBe(3)
@@ -117,19 +126,25 @@ describe('TreeNode', () => {
     it('should add node at end when index is negative', () => {
       // Setup a tree with multiple children
       const rootId = Object.keys(testNodes)[0]
-      const child2 = createNode({
+      const child2 = createNode("map", {
         title: 'Child 2',
         setMetrics: { readinessLevel: 2 }
       })
       const nodesWithTwoChildren = getTreeWithNodeAdded(testNodes, child2, rootId)
 
-      const newNode = createNode({ title: 'Last', setMetrics: { readinessLevel: 3 } })
+      const newNode = createNode("map", {
+        title: 'Last',
+        setMetrics: { readinessLevel: 3 }
+      })
       const result = getTreeWithNodeAdded(nodesWithTwoChildren, newNode, rootId, -1)
       expect(result[rootId].childrenIds[result[rootId].childrenIds.length - 1]).toBe(newNode.id)
       expect(result[rootId].childrenIds.length).toBe(3)
 
       // Test with other negative numbers too
-      const newNode2 = createNode({ title: 'Last 2', setMetrics: { readinessLevel: 3 } })
+      const newNode2 = createNode("map", {
+        title: 'Last 2',
+        setMetrics: { readinessLevel: 3 }
+      })
       const result2 = getTreeWithNodeAdded(nodesWithTwoChildren, newNode2, rootId, -42)
       expect(result2[rootId].childrenIds[result2[rootId].childrenIds.length - 1]).toBe(newNode2.id)
       expect(result2[rootId].childrenIds.length).toBe(3)
@@ -140,7 +155,7 @@ describe('TreeNode', () => {
       const child1Id = testNodes[rootId].childrenIds[0]
 
       // Add a grandchild
-      const grandChild = createNode({
+      const grandChild = createNode("map", {
         title: 'Grandchild',
         setMetrics: { readinessLevel: 3 }
       })
@@ -152,7 +167,7 @@ describe('TreeNode', () => {
       expect(nodesWithGrandchild[grandChild.id].parentId).toBe(child1Id)
 
       // Add a great-grandchild
-      const greatGrandChild = createNode({
+      const greatGrandChild = createNode("map", {
         title: 'Great Grandchild',
         setMetrics: { readinessLevel: 4 }
       })
@@ -195,13 +210,13 @@ describe('TreeNode', () => {
       const child1Id = testNodes[rootId].childrenIds[0]
 
       // Setup a deep tree
-      const grandChild = createNode({
+      const grandChild = createNode("map", {
         title: 'Grandchild',
         setMetrics: { readinessLevel: 3 }
       })
       const nodesWithGrandchild = getTreeWithNodeAdded(testNodes, grandChild, child1Id)
 
-      const greatGrandChild = createNode({
+      const greatGrandChild = createNode("map", {
         title: 'Great Grandchild',
         setMetrics: { readinessLevel: 4 }
       })
@@ -225,19 +240,19 @@ describe('TreeNode', () => {
       const child1Id = testNodes[rootId].childrenIds[0]
 
       // Add multiple children to child1
-      const grandChild1 = createNode({
+      const grandChild1 = createNode("map", {
         title: 'Grandchild 1',
         setMetrics: { readinessLevel: 3 }
       })
       const treeWithGrandchild1 = getTreeWithNodeAdded(testNodes, grandChild1, child1Id)
 
-      const grandChild2 = createNode({
+      const grandChild2 = createNode("map", {
         title: 'Grandchild 2',
         setMetrics: { readinessLevel: 4 }
       })
       const treeWithGrandchild2 = getTreeWithNodeAdded(treeWithGrandchild1, grandChild2, child1Id)
 
-      const grandChild3 = createNode({
+      const grandChild3 = createNode("map", {
         title: 'Grandchild 3',
         setMetrics: { readinessLevel: 5 }
       })
@@ -303,26 +318,26 @@ describe('TreeNode', () => {
       expect(testNodes[child1Id].calculatedMetrics.readinessLevel).toBe(0)
 
       // Add two grandchildren to child1
-      const grandChild1 = createNode({
+      const grandChild1 = createNode("map", {
         title: 'Grandchild 1',
         setMetrics: { readinessLevel: 4 }
       })
       const nodesWithGrandchild1 = getTreeWithNodeAdded(testNodes, grandChild1, child1Id)
       expect(nodesWithGrandchild1[child1Id].calculatedMetrics.readinessLevel).toBe(4)
 
-      const grandChild2 = createNode({
+      const grandChild2 = createNode("map", {
         title: 'Grandchild 2',
       })
       const nodesWithBothGrandchildren = getTreeWithNodeAdded(nodesWithGrandchild1, grandChild2, child1Id)
 
       // Add two great-grandchildren to grandChild1
-      const greatGrandChild1 = createNode({
+      const greatGrandChild1 = createNode("map", {
         title: 'Great Grandchild 1',
         setMetrics: { readinessLevel: 1 }
       })
       const nodesWithGreatGrandchild1 = getTreeWithNodeAdded(nodesWithBothGrandchildren, greatGrandChild1, grandChild2.id)
 
-      const greatGrandChild2 = createNode({
+      const greatGrandChild2 = createNode("map", {
         title: 'Great Grandchild 2',
         setMetrics: { readinessLevel: 3 }
       })
@@ -355,7 +370,7 @@ describe('TreeNode', () => {
     it('should move node to new parent', () => {
       // First add a second child to root
       const rootId = Object.keys(testNodes)[0]
-      const child2 = createNode({
+      const child2 = createNode("map", {
         title: 'Child 2',
         setMetrics: { readinessLevel: 2 }
       })
@@ -381,7 +396,7 @@ describe('TreeNode', () => {
     it('should throw error when trying to create circular reference', () => {
       const rootId = Object.keys(testNodes)[0]
       const child1Id = testNodes[rootId].childrenIds[0]
-      const child2 = createNode({
+      const child2 = createNode("map", {
         title: 'Child 2',
         setMetrics: { readinessLevel: 2 }
       })
@@ -409,7 +424,7 @@ describe('TreeNode', () => {
     it('should return true for indirect parent relationship', () => {
       const rootId = Object.keys(testNodes)[0]
       const child1Id = testNodes[rootId].childrenIds[0]
-      const child2 = createNode({
+      const child2 = createNode("map", {
         title: 'Child 2',
         setMetrics: { readinessLevel: 2 }
       })
@@ -421,36 +436,36 @@ describe('TreeNode', () => {
 
   describe('NodeType', () => {
     it('should default to Map type when not specified', () => {
-      const node = createNode({ title: 'Test Node' })
-      expect(node.type).toBe(NodeType.Map)
+      const node = createNode("map", { title: 'Test Node' })
+      expect(node.type).toBe("map")
     })
 
     it('should allow setting different node types', () => {
-      const waypoint = createNode({ title: 'Waypoint Node', type: NodeType.Waypoint })
-      expect(waypoint.type).toBe(NodeType.Waypoint)
+      const waypoint = createNode("waypoint", { title: 'Waypoint Node' })
+      expect(waypoint.type).toBe("waypoint")
 
-      const user = createNode({ title: 'User Node', type: NodeType.User })
-      expect(user.type).toBe(NodeType.User)
+      const user = createNode("user", { title: 'User Node' })
+      expect(user.type).toBe("user")
     })
 
     it('should preserve node type through tree operations', () => {
       const rootId = Object.keys(testNodes)[0]
 
       // Add a waypoint node
-      const waypoint = createNode({ title: 'Waypoint', type: NodeType.Waypoint })
+      const waypoint = createNode("waypoint", { title: 'Waypoint' })
       const treeWithWaypoint = getTreeWithNodeAdded(testNodes, waypoint, rootId)
-      expect(treeWithWaypoint[waypoint.id].type).toBe(NodeType.Waypoint)
+      expect(treeWithWaypoint[waypoint.id].type).toBe("waypoint")
 
       // Update the waypoint node
       const updatedTree = getTreeWithNodeUpdated(treeWithWaypoint, waypoint.id, { title: 'Updated Waypoint' })
-      expect(updatedTree[waypoint.id].type).toBe(NodeType.Waypoint)
+      expect(updatedTree[waypoint.id].type).toBe("waypoint")
 
       // Move the waypoint node
-      const user = createNode({ title: 'User', type: NodeType.User })
+      const user = createNode("user", { title: 'User' })
       const treeWithUser = getTreeWithNodeAdded(updatedTree, user, rootId)
       const movedTree = getTreeWithNodeParentChanged(treeWithUser, waypoint.id, user.id)
-      expect(movedTree[waypoint.id].type).toBe(NodeType.Waypoint)
-      expect(movedTree[user.id].type).toBe(NodeType.User)
+      expect(movedTree[waypoint.id].type).toBe("waypoint")
+      expect(movedTree[user.id].type).toBe("user")
     })
   })
 })

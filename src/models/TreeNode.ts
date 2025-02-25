@@ -1,5 +1,7 @@
 import { v4 as uuid } from 'uuid'
-import { log } from '../log'
+import { log } from '../ArtStandardLib'
+
+const { eq } = require('art-standard-lib')
 export type Metrics = {
   readinessLevel: number
 }
@@ -88,10 +90,13 @@ export const calculateAllMetricsFromNodeId = (nodeId: string, allNodes: TreeNode
   return calculateAllMetricsFromNode(node, getActiveChildren(allNodes, nodeId))
 }
 
-export enum NodeType {
-  Map = 'map',
-  Waypoint = 'waypoint',
-  User = 'user'
+export type NodeType = "map" | "waypoint" | "user"
+export type RootNodesByType = Record<NodeType, TreeNode>
+
+export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
+  map: { title: 'Root Problem', description: 'What is the root problem you are trying to solve? Trace your "why" back to the fundamental human needs you are serving. Who are you serving? What is the problem you are solving for them? What is the impact of that problem on their lives?' },
+  waypoint: { title: 'Waypoints', description: 'What is the next deliverable? What does it require? When do you need it?' },
+  user: { title: 'Contributors', description: 'Who is contributing to this expedition?' }
 }
 
 export interface TreeNodeProperties {
@@ -100,7 +105,6 @@ export interface TreeNodeProperties {
   metadata?: Record<string, string | number | boolean | Date>
   setMetrics?: PartialMetrics
   draft?: boolean
-  type?: NodeType
 }
 
 export type UpdateTreeNodeProperties = Omit<Partial<TreeNodeProperties>, 'setMetrics'> & {
@@ -109,10 +113,15 @@ export type UpdateTreeNodeProperties = Omit<Partial<TreeNodeProperties>, 'setMet
 
 export interface TreeNode extends TreeNodeProperties {
   id: string
+  type: NodeType
   parentId: string | null
   childrenIds: string[]
   calculatedMetrics: Metrics
   filename: string  // The name of the file storing this node
+}
+
+export const nodesAreEqual = (a: TreeNode, b: TreeNode): boolean => {
+  return eq(a, b)
 }
 
 export type TreeNodeMap = Record<string, TreeNode>
@@ -148,8 +157,7 @@ const calculateMetrics = (node: TreeNode, children: TreeNode[]): Metrics => {
   }
 }
 
-const metricsAreSame = (a: Metrics, b: Metrics): boolean =>
-  a.readinessLevel === b.readinessLevel
+const metricsAreSame = (a: Metrics, b: Metrics): boolean => eq(a, b)
 
 /**
  * Update the metrics for a node and all its parents
@@ -188,12 +196,27 @@ const updateNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap
     : nodes
 }
 
+export const getAllRootNodes = (nodes: TreeNodeMap): TreeNode[] => {
+  return Object.values(nodes).filter(node => !node.parentId)
+}
+
+export const getRootNodesByType = (nodes: TreeNodeMap): Record<NodeType, TreeNode> => {
+  const rootNodes = getAllRootNodes(nodes)
+  const rootNodesByType: any = {}
+  rootNodes.forEach(node => {
+    if (rootNodesByType[node.type]) throw new Error(`Multiple root nodes of type ${node.type}`)
+    rootNodesByType[node.type] = node
+  })
+  return rootNodesByType as Record<NodeType, TreeNode>
+}
+
 export const createNode = (
+  type: NodeType,
   properties: TreeNodeProperties,
-  parentId: string | null = null
+  parentId: string | null = null,
 ): TreeNode => ({
   ...properties,
-  type: properties.type ?? NodeType.Map,
+  type,
   id: uuid(),
   parentId,
   childrenIds: [],
@@ -235,6 +258,15 @@ export const getTreeWithNodeAdded = (
   return updateNodeMetrics(updatedNodes, nodeToAdd.id)
 }
 
+export const getUpdatedNode = (
+  node: TreeNode,
+  updates: UpdateTreeNodeProperties
+): TreeNode => ({
+  ...node,
+  ...updates,
+  setMetrics: compactMergeMetrics(node.setMetrics, updates.setMetrics)
+})
+
 export const getTreeWithNodeUpdated = (
   nodes: TreeNodeMap,
   nodeId: string,
@@ -244,11 +276,7 @@ export const getTreeWithNodeUpdated = (
   if (!node) throw new Error(`Node ${nodeId} not found`)
 
   // Create updated node
-  const updatedNode = {
-    ...node,
-    ...updates,
-    setMetrics: compactMergeMetrics(node.setMetrics, updates.setMetrics)
-  }
+  const updatedNode = getUpdatedNode(node, updates)
 
   // Update the nodes object and recalculate metrics
   const updatedNodes = {
@@ -260,6 +288,17 @@ export const getTreeWithNodeUpdated = (
   return updateNodeMetrics(updatedNodes, nodeId)
 }
 
+/**
+ * Move a node to a new parent
+ *
+ * TODO: I'd rather have this, or a helper function like this, only return the nodes that changed
+ *
+ * @param nodes - The nodes to update
+ * @param nodeId - The node to move
+ * @param newParentId - The new parent of the node
+ * @param insertAtIndex - The index to insert the node at, if null, the node will be added to the end
+ * @returns A new nodes object with the node moved
+ */
 export const getTreeWithNodeParentChanged = (
   nodes: TreeNodeMap,
   nodeId: string,

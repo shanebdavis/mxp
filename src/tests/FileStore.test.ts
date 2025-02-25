@@ -1,38 +1,40 @@
 import { describe, it, expect } from 'vitest'
+
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import { FileStore } from '../models/FileStore'
+import { createFileStore, FileStore } from '../models/FileStore'
 import { useTempDir } from './helpers/tempDir'
 import { v4 as uuid } from 'uuid'
-import { defaultMetrics, NodeType } from '../models/TreeNode'
-import { log } from '../log'
+import { log } from '../ArtStandardLib'
 
 describe('FileStore', () => {
   const { useTemp } = useTempDir({ prefix: 'filestore-test-' })
   let fileStore: FileStore
 
-  const newTestFileStore = () => {
+  const newTestFileStore = async () => {
     const { path: testDir } = useTemp()
-    return { testDir, fileStore: new FileStore(testDir) }
+    return { testDir, fileStore: await createFileStore(testDir) }
   }
 
   it('basic workflow: create and read a node', async () => {
     // Setup: Create a new FileStore in a temp directory
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
+    const map = fileStore.rootNodesByType.map
+    log({ rootNodesByType: fileStore.rootNodesByType })
 
     // Create a node
-    const createdNode = await fileStore.createNode({
+    const createdNode = await fileStore.createNode("map", {
       title: 'My First Node',
       description: 'This is a test node',
       setMetrics: { readinessLevel: 5 }
-    }, null)
+    }, map.id)
 
     // Get all nodes
-    const allNodes = await fileStore.getAllNodes()
+    const allNodes = fileStore.allNodes
 
     // Verify we got exactly one node back
-    expect(Object.keys(allNodes)).toHaveLength(1)
+    expect(Object.keys(allNodes)).toHaveLength(4)
 
     // Get the node from the map
     const retrievedNode = allNodes[createdNode.id]
@@ -42,21 +44,24 @@ describe('FileStore', () => {
       id: createdNode.id,
       title: 'My First Node',
       description: 'This is a test node',
-      parentId: null,
+      parentId: fileStore.rootNodesByType.map.id,
       childrenIds: [],
       setMetrics: { readinessLevel: 5 },
       calculatedMetrics: { readinessLevel: 5 },
       filename: 'My First Node.md',
-      draft: false,
-      type: NodeType.Map
+      type: "map"
     })
 
-    // Verify the file exists and has the correct name
-    const files = await fs.readdir(testDir)
-    expect(files).toEqual(['My First Node.md'])
+    // Verify the folders exists
+    const dirs = await fs.readdir(testDir)
+    expect(dirs.sort()).toEqual(['maps', 'users', 'waypoints'])
+
+    // verify maps files
+    const mapsFiles = await fs.readdir(path.join(testDir, 'maps'))
+    expect(mapsFiles.sort()).toEqual(['My First Node.md', 'Root Problem.md'])
 
     // Verify the file contents
-    const content = await fs.readFile(path.join(testDir, 'My First Node.md'), 'utf-8')
+    const content = await fs.readFile(path.join(testDir, 'maps', 'My First Node.md'), 'utf-8')
     expect(content).toMatch(/^---\n/) // starts with frontmatter
     expect(content).toContain(`id: ${createdNode.id}`)
     expect(content).toContain('title: My First Node')
@@ -65,9 +70,9 @@ describe('FileStore', () => {
   })
 
   it('creates a node with title and description', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
-    const node = await fileStore.createNode({
+    const node = await fileStore.createNode("map", {
       title: 'Test Node',
       description: 'Test Description'
     }, null)
@@ -78,27 +83,27 @@ describe('FileStore', () => {
     expect(node.description).toBe('Test Description')
 
     // Verify file was created
-    const files = await fs.readdir(testDir)
-    expect(files).toHaveLength(1)
-    expect(files[0]).toBe('Test Node.md')
+    const files = await fs.readdir(fileStore.baseDirsByType.map)
+    expect(files).toHaveLength(2)
+    expect(files.sort()).toEqual(['Root Problem.md', 'Test Node.md'])
 
     // Verify file contents
-    const content = await fs.readFile(path.join(testDir, files[0]), 'utf-8')
+    const content = await fs.readFile(path.join(fileStore.baseDirsByType.map, 'Test Node.md'), 'utf-8')
     expect(content).toContain('Test Description')
     expect(content).toContain('id: ' + node.id)
   })
 
   it('maintains parent-child relationships', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create parent node
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent',
       description: 'Parent Description'
     }, null)
 
     // Create child node
-    const child = await fileStore.createNode({
+    const child = await fileStore.createNode("map", {
       title: 'Child',
       description: 'Child Description'
     }, parent.id)
@@ -107,17 +112,17 @@ describe('FileStore', () => {
     expect(child.parentId).toBe(parent.id)
 
     // Read parent file and verify childrenIds
-    const [updatedParent] = await fileStore['findNodeById'](parent.id)
+    const updatedParent = fileStore.getNode(parent.id)
     expect(updatedParent.childrenIds).toContain(child.id)
   })
 
   it('prevents circular parent-child relationships', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create a chain of nodes
-    const node1 = await fileStore.createNode({ title: 'Node 1' }, null)
-    const node2 = await fileStore.createNode({ title: 'Node 2' }, node1.id)
-    const node3 = await fileStore.createNode({ title: 'Node 3' }, node2.id)
+    const node1 = await fileStore.createNode("map", { title: 'Node 1' })
+    const node2 = await fileStore.createNode("map", { title: 'Node 2' }, node1.id)
+    const node3 = await fileStore.createNode("map", { title: 'Node 3' }, node2.id)
 
     // Try to make node1 a child of node3 (should fail)
     await expect(
@@ -126,12 +131,12 @@ describe('FileStore', () => {
   })
 
   it('deletes nodes and updates parent references', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create a parent with two children
-    const parent = await fileStore.createNode({ title: 'Parent' }, null)
-    const child1 = await fileStore.createNode({ title: 'Child 1' }, parent.id)
-    const child2 = await fileStore.createNode({ title: 'Child 2' }, parent.id)
+    const parent = await fileStore.createNode("map", { title: 'Parent' })
+    const child1 = await fileStore.createNode("map", { title: 'Child 1' }, parent.id)
+    const child2 = await fileStore.createNode("map", { title: 'Child 2' }, parent.id)
 
     // Delete first child
     await fileStore.deleteNode(child1.id)
@@ -147,10 +152,10 @@ describe('FileStore', () => {
   })
 
   it('handles file renames when title changes', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create a node
-    const node = await fileStore.createNode({
+    const node = await fileStore.createNode("map", {
       title: 'Original Title',
       description: 'Test'
     }, null)
@@ -171,10 +176,10 @@ describe('FileStore', () => {
   })
 
   it('updates calculatedMetrics when setMetrics changes', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create a node with initial readinessLevel
-    const node = await fileStore.createNode({
+    const node = await fileStore.createNode("map", {
       title: 'Test Node',
       description: 'Test Description',
       setMetrics: { readinessLevel: 5 }
@@ -204,27 +209,26 @@ describe('FileStore', () => {
   })
 
   it('calculates parent metrics from children', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create root node with no setMetrics (auto)
-    const root = await fileStore.createNode({
+    const root = await fileStore.createNode("map", {
       title: 'Root Node'
     }, null)
 
     // Create two children with different readiness levels
-    const child1 = await fileStore.createNode({
+    const child1 = await fileStore.createNode("map", {
       title: 'Child 1',
       setMetrics: { readinessLevel: 2 }
     }, root.id)
 
-    const child2 = await fileStore.createNode({
+    const child2 = await fileStore.createNode("map", {
       title: 'Child 2',
       setMetrics: { readinessLevel: 3 }
     }, root.id)
 
     // Get the updated root node
-    let nodes = await fileStore.getAllNodes()
-    let updatedRoot = nodes[root.id]
+    let updatedRoot = fileStore.getNode(root.id)
 
     // Root should have calculatedMetrics.readinessLevel = 2 (min of children)
     expect(updatedRoot.setMetrics).toBeUndefined()
@@ -235,8 +239,7 @@ describe('FileStore', () => {
       setMetrics: { readinessLevel: 4 }
     })
 
-    nodes = await fileStore.getAllNodes()
-    updatedRoot = nodes[root.id]
+    updatedRoot = fileStore.getNode(root.id)
 
     // Root should now have readinessLevel = 4 (manually set)
     expect(updatedRoot.setMetrics?.readinessLevel).toBe(4)
@@ -247,8 +250,7 @@ describe('FileStore', () => {
       setMetrics: { readinessLevel: null }
     })
 
-    nodes = await fileStore.getAllNodes()
-    updatedRoot = nodes[root.id]
+    updatedRoot = fileStore.getNode(root.id)
 
     // Root should return to readinessLevel = 2 (min of children)
     expect(updatedRoot.setMetrics).toEqual({})
@@ -256,13 +258,13 @@ describe('FileStore', () => {
   })
 
   it('heals files with missing data', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create an empty markdown file
     await fs.writeFile(path.join(testDir, 'test-node.md'), '')
 
     // Get all nodes
-    const nodes = await fileStore.getAllNodes()
+    const nodes = fileStore.allNodes
 
     // Verify we got exactly one node
     const nodeIds = Object.keys(nodes)
