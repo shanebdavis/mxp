@@ -200,14 +200,18 @@ export const getAllRootNodes = (nodes: TreeNodeMap): TreeNode[] => {
   return Object.values(nodes).filter(node => !node.parentId)
 }
 
-export const getRootNodesByType = (nodes: TreeNodeMap): Record<NodeType, TreeNode> => {
+export const getRootNodesByType = (nodes: TreeNodeMap): { nodes: TreeNodeMap, rootNodesByType: RootNodesByType } => {
   const rootNodes = getAllRootNodes(nodes)
-  const rootNodesByType: any = {}
+  const rootNodesByType: RootNodesByType = {} as RootNodesByType
   rootNodes.forEach(node => {
-    if (rootNodesByType[node.type]) throw new Error(`Multiple root nodes of type ${node.type}`)
-    rootNodesByType[node.type] = node
+    if (rootNodesByType[node.type]) {
+      // already have a root node of this type, so add this node as a child
+      nodes = getTreeWithNodeParentChanged(nodes, node.id, rootNodesByType[node.type].id)
+    } else {
+      rootNodesByType[node.type] = node
+    }
   })
-  return rootNodesByType as Record<NodeType, TreeNode>
+  return { nodes, rootNodesByType }
 }
 
 export const getDefaultFilename = (properties: TreeNodeProperties): string => {
@@ -316,7 +320,7 @@ export const getTreeWithNodeParentChanged = (
     throw new Error('Cannot move a node to one of its descendants')
   }
   const oldParent = node.parentId ? nodes[node.parentId] : null
-  if (!oldParent) throw new Error(`Old parent node ${node.parentId} not found`)
+  // if (!oldParent) throw new Error(`Old parent node ${node.parentId} not found`)
 
   let updatedNodes = {
     ...nodes,

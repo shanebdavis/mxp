@@ -79,7 +79,12 @@ class FileStore {
     await this.ensureBaseDirs()
     await this.vivifyAllSubDirs()
     await this.loadAllNodes()
-    this._rootNodesByType = getRootNodesByType(this._allNodes)
+    const { nodes, rootNodesByType } = getRootNodesByType(this._allNodes)
+    log({ getRootNodesByType1: { nodes, rootNodesByType } })
+    this.setAllNodesAndSaveAnyChanges(nodes)
+    log({ getRootNodesByType2: { allNodes: this._allNodes } })
+    this._rootNodesByType = rootNodesByType
+
     for (const [type, dir] of Object.entries(FILESTORE_SUB_DIRS_BY_TYPE)) {
       const nodeType = type as NodeType
       let rootNode = this._rootNodesByType[nodeType]
@@ -141,7 +146,7 @@ class FileStore {
     await this.saveNode(getUpdatedNode(this.getNode(nodeId), properties))
 
     // Calculate new metrics for this node and its ancestors
-    await this.updateNodeAndParentMetrics(nodeId)
+    await this.updateNodeAndParentMetrics(nodeId, true)
 
     // Get the final node state after metrics update
     return this.getNode(nodeId)
@@ -221,6 +226,7 @@ class FileStore {
   private async setAllNodesAndSaveAnyChanges(updatedNodes: Record<string, TreeNode>) {
     // iterate through all nodes and save the ones that have changed
     const allOldNodes = this._allNodes
+
     await Promise.all(Object.keys(updatedNodes).map(async id => {
       if (!nodesAreEqual(allOldNodes[id], updatedNodes[id])) {
         await this.writeNodeFile(updatedNodes[id])
@@ -256,7 +262,7 @@ class FileStore {
     }
   }
 
-  private getFilePath({ type, filename }: TreeNode): string {
+  getFilePath({ type, filename }: TreeNode): string {
     return path.join(this._baseDirsByType[type], filename)
   }
 
@@ -296,13 +302,13 @@ class FileStore {
     return node
   }
 
-  private async updateNodeAndParentMetrics(nodeId: string): Promise<void> {
+  private async updateNodeAndParentMetrics(nodeId: string, forceCheckParent = false): Promise<void> {
     const node = this.getNode(nodeId)
 
     // Calculate new metrics for this node
     const calculatedMetrics = calculateAllMetricsFromNodeId(nodeId, this._allNodes)
 
-    if (!eq(node.calculatedMetrics, calculatedMetrics)) {
+    if (!eq(node.calculatedMetrics, calculatedMetrics) || forceCheckParent) {
       await this.saveNode({ ...node, calculatedMetrics })
       // If parent exists, update parent
       if (node.parentId) {
@@ -363,13 +369,10 @@ class FileStore {
   private async saveNode(node: TreeNode) {
     this.ensureInitialized()
     const oldNode = this._allNodes[node.id]
-    log({ oldNode, node })
     if (!nodesAreEqual(oldNode, node)) {
-      log("nodesAreNotEqual")
       node = { ...node, filename: getDefaultFilename(node) }
       const oldPath = this.getFilePath(oldNode)
       const newPath = this.getFilePath(node)
-      log({ oldPath, newPath })
       if (oldPath !== newPath) await fs.rename(oldPath, newPath)
 
       this._allNodes[node.id] = node

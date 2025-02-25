@@ -406,6 +406,38 @@ describe('TreeNode', () => {
         getTreeWithNodeParentChanged(nodesWithTwoChildren, child1Id, child2.id)
       ).toThrow('Cannot move a node to one of its descendants')
     })
+
+    it('correctly reorders children within the same parent', async () => {
+      let nodes: TreeNodeMap = testNodes
+
+      const addNode = (title: string, parentId: string) => {
+        const node = createNode("map", { title, description: 'Child node' })
+        nodes = getTreeWithNodeAdded(nodes, node, parentId)
+        return node
+      }
+
+      // Create parent node
+      const parent = addNode('Parent', rootNodeId)
+
+      // Create 4 children in sequence
+      const child1 = addNode('Child 1', parent.id)
+      const child2 = addNode('Child 2', parent.id)
+      const child3 = addNode('Child 3', parent.id)
+      const child4 = addNode('Child 4', parent.id)
+
+      // Verify initial order
+      expect(nodes[parent.id].childrenIds).toEqual([
+        child1.id, child2.id, child3.id, child4.id
+      ])
+
+      // Move child4 to position 2 (before child3)
+      nodes = getTreeWithNodeParentChanged(nodes, child4.id, parent.id, 2)
+
+      // Verify new order
+      expect(nodes[parent.id].childrenIds).toEqual([
+        child1.id, child2.id, child4.id, child3.id
+      ])
+    })
   })
 
   describe('isParentOfInTree', () => {

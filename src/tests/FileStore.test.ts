@@ -7,6 +7,7 @@ import { createFileStore, FileStore } from '../models/FileStore'
 import { useTempDir } from './helpers/tempDir'
 import { v4 as uuid } from 'uuid'
 import { log } from '../ArtStandardLib'
+import { getTreeWithNodeParentChanged } from '../models/TreeNode'
 
 describe('FileStore', () => {
   const { useTemp } = useTempDir({ prefix: 'filestore-test-' })
@@ -21,7 +22,6 @@ describe('FileStore', () => {
     // Setup: Create a new FileStore in a temp directory
     const { fileStore, testDir } = await newTestFileStore()
     const map = fileStore.rootNodesByType.map
-    log({ rootNodesByType: fileStore.rootNodesByType })
 
     // Create a node
     const createdNode = await fileStore.createNode("map", {
@@ -168,7 +168,6 @@ describe('FileStore', () => {
 
     // Verify old file is gone and new file exists
     const files = await fs.readdir(fileStore.baseDirsByType.map)
-    log({ files })
     expect(files).not.toContain('Original Title.md')
     expect(files).toContain('New Title.md')
 
@@ -260,42 +259,43 @@ describe('FileStore', () => {
   })
 
   it('heals files with missing data', async () => {
-    const { fileStore, testDir } = await newTestFileStore()
+    const initHelper = await newTestFileStore()
 
     // Create an empty markdown file
-    await fs.writeFile(path.join(testDir, 'test-node.md'), '')
+    await fs.writeFile(path.join(initHelper.fileStore.baseDirsByType.map, 'test-node.md'), '')
+
+    // now re-load and verify the node is healed
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Get all nodes
     const nodes = fileStore.allNodes
 
     // Verify we got exactly one node
     const nodeIds = Object.keys(nodes)
-    expect(nodeIds).toHaveLength(3)
+    expect(nodeIds).toHaveLength(4)
 
     // Get the node
-    const node = nodes[nodeIds[0]]
+    const node = Object.values(nodes).find(n => /test-node/.test(n.filename))
 
     // Verify the node has an id and title
-    expect(node.id).toBeDefined()
-    expect(node.id).toMatch(/^[0-9a-f-]{36}$/) // UUID format
-    expect(node.title).toBe('test-node')
+    expect(node).toBeDefined()
+    if (!node) throw new Error('Node not found - typescript is so dumn')
+    expect(node?.id).toBeDefined()
+    expect(node?.id).toMatch(/^[0-9a-f-]{36}$/) // UUID format
+    expect(node?.title).toBe('test-node')
 
     // Verify the file was healed
-    const fileContent = await fs.readFile(path.join(testDir, 'test-node.md'), 'utf-8')
+    const fileContent = await fs.readFile(fileStore.getFilePath(node), 'utf-8')
     expect(fileContent).toMatch(/^---\n/)
     expect(fileContent).toMatch(/\nid: [0-9a-f-]{36}\n/)
     expect(fileContent).toMatch(/\ntitle: test-node\n/)
   })
 
   it('heals invalid parentIds by attaching to root', async () => {
-    const { fileStore, testDir } = newTestFileStore()
-    // Create root node
-    const root = await fileStore.createNode({
-      title: 'Root Node'
-    }, null)
+    const initHelper = await newTestFileStore()
 
     // Create node with invalid parent
-    await fs.writeFile(path.join(testDir, 'Orphan Node.md'), `---
+    await fs.writeFile(path.join(initHelper.fileStore.baseDirsByType.map, 'Orphan Node.md'), `---
 id: ${uuid()}
 title: Orphan Node
 parentId: invalid-parent-id
@@ -305,42 +305,46 @@ calculatedMetrics:
 ---
 `)
 
+    const { fileStore, testDir } = await newTestFileStore()
     // Get all nodes
-    const nodes = await fileStore.getAllNodes()
+    const nodes = fileStore.allNodes
+
+    const mapRoot = fileStore.rootNodesByType.map
 
     // Find the orphan node
     const orphan = Object.values(nodes).find(n => n.title === 'Orphan Node')
     expect(orphan).toBeDefined()
-    expect(orphan?.parentId).toBe(root.id)
+    if (!orphan) throw new Error('Orphan node not found')
+    expect(orphan?.parentId).toBe(mapRoot.id)
 
     // Verify root has the orphan as a child
-    expect(nodes[root.id].childrenIds).toContain(orphan?.id)
+    expect(nodes[mapRoot.id].childrenIds).toContain(orphan?.id)
 
     // Verify the orphan's file was updated
-    const fileContent = await fs.readFile(path.join(testDir, 'Orphan Node.md'), 'utf-8')
-    expect(fileContent).toContain(`parentId: ${root.id}`)
+    const fileContent = await fs.readFile(fileStore.getFilePath(orphan), 'utf-8')
+    expect(fileContent).toContain(`parentId: ${mapRoot.id}`)
   })
 
   it('handles empty and missing titles correctly', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const initHelper = await newTestFileStore()
 
     // Create node with empty title
-    const emptyTitleNode = await fileStore.createNode({
+    const emptyTitleNode = await initHelper.fileStore.createNode("map", {
       title: '',
       description: 'Node with empty title'
     }, null)
 
     // Verify node has empty title but file is named "untitled"
     expect(emptyTitleNode.title).toBe('')
-    const files = await fs.readdir(testDir)
+    const files = await fs.readdir(initHelper.fileStore.baseDirsByType.map)
     expect(files).toContain('untitled.md')
 
     // Verify the empty title is preserved in the file
-    const content = await fs.readFile(path.join(testDir, 'untitled.md'), 'utf-8')
+    const content = await fs.readFile(initHelper.fileStore.getFilePath(emptyTitleNode), 'utf-8')
     expect(content).toContain('\ntitle: ""\n')
 
     // Create file with no title field
-    await fs.writeFile(path.join(testDir, 'test-file.md'), `---
+    await fs.writeFile(path.join(initHelper.fileStore.baseDirsByType.map, 'test-file.md'), `---
 id: ${uuid()}
 childrenIds: []
 calculatedMetrics:
@@ -348,36 +352,40 @@ calculatedMetrics:
 ---
 `)
 
+    const { fileStore, testDir } = await newTestFileStore()
+
+
     // Get all nodes and find our node
-    const nodes = await fileStore.getAllNodes()
-    const noTitleNode = Object.values(nodes).find(n => n.id !== emptyTitleNode.id)
+    const nodes = fileStore.allNodes
+    const noTitleNode = Object.values(nodes).find(n => /test-file/.test(n.filename))
     expect(noTitleNode).toBeDefined()
+    if (!noTitleNode) throw new Error('NoTitleNode not found')
     expect(noTitleNode?.title).toBe('test-file')
 
     // Verify the title was added to the file
-    const healedContent = await fs.readFile(path.join(testDir, 'test-file.md'), 'utf-8')
+    const healedContent = await fs.readFile(fileStore.getFilePath(noTitleNode), 'utf-8')
     expect(healedContent).toContain('\ntitle: test-file\n')
   })
 
   it('propagates readiness level changes through multiple generations', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create a three-generation hierarchy
-    const grandparent = await fileStore.createNode({
+    const grandparent = await fileStore.createNode("map", {
       title: 'Grandparent'
     }, null)
 
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent'
     }, grandparent.id)
 
-    const child = await fileStore.createNode({
+    const child = await fileStore.createNode("map", {
       title: 'Child',
       setMetrics: { readinessLevel: 2 }
     }, parent.id)
 
     // Verify initial state
-    let nodes = await fileStore.getAllNodes()
+    let nodes = fileStore.allNodes
     expect(nodes[child.id].calculatedMetrics.readinessLevel).toBe(2)
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(2)
     expect(nodes[grandparent.id].calculatedMetrics.readinessLevel).toBe(2)
@@ -388,35 +396,35 @@ calculatedMetrics:
     })
 
     // Verify updated state
-    nodes = await fileStore.getAllNodes()
+    nodes = fileStore.allNodes
     expect(nodes[child.id].calculatedMetrics.readinessLevel).toBe(3)
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
     expect(nodes[grandparent.id].calculatedMetrics.readinessLevel).toBe(3)
   })
 
   it('excludes draft nodes from readiness level calculations', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create parent node
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent'
     }, null)
 
     // Create non-draft child with RL3
-    const nonDraftChild = await fileStore.createNode({
+    const nonDraftChild = await fileStore.createNode("map", {
       title: 'Non-draft Child',
       setMetrics: { readinessLevel: 3 }
     }, parent.id)
 
     // Create draft child with RL2
-    const draftChild = await fileStore.createNode({
+    const draftChild = await fileStore.createNode("map", {
       title: 'Draft Child',
       setMetrics: { readinessLevel: 2 },
       draft: true
     }, parent.id)
 
     // Verify state
-    const nodes = await fileStore.getAllNodes()
+    const nodes = fileStore.allNodes
     expect(nodes[nonDraftChild.id].calculatedMetrics.readinessLevel).toBe(3)
     expect(nodes[draftChild.id].calculatedMetrics.readinessLevel).toBe(2)
     // Parent should only consider the non-draft child's readiness level
@@ -424,55 +432,55 @@ calculatedMetrics:
   })
 
   it('treats readinessLevel 0 as a valid manual setting', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create parent node with RL0 explicitly set
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent',
       setMetrics: { readinessLevel: 0 }
     }, null)
 
     // Create child with RL3
-    const child = await fileStore.createNode({
+    const child = await fileStore.createNode("map", {
       title: 'Child',
       setMetrics: { readinessLevel: 3 }
     }, parent.id)
 
     // Verify state
-    let nodes = await fileStore.getAllNodes()
+    let nodes = fileStore.allNodes
     // Parent should keep its manually set 0, not use child's 3
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[parent.id].setMetrics?.readinessLevel).toBe(0)
 
     // Now clear the parent's setMetrics
     await fileStore.updateNode(parent.id, { setMetrics: { readinessLevel: null } })
-    nodes = await fileStore.getAllNodes()
+    nodes = fileStore.allNodes
     // Now parent should use child's value
     expect(nodes[parent.id].setMetrics).toEqual({})
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
   })
 
   it('properly handles readinessLevel 0 in parent calculations', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create parent node with auto metrics
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent'
     }, null)
 
     // Create two children, one with RL0 and one with RL3
-    const child1 = await fileStore.createNode({
+    const child1 = await fileStore.createNode("map", {
       title: 'Child 1',
       setMetrics: { readinessLevel: 0 }
     }, parent.id)
 
-    const child2 = await fileStore.createNode({
+    const child2 = await fileStore.createNode("map", {
       title: 'Child 2',
       setMetrics: { readinessLevel: 3 }
     }, parent.id)
 
     // Verify state
-    let nodes = await fileStore.getAllNodes()
+    let nodes = fileStore.allNodes
     // Parent should use minimum of all children, including RL0
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
@@ -480,7 +488,7 @@ calculatedMetrics:
 
     // Update child1 to auto mode
     await fileStore.updateNode(child1.id, { setMetrics: { readinessLevel: null } })
-    nodes = await fileStore.getAllNodes()
+    nodes = fileStore.allNodes
     // Now parent should only consider child2's value since child1 is in auto mode
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
@@ -488,35 +496,34 @@ calculatedMetrics:
   })
 
   it('distinguishes between readinessLevel 0 and draft mode', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create parent node with auto metrics
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent'
     }, null)
 
     // Create child with RL0 (not draft)
-    const child1 = await fileStore.createNode({
+    const child1 = await fileStore.createNode("map", {
       title: 'Child 1',
       setMetrics: { readinessLevel: 0 }
     }, parent.id)
 
     // Create draft child with RL3
-    const child2 = await fileStore.createNode({
+    const child2 = await fileStore.createNode("map", {
       title: 'Child 2',
       setMetrics: { readinessLevel: 3 },
       draft: true
     }, parent.id)
 
     // Create normal child with RL5
-    const child3 = await fileStore.createNode({
+    const child3 = await fileStore.createNode("map", {
       title: 'Child 3',
       setMetrics: { readinessLevel: 5 }
     }, parent.id)
 
     // Verify state
-    let nodes = await fileStore.getAllNodes()
-
+    let nodes = fileStore.allNodes
     // Child1 (RL0) should be included in parent's calculation
     // Child2 (draft) should be excluded
     // Child3 (RL5) should be included
@@ -528,37 +535,37 @@ calculatedMetrics:
 
     // Now set child1 to draft mode
     await fileStore.updateNode(child1.id, { draft: true })
-    nodes = await fileStore.getAllNodes()
+    nodes = fileStore.allNodes
     // Parent should now only consider child3's value since both child1 and child2 are draft
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(5)
   })
 
   it('handles complex readinessLevel 0 scenarios', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create a three-level hierarchy
-    const root = await fileStore.createNode({
+    const root = await fileStore.createNode("map", {
       title: 'Root',
       setMetrics: { readinessLevel: 0 }  // Explicitly set to 0
     }, null)
 
-    const middle = await fileStore.createNode({
+    const middle = await fileStore.createNode("map", {
       title: 'Middle',
       setMetrics: { readinessLevel: 3 }
     }, root.id)
 
-    const leaf1 = await fileStore.createNode({
+    const leaf1 = await fileStore.createNode("map", {
       title: 'Leaf 1',
       setMetrics: { readinessLevel: 0 }  // Explicitly set to 0
     }, middle.id)
 
-    const leaf2 = await fileStore.createNode({
+    const leaf2 = await fileStore.createNode("map", {
       title: 'Leaf 2',
       setMetrics: { readinessLevel: 5 }
     }, middle.id)
 
     // Verify initial state
-    let nodes = await fileStore.getAllNodes()
+    let nodes = fileStore.allNodes
     expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)    // Manually set to 0
     expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(3)  // Manually set to 3
     expect(nodes[leaf1.id].calculatedMetrics.readinessLevel).toBe(0)   // Manually set to 0
@@ -566,7 +573,7 @@ calculatedMetrics:
 
     // Clear middle node's setMetrics
     await fileStore.updateNode(middle.id, { setMetrics: { readinessLevel: null } })
-    nodes = await fileStore.getAllNodes()
+    nodes = fileStore.allNodes
     // Middle should now calculate from children (min of 0 and 5)
     expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(0)
     // Root should still be 0 (manually set)
@@ -574,38 +581,40 @@ calculatedMetrics:
 
     // Clear root's setMetrics
     await fileStore.updateNode(root.id, { setMetrics: { readinessLevel: null } })
-    nodes = await fileStore.getAllNodes()
+    nodes = fileStore.allNodes
     // Root should now calculate from middle node
     expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
   })
 
   it('correctly reorders children within the same parent', async () => {
-    const { fileStore, testDir } = newTestFileStore()
+    const { fileStore, testDir } = await newTestFileStore()
 
     // Create parent node
-    const parent = await fileStore.createNode({
+    const parent = await fileStore.createNode("map", {
       title: 'Parent',
       description: 'Parent node'
     }, null)
 
     // Create 4 children in sequence
-    const child1 = await fileStore.createNode({ title: 'Child 1' }, parent.id)
-    const child2 = await fileStore.createNode({ title: 'Child 2' }, parent.id)
-    const child3 = await fileStore.createNode({ title: 'Child 3' }, parent.id)
-    const child4 = await fileStore.createNode({ title: 'Child 4' }, parent.id)
+    const child1 = await fileStore.createNode("map", { title: 'Child 1' }, parent.id)
+    const child2 = await fileStore.createNode("map", { title: 'Child 2' }, parent.id)
+    const child3 = await fileStore.createNode("map", { title: 'Child 3' }, parent.id)
+    const child4 = await fileStore.createNode("map", { title: 'Child 4' }, parent.id)
 
     // Verify initial order
-    let nodes = await fileStore.getAllNodes()
-    expect(nodes[parent.id].childrenIds).toEqual([
+    expect(fileStore.getNode(parent.id).childrenIds).toEqual([
       child1.id, child2.id, child3.id, child4.id
     ])
+
+    const compareResults = getTreeWithNodeParentChanged(fileStore.allNodes, child4.id, parent.id, 2)
 
     // Move child4 to position 2 (before child3)
     await fileStore.setNodeParent(child4.id, parent.id, 2)
 
+    log({ curiosity: { nodes: fileStore.allNodes, compareResults } })
+
     // Verify new order
-    nodes = await fileStore.getAllNodes()
-    expect(nodes[parent.id].childrenIds).toEqual([
+    expect(fileStore.getNode(parent.id).childrenIds).toEqual([
       child1.id, child2.id, child4.id, child3.id
     ])
   })
