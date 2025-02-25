@@ -336,6 +336,11 @@ export const getTreeWithNodeParentChanged = (
     const currentIndex = parent.childrenIds.indexOf(nodeId);
     if (currentIndex === -1) throw new Error(`Node ${nodeId} not found in parent's children`);
 
+    // If no insertAtIndex is provided, move to the end
+    const targetIndex = insertAtIndex ?? parent.childrenIds.length - 1;
+    // If moving to a later position, we need to account for the removal of the current item
+    const adjustedTargetIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
+
     return updateNodeMetrics(
       {
         ...nodes,
@@ -344,7 +349,7 @@ export const getTreeWithNodeParentChanged = (
           childrenIds: moveElementInArray(
             parent.childrenIds,
             currentIndex,
-            insertAtIndex ?? parent.childrenIds.length
+            adjustedTargetIndex
           )
         }
       },

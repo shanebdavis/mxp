@@ -6,12 +6,8 @@ import {
   getTreeWithNodeUpdated,
   getTreeWithNodeParentChanged,
   isParentOfInTree,
-  type TreeNode,
   type TreeNodeMap,
-  NodeType,
-  inspectTree
 } from '../../models'
-import { log } from '../../ArtStandardLib'
 
 describe('TreeNode', () => {
   let testNodes: TreeNodeMap
