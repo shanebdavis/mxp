@@ -1,2 +1,5 @@
+export * from './TreeNodeTypes'
+export * from './TreeNodeLib'
+export * from './TreeNodeMetrics'
 export * from './TreeNode'
 export * from './FileStore'

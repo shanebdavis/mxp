@@ -3,7 +3,11 @@ import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
 import matter from 'gray-matter'
-import { TreeNode, TreeNodeProperties, createNode, NodeType, calculateAllMetricsFromNodeId, UpdateTreeNodeProperties, nodesAreEqual, getUpdatedNode, getRootNodesByType, getTreeWithNodeParentChanged, getTreeWithNodeAdded, getTreeWithNodeRemoved, RootNodesByType, ROOT_NODE_DEFAULT_PROPERTIES, getDefaultFilename } from './TreeNode'
+import { TreeNode, TreeNodeProperties, NodeType, UpdateTreeNodeProperties, RootNodesByType } from './TreeNodeTypes'
+import { calculateAllMetricsFromNodeId } from './TreeNodeMetrics'
+import { nodesAreEqual, getDefaultFilename, ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNodeLib'
+import { createNode, getUpdatedNode, getRootNodesByType, getTreeWithNodeParentChanged, getTreeWithNodeAdded, getTreeWithNodeRemoved } from './TreeNode'
+
 const { eq } = require('art-standard-lib')
 import { array, formattedInspect, log } from '../ArtStandardLib'
 
