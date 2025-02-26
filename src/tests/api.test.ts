@@ -2,6 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { useTempDir } from './helpers/tempDir'
 import { startTestServer, TestServer } from './helpers/testServer'
 import { log } from '../ArtStandardLib'
+import { TreeNode } from '../models/TreeNode'
+
+type ApiNode = TreeNode & {
+  id: string
+  type: 'map' | 'waypoint' | 'user'
+}
+
+type ApiResponse = Record<string, ApiNode>
 
 describe('API', () => {
   const { useTemp } = useTempDir({ prefix: 'api-test-' })
@@ -17,7 +25,10 @@ describe('API', () => {
       expect(response.status).toBe(200)
 
       const nodes = await response.json()
-      expect(nodes).toEqual({})
+      // Expect root nodes for each type
+      expect(Object.values(nodes)).toHaveLength(3)
+      expect(Object.values(nodes).map(n => (n as any).type).sort()).toEqual(['map', 'user', 'waypoint'])
+      expect(Object.values(nodes).every((n: any) => !n.parentId)).toBe(true)
     } finally {
       // Cleanup: Stop server
       await server.stop()
@@ -29,26 +40,38 @@ describe('API', () => {
     const server = await startTestServer({ storageFolder })
 
     try {
-      // Create root node
-      const createRootResponse = await fetch(`${server.baseUrl}/api/nodes`, {
+      // Get initial state to find the map root node
+      const initialResponse = await fetch(`${server.baseUrl}/api/nodes`)
+      const initialNodes = await initialResponse.json() as ApiResponse
+      const mapRoot = Object.values(initialNodes).find((n) => n.type === 'map')
+      if (!mapRoot) throw new Error('Map root not found')
+
+      // Create a new map node under the map root
+      const createNodeResponse = await fetch(`${server.baseUrl}/api/nodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           node: {
-            title: 'Root Node',
-            description: 'The root node'
+            title: 'Test Node',
+            description: 'The test node',
+            type: 'map'
           },
-          parentNodeId: null
+          parentNodeId: mapRoot.id
         })
       })
-      expect(createRootResponse.status).toBe(201)
-      const rootResult = await createRootResponse.json()
-      const rootId = Object.keys(rootResult)[0]
-      const rootNode = rootResult[rootId]
-      expect(rootNode.title).toBe('Root Node')
-      expect(rootNode.description).toBe('The root node')
-      expect(rootNode.parentId).toBeNull()
-      expect(rootNode.childrenIds).toEqual([])
+      expect(createNodeResponse.status).toBe(201)
+      const nodeResult = await createNodeResponse.json()
+      const nodeId = Object.keys(nodeResult).find(id => {
+        const node = nodeResult[id]
+        return node.type === 'map' && node.title === 'Test Node'
+      })
+      if (!nodeId) throw new Error('Created node not found')
+      const node = nodeResult[nodeId]
+      expect(node.title).toBe('Test Node')
+      expect(node.description).toBe('The test node')
+      expect(node.parentId).toBe(mapRoot.id)
+      expect(node.childrenIds).toEqual([])
+      expect(node.type).toBe('map')
 
       // Create child node
       const createChildResponse = await fetch(`${server.baseUrl}/api/nodes`, {
@@ -58,22 +81,28 @@ describe('API', () => {
           node: {
             title: 'Child Node',
             description: 'A child node',
-            setMetrics: { readinessLevel: 5 }
+            setMetrics: { readinessLevel: 5 },
+            type: 'map'
           },
-          parentNodeId: rootId,
+          parentNodeId: nodeId,
           insertAtIndex: 0
         })
       })
       expect(createChildResponse.status).toBe(201)
       const childResult = await createChildResponse.json()
-      const childId = Object.keys(childResult).find(id => id !== rootId)!
+      const childId = Object.keys(childResult).find(id => {
+        const node = childResult[id]
+        return node.type === 'map' && node.title === 'Child Node'
+      })
+      if (!childId) throw new Error('Child node not found')
       const childNode = childResult[childId]
       expect(childNode.title).toBe('Child Node')
       expect(childNode.setMetrics?.readinessLevel).toBe(5)
-      expect(childNode.parentId).toBe(rootId)
+      expect(childNode.parentId).toBe(nodeId)
+      expect(childNode.type).toBe('map')
 
-      // Verify root was updated with child
-      expect(childResult[rootId].childrenIds).toEqual([childId])
+      // Verify parent was updated with child
+      expect(childResult[nodeId].childrenIds).toEqual([childId])
 
       // Update child node
       const updateResponse = await fetch(`${server.baseUrl}/api/nodes/${childId}`, {
@@ -96,14 +125,15 @@ describe('API', () => {
         body: JSON.stringify({
           node: {
             title: 'Child 2',
-            description: 'Second child'
+            description: 'Second child',
+            type: 'map'
           },
-          parentNodeId: rootId
+          parentNodeId: nodeId
         })
       })
       expect(createChild2Response.status).toBe(201)
       const child2Result = await createChild2Response.json()
-      const child2Id = Object.keys(child2Result).find(id => !([rootId, childId].includes(id)))!
+      const child2Id = Object.keys(child2Result).find(id => ![nodeId, childId, mapRoot.id].includes(id))!
 
       // Move first child under second child
       const moveResponse = await fetch(`${server.baseUrl}/api/nodes/${childId}/parent`, {
@@ -117,7 +147,7 @@ describe('API', () => {
       const moveResult = await moveResponse.json()
       expect(moveResult[childId].parentId).toBe(child2Id)
       expect(moveResult[child2Id].childrenIds).toContain(childId)
-      expect(moveResult[rootId].childrenIds).not.toContain(childId)
+      expect(moveResult[nodeId].childrenIds).not.toContain(childId)
 
       // Delete first child
       const deleteResponse = await fetch(`${server.baseUrl}/api/nodes/${childId}`, {
@@ -132,9 +162,14 @@ describe('API', () => {
       const finalResponse = await fetch(`${server.baseUrl}/api/nodes`)
       expect(finalResponse.status).toBe(200)
       const finalNodes = await finalResponse.json()
-      expect(Object.keys(finalNodes)).toHaveLength(2) // root and child2
-      expect(finalNodes[rootId].childrenIds).toEqual([child2Id])
-      expect(finalNodes[child2Id].childrenIds).toEqual([])
+      // Should have 5 nodes: 3 root nodes + our test node + child2
+      expect(Object.keys(finalNodes)).toHaveLength(5)
+      const testNode = Object.values(finalNodes).find(n => (n as ApiNode).title === 'Test Node') as ApiNode
+      if (!testNode) throw new Error('Test node not found')
+      const child2 = Object.values(finalNodes).find(n => (n as ApiNode).title === 'Child 2') as ApiNode
+      if (!child2) throw new Error('Child 2 not found')
+      expect(testNode.childrenIds).toEqual([child2.id])
+      expect(child2.childrenIds).toEqual([])
     } finally {
       await server.stop()
     }
@@ -153,31 +188,44 @@ describe('API', () => {
       })
       expect(updateResponse.status).toBe(404)
 
-      // Create a chain of nodes to test circular reference prevention
-      const rootResponse = await fetch(`${server.baseUrl}/api/nodes`, {
+      // Get map root node
+      const initialResponse = await fetch(`${server.baseUrl}/api/nodes`)
+      const initialNodes = await initialResponse.json() as ApiResponse
+      const mapRoot = Object.values(initialNodes).find((n) => n.type === 'map')
+      if (!mapRoot) throw new Error('Map root not found')
+
+      // Create a node under map root
+      const nodeResponse = await fetch(`${server.baseUrl}/api/nodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          node: { title: 'Root' },
-          parentNodeId: null
+          node: {
+            title: 'Test Node',
+            type: 'map'
+          },
+          parentNodeId: mapRoot.id
         })
       })
-      const rootResult = await rootResponse.json()
-      const rootId = Object.keys(rootResult)[0]
+      const nodeResult = await nodeResponse.json()
+      const nodeId = Object.keys(nodeResult).find(id => id !== mapRoot.id)!
 
+      // Create child node
       const childResponse = await fetch(`${server.baseUrl}/api/nodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          node: { title: 'Child' },
-          parentNodeId: rootId
+          node: {
+            title: 'Child',
+            type: 'map'
+          },
+          parentNodeId: nodeId
         })
       })
       const childResult = await childResponse.json()
-      const childId = Object.keys(childResult).find(id => id !== rootId)!
+      const childId = Object.keys(childResult).find(id => ![nodeId, mapRoot.id].includes(id))!
 
-      // Try to make root a child of its child (should fail)
-      const moveResponse = await fetch(`${server.baseUrl}/api/nodes/${rootId}/parent`, {
+      // Try to make parent a child of its child (should fail)
+      const moveResponse = await fetch(`${server.baseUrl}/api/nodes/${nodeId}/parent`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -202,17 +250,27 @@ describe('API', () => {
     const server = await startTestServer({ storageFolder })
 
     try {
-      // Create parent node
+      // Get map root node
+      const initialResponse = await fetch(`${server.baseUrl}/api/nodes`)
+      const initialNodes = await initialResponse.json() as ApiResponse
+      const mapRoot = Object.values(initialNodes).find((n) => n.type === 'map')
+      if (!mapRoot) throw new Error('Map root not found')
+
+      // Create parent node under map root
       const parentResponse = await fetch(`${server.baseUrl}/api/nodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          node: { title: 'Parent' },
-          parentNodeId: null
+          node: {
+            title: 'Parent',
+            type: 'map'
+          },
+          parentNodeId: mapRoot.id
         })
       })
       const json = await parentResponse.json()
-      const parent = json[Object.keys(json)[0]]
+      const parentId = Object.keys(json).find(id => id !== mapRoot.id)!
+      const parent = json[parentId]
 
       // Create 4 children
       const childIds: string[] = []
@@ -221,13 +279,16 @@ describe('API', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            node: { title: `Child ${i}` },
-            parentNodeId: parent.id
+            node: {
+              title: `Child ${i}`,
+              type: 'map'
+            },
+            parentNodeId: parentId
           })
         });
         expect(response.status).toBe(201);
         const store = await response.json();
-        const newId = Object.keys(store).find(id => id !== parent.id && !childIds.includes(id));
+        const newId = Object.keys(store).find(id => id !== parentId && id !== mapRoot.id && !childIds.includes(id));
         if (!newId) throw new Error('Failed to create child');
         childIds.push(newId);
       }
@@ -237,7 +298,7 @@ describe('API', () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newParentId: parent.id,
+          newParentId: parentId,
           insertAtIndex: 2
         })
       })
@@ -248,10 +309,10 @@ describe('API', () => {
 
       // Should only return the parent node since it's the only one that changed
       expect(Object.keys(changedNodes)).toHaveLength(1)
-      expect(Object.keys(changedNodes)).toContain(parent.id)
+      expect(Object.keys(changedNodes)).toContain(parentId)
 
       // Verify the order in the parent's childrenIds
-      expect(changedNodes[parent.id].childrenIds).toEqual([
+      expect(changedNodes[parentId].childrenIds).toEqual([
         childIds[0],
         childIds[1],
         childIds[3],
@@ -260,8 +321,8 @@ describe('API', () => {
 
       // Verify full state through a separate request
       const finalResponse = await fetch(`${server.baseUrl}/api/nodes`)
-      const finalNodes = await finalResponse.json()
-      expect(finalNodes[parent.id].childrenIds).toEqual([
+      const finalNodes = await finalResponse.json() as ApiResponse
+      expect(finalNodes[parentId].childrenIds).toEqual([
         childIds[0],
         childIds[1],
         childIds[3],

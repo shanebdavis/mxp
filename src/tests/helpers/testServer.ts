@@ -14,10 +14,10 @@ export interface TestServer {
  * @param config API configuration
  * @returns Server info including URL and stop function
  */
-export const startTestServer = (config: ApiConfig): Promise<TestServer> => {
+export const startTestServer = async (config: ApiConfig): Promise<TestServer> => {
   const app = express()
   app.use(express.json())
-  app.use('/api', createApiRouter(config))
+  app.use('/api', await createApiRouter(config))
 
   return new Promise((resolve) => {
     // Start server on a random port

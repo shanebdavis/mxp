@@ -3,6 +3,22 @@ import { Simplify } from 'type-fest';
 
 type NotPresent = null | undefined;
 
+/**
+ * eq is a function that returns true if two values are equal using deep equality
+ * @param a - The first value to compare
+ * @param b - The second value to compare
+ * @returns true if the values are equal
+ */
+export const eq = ArtStandardLib.eq as (a: any, b: any) => boolean
+
+/**
+ * neq is a function that returns true if two values are not equal using deep equality
+ * @param a - The first value to compare
+ * @param b - The second value to compare
+ * @returns true if the values are not equal
+ */
+export const neq = ArtStandardLib.neq as (a: any, b: any) => boolean
+
 /***************************************************************
  * Constants
  **************************************************************/
