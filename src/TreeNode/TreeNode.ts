@@ -19,7 +19,8 @@ export const createNode = (
   parentId,
   childrenIds: [],
   calculatedMetrics: calculateAllMetricsFromSetMetricsAndChildrenMetrics(properties.setMetrics ?? {}, []),
-  filename: getDefaultFilename(properties)
+  filename: getDefaultFilename(properties),
+  nodeState: properties.nodeState ?? "active"
 })
 
 export const getUpdatedNode = (
@@ -42,7 +43,7 @@ const getChildNodesWithOptionalDelta = (nodes: TreeNodeSet, nodeId: string, opti
   getNode(nodes, nodeId, optionalDelta).childrenIds.map(childId => getNode(nodes, childId, optionalDelta))
 
 const getActiveChildNodesWithOptionalDelta = (nodes: TreeNodeSet, nodeId: string, optionalDelta: TreeNodeSetDelta | undefined): TreeNode[] =>
-  getChildNodesWithOptionalDelta(nodes, nodeId, optionalDelta).filter(child => !child.draft)
+  getChildNodesWithOptionalDelta(nodes, nodeId, optionalDelta).filter(child => child.nodeState === "active")
 
 //*******************************************
 // Whole Tree Mutators
@@ -63,7 +64,7 @@ const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeSet, startNodeId: string):
     const node = updatedNodes[nodeId]
     if (!node) return
 
-    // Use getActiveChildren to filter out draft nodes for metrics calculations
+    // Use getActiveChildren to filter out non-active nodes for metrics calculations
     const children = getActiveChildren(updatedNodes, nodeId)
     const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
 
@@ -108,7 +109,7 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
     // Get the node, considering both the original nodes and the delta
     const node = getNode(nodes, nodeId, updatedDelta)
 
-    // Use getActiveChildNodesWithOptionalDelta to filter out draft nodes for metrics calculations
+    // Use getActiveChildNodesWithOptionalDelta to filter out non-active nodes for metrics calculations
     const children = getActiveChildNodesWithOptionalDelta(nodes, nodeId, updatedDelta)
     const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
 
@@ -436,9 +437,9 @@ export const getTreeNodeSetDeltaForNodeUpdated = (
   }
 
   // Update metrics for this node and its ancestors
-  // If draft status is changing, we need to force an update of the parent's metrics
+  // If nodeState is changing, we need to force an update of the parent's metrics
   // even if this node's metrics didn't change
-  if ('draft' in updates && node.parentId) {
+  if ('nodeState' in updates && node.parentId) {
     // First update the node's own metrics
     const updatedDelta = getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, nodeId)
 

@@ -1,5 +1,11 @@
 export type NodeType = "map" | "waypoint" | "user"
 
+/**
+ * Node state type, replacing the boolean draft field
+ * This allows for more states beyond just draft and active
+ */
+export type NodeState = "draft" | "active"
+
 export type Metrics = {
   readinessLevel: number
 }
@@ -14,7 +20,7 @@ export interface TreeNodeProperties {
   description?: string
   metadata?: Record<string, string | number | boolean | Date>
   setMetrics?: PartialMetrics
-  draft?: boolean
+  nodeState?: NodeState  // Replacing draft with nodeState
 }
 
 export type UpdateTreeNodeProperties = Omit<Partial<TreeNodeProperties>, 'setMetrics'> & {
@@ -28,6 +34,7 @@ export interface TreeNode extends TreeNodeProperties {
   childrenIds: string[]
   calculatedMetrics: Metrics
   filename: string  // The name of the file storing this node
+  nodeState: NodeState  // Required in TreeNode, replaces draft
 }
 
 export type TreeNodeSet = Record<string, TreeNode>

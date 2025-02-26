@@ -5,7 +5,7 @@ import path from 'path'
 import os from 'os'
 import { createFileStore, FileStore } from '../../models'
 import { getTreeWithNodeParentChanged } from '../../TreeNode'
-import { getActiveChildren } from '../../TreeNode/TreeNodeLib'
+import { getActiveChildren } from '../../TreeNode'
 import { useTempDir } from '../helpers/tempDir'
 import { v4 as uuid } from 'uuid'
 import { log } from '../../ArtStandardLib'
@@ -50,6 +50,7 @@ describe('FileStore', () => {
       setMetrics: { readinessLevel: 5 },
       calculatedMetrics: { readinessLevel: 5 },
       filename: `${createdNode.id}.md`,
+      nodeState: "active",
       type: "map"
     })
 
@@ -432,7 +433,7 @@ calculatedMetrics:
     const { node: draftChild } = await fileStore.createNode("map", {
       title: 'Draft Child',
       setMetrics: { readinessLevel: 2 },
-      draft: true
+      nodeState: "draft"
     }, parent.id)
 
     // Verify state
@@ -525,7 +526,7 @@ calculatedMetrics:
     const { node: child2 } = await fileStore.createNode("map", {
       title: 'Child 2',
       setMetrics: { readinessLevel: 3 },
-      draft: true
+      nodeState: "draft"
     }, parent.id)
 
     // Create normal child with RL5
@@ -543,7 +544,7 @@ calculatedMetrics:
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
 
     // Now set child1 to draft mode
-    await fileStore.updateNode(child1.id, { draft: true })
+    await fileStore.updateNode(child1.id, { nodeState: "draft" })
     nodes = fileStore.allNodes
 
     // Parent should now only consider child3's value since both child1 and child2 are draft

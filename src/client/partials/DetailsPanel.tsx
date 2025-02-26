@@ -1,14 +1,15 @@
-import type { TreeNode, TreeNodeSet, UpdateTreeNodeProperties } from "../../models"
-import { PanelHeader } from "./PanelHeader"
-import { useState } from 'react'
+import React, { useState, useRef, useEffect, FC } from 'react'
+import { Switch, FormControlLabel } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import { EditableRlPill } from '../widgets'
 import { SolutionItems } from '../widgets/SolutionItems'
+import type { TreeNode, TreeNodeSet, UpdateTreeNodeProperties } from '../../TreeNodeTypes'
+import { PanelHeader } from "./PanelHeader"
+import { useRef as useReactRef } from 'react'
+import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Components } from 'react-markdown'
-import { Switch, FormControlLabel } from '@mui/material'
 import type { CSSProperties } from 'react'
 
 interface CodeProps {
@@ -244,17 +245,17 @@ export const DetailsPanel = ({
                 control={
                   <Switch
                     size="small"
-                    checked={!selectedNode.draft}
+                    checked={selectedNode.nodeState !== "draft"}
                     onChange={async (e) => {
                       if (selectedNode) {
                         await treeStateMethods.updateNode(selectedNode.id, {
-                          draft: !e.target.checked
+                          nodeState: e.target.checked ? "active" : "draft"
                         })
                       }
                     }}
                   />
                 }
-                label={<span style={styles.draftLabel}>{selectedNode.draft ? 'draft' : 'active'}</span>}
+                label={<span style={styles.draftLabel}>{selectedNode.nodeState === "draft" ? 'draft' : 'active'}</span>}
                 labelPlacement="start"
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

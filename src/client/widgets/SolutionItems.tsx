@@ -1,5 +1,5 @@
 import React from 'react'
-import type { TreeNode } from '../../models'
+import type { TreeNode } from '../../TreeNodeTypes'
 
 interface SolutionItemsProps {
   node: TreeNode
@@ -78,7 +78,7 @@ const styles = {
 
 export const SolutionItems = ({ node, children }: SolutionItemsProps) => {
   // Filter out draft items and find the minimum readiness level
-  const nonDraftChildren = children.filter(child => !child.draft)
+  const nonDraftChildren = children.filter(child => child.nodeState !== "draft" && child.nodeState !== undefined)
   const minReadinessLevel = Math.min(
     ...nonDraftChildren.map(child => child.calculatedMetrics.readinessLevel)
   )
@@ -92,35 +92,40 @@ export const SolutionItems = ({ node, children }: SolutionItemsProps) => {
     <div style={styles.container}>
       <div style={styles.label}>Solution: {node.childrenIds.length} Sub-problems</div>
       <ol style={styles.list}>
-        {children.map(child => (
-          <li key={child.id} style={{
-            ...styles.item,
-            ...(child.draft ? styles.draftItem : {}),
-            ...(child.id === priorityChild?.id ? styles.priorityItem : {}),
-          }}>
-            {!child.draft && <>
-              <span style={{
-                ...styles.readinessCircle,
-                background: styles.readinessLevelColors[child.calculatedMetrics.readinessLevel as keyof typeof styles.readinessLevelColors],
-              }}>
-                {child.calculatedMetrics.readinessLevel}
-              </span>
-              &nbsp;
-            </>}
-            {child.title}
+        {children.map(child => {
+          // Support legacy nodes with draft property
+          const isDraft = child.nodeState === "draft";
 
-            {child.id === priorityChild?.id && (
-              <>
-                &nbsp;<span style={styles.priorityPill}>priority</span>
-              </>
-            )}
-            {child.draft && (
-              <>
-                &nbsp;<span style={styles.draftPill}>draft</span>
-              </>
-            )}
-          </li>
-        ))}
+          return (
+            <li key={child.id} style={{
+              ...styles.item,
+              ...(isDraft ? styles.draftItem : {}),
+              ...(child.id === priorityChild?.id ? styles.priorityItem : {}),
+            }}>
+              {!isDraft && <>
+                <span style={{
+                  ...styles.readinessCircle,
+                  background: styles.readinessLevelColors[child.calculatedMetrics.readinessLevel as keyof typeof styles.readinessLevelColors],
+                }}>
+                  {child.calculatedMetrics.readinessLevel}
+                </span>
+                &nbsp;
+              </>}
+              {child.title}
+
+              {child.id === priorityChild?.id && (
+                <>
+                  &nbsp;<span style={styles.priorityPill}>priority</span>
+                </>
+              )}
+              {isDraft && (
+                <>
+                  &nbsp;<span style={styles.draftPill}>draft</span>
+                </>
+              )}
+            </li>
+          )
+        })}
       </ol>
     </div>
   )

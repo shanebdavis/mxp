@@ -1,17 +1,27 @@
 ---
-id: 6e1216a9-533d-4d9e-819f-d60719ad6e9e
-title: easy interface to manipulate the hiearchy
+id: d1ed7c14-b07d-4d2a-8b5b-65e119a362ee
+title: support creative expression of problems and solutions
 filename: untitled.md
 parentId: f5958119-9841-4b17-8c52-c731bd49159f
 childrenIds:
-  - f436b5a5-6517-4f11-b547-0c930ef25e83
-  - 5456bd49-ed0f-4155-a01c-c8123d5b0d14
-  - 9005c387-0c83-4f4b-9815-46589dd317fb
+  - 76d33e78-22d9-4dd9-a9b3-2e419674395f
+  - d27869c7-f80e-455a-929f-107d94bc35f2
 calculatedMetrics:
   readinessLevel: 3
-draft: false
+nodeState: active
+type: map
+setMetrics:
+  readinessLevel: 3
+---
+lculatedMetrics:
+  readinessLevel: 3
+nodeState: active
 type: map
 ---
-Need to be able to quickly edit and update everything in the tree.
+# Track Status, not To-Dos
 
-> At the speed of thought
+1. a hierarchy
+2. each node is a problem to be solved
+3. children represent the strategy - a list of sub-problems that, if solved, will solve the parent problem
+4. each node has a readiness status
+5. nodes can have their readiness set explicitly or automatically - the latter is either RL0 if there are no children or the min value of all the children

@@ -5,7 +5,7 @@ import type {
   TreeNodeProperties,
   UpdateTreeNodeProperties,
   TreeNodeSetDelta
-} from './TreeNode/TreeNodeTypes'
+} from './TreeNodeTypes'
 import { getTreeNodeSetWithDeltaApplied } from './TreeNode'
 
 export interface TreeStateMethods {

@@ -19,7 +19,8 @@ import {
   getTreeNodeSetDeltaForNodeRemoved,
   getTreeNodeSetWithDeltaApplied,
   getHealedChildrenIdsDelta,
-  getHealedParentIdsDelta
+  getHealedParentIdsDelta,
+  NodeState
 } from '../TreeNode'
 
 import { array, formattedInspect } from '../ArtStandardLib'
@@ -33,7 +34,7 @@ interface NodeMetadata {
   setMetrics?: Record<string, number>
   calculatedMetrics?: { readinessLevel: number }
   filename?: string  // The name of the file storing this node
-  draft?: boolean
+  nodeState?: NodeState  // Replacing draft with nodeState
   type?: NodeType
 }
 
@@ -274,7 +275,7 @@ class FileStore {
       childrenIds: Array.isArray(metadata.childrenIds) ? metadata.childrenIds : [],
       parentId: metadata.parentId || null,
       calculatedMetrics: metadata.calculatedMetrics || { readinessLevel: 0 },
-      draft: metadata.draft ?? false,
+      nodeState: metadata.nodeState ?? (metadata.draft ? "draft" : "active"),  // Convert legacy draft to nodeState
       type: metadata.type ?? "map",
       ...(metadata.setMetrics && { setMetrics: metadata.setMetrics })
     }
@@ -328,7 +329,7 @@ class FileStore {
       parentId: node.parentId,
       childrenIds: node.childrenIds,
       calculatedMetrics: node.calculatedMetrics,
-      draft: node.draft,
+      nodeState: node.nodeState,
       type: node.type,
       ...(node.setMetrics && { setMetrics: node.setMetrics })
     }

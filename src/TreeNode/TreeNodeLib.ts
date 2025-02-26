@@ -1,4 +1,4 @@
-import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from './TreeNodeTypes'
+import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties, NodeState } from './TreeNodeTypes'
 import { eq } from '../ArtStandardLib'
 
 export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
@@ -23,7 +23,7 @@ export const getChildrenIdsWithRemoval = (childrenIds: string[], nodeId: string)
 export const getActiveChildren = (nodes: TreeNodeSet, nodeId: string): TreeNode[] => {
   const node = nodes[nodeId]
   if (!node) return []
-  return node.childrenIds.map(id => nodes[id]).filter(child => !child.draft)
+  return node.childrenIds.map(id => nodes[id]).filter(child => child.nodeState === "active")
 }
 
 export const getChildIds = (nodes: TreeNodeSet, nodeId: string): string[] =>

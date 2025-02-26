@@ -4,7 +4,7 @@ import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode, TreeNodeSet } from '../../../models'
+import type { TreeNode, TreeNodeSet } from '../../../TreeNodeTypes'
 
 interface TreeNodeProps {
   nodes: TreeNodeSet
@@ -53,7 +53,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const { setNodeParent, isParentOf } = treeStateMethods
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !isParentOf(nodeId, draggedNode.id)
   const isDragTarget = dragTarget.nodeId === nodeId && isValidTarget
-  const showAsDraft = isDraftSubtree || node.draft
+  const showAsDraft = isDraftSubtree || node.nodeState === "draft"
 
   const expanded = expandedNodes[nodeId]
   const isRoot = !node.parentId

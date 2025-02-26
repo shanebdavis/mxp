@@ -1,6 +1,6 @@
-import { useState, type FC, useRef, useMemo } from 'react'
+import { FC, useState, useRef, useEffect, useMemo } from 'react'
 import React from 'react'
-import type { TreeNode, TreeNodeSet } from '../../../models'
+import type { TreeNode, TreeNodeSet } from '../../../TreeNodeTypes'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
@@ -118,6 +118,12 @@ export const HTable: FC<HTableProps> = ({
     setDropIndicator(prev => ({ ...prev, show: false }))
   }
 
+  const shouldShowDropIndicator = (x: DragTarget) => {
+    // ... existing code ...
+  }
+
+  let draftNodesVisited: TreeNodeSet = {}
+
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
       {dropIndicator.show && (
@@ -164,10 +170,11 @@ export const HTable: FC<HTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {displayOrder.map(({ nodeId, level, itemNumber }, index) => {
+          {displayOrder.map(({ nodeId, level, itemNumber }: { nodeId: string, level: number, itemNumber: number }, index: number) => {
             const node = nodes[nodeId]
+            const isDraftSubtree = node.nodeState === "draft" || draftNodesVisited[node.parentId]
+            if (isDraftSubtree) draftNodesVisited[nodeId] = true
             const parentNode = node.parentId ? nodes[node.parentId] : null
-            const isDraftSubtree = Boolean(node.draft || (parentNode?.draft))
 
             return (
               <HTableRow

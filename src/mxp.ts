@@ -27,34 +27,6 @@ const askQuestion = async (query: string): Promise<string> => {
   }))
 }
 
-const createRootProblem = async (mapsDir: string) => {
-  const content = `---
-id: ${crypto.randomUUID()}
-title: Root Problem
-filename: root-problem.md
-parentId: null
-childrenIds: []
-calculatedMetrics:
-  readinessLevel: 0
-draft: false
-type: map
----
-# Why?
-
-What problem are you trying to solve? What human needs are you fulfilling? Who does it impact? Why does it matter?
-
-# Strategy
-
-Break down your root problem into smaller, more manageable sub-problems. Each sub-problem should:
-1. Have a clear connection to solving the root problem
-2. Be specific and actionable
-3. Be measurable in terms of progress
-
-Remember: "All problems are solvable with enough knowledge."
-`
-  await fs.writeFile(path.join(mapsDir, 'root-problem.md'), content)
-}
-
 export const main = async (startDir: string = process.cwd()) => {
   // Check if expedition directory exists
   const expeditionDir = path.join(startDir, 'expedition')

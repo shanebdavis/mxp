@@ -11,7 +11,7 @@ import {
   getTreeNodeSetDeltaWithUpdatedNodeMetrics,
   vivifyRootNodesByType,
 } from '../../TreeNode'
-import { getActiveChildren } from '../../TreeNode/TreeNodeLib'
+import { getActiveChildren } from '../../TreeNode'
 
 describe('TreeNode using Deltas', () => {
   let testNodes: TreeNodeSet
@@ -900,7 +900,7 @@ describe('TreeNode using Deltas', () => {
       const child2 = createNode('map', {
         title: 'Child 2',
         setMetrics: { readinessLevel: 3 },
-        draft: true
+        nodeState: "draft"
       }, parent.id)
 
       // Add child2 to parent and update nodes
@@ -925,7 +925,7 @@ describe('TreeNode using Deltas', () => {
       // Parent should have readinessLevel 0 (min of active children: child1=0, child3=5)
       expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
       // Now set child1 to draft mode using direct delta functions
-      delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { draft: true })
+      delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { nodeState: "draft" })
       nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
 
       // Now parent should only consider child3's readinessLevel since both child1 and child2 are draft
@@ -960,7 +960,7 @@ describe('TreeNode using Deltas', () => {
       expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
 
       // Now set child1 to draft mode
-      delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { draft: true })
+      delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { nodeState: "draft" })
       nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
 
       // Parent should default to 0 when all children are draft
