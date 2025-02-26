@@ -95,11 +95,6 @@ class FileStore {
     await this.setAllNodesAndSaveAnyChanges(delta)
     this._rootNodesByType = rootNodesByType
 
-    for (const [type, dir] of Object.entries(FILESTORE_SUB_DIRS_BY_TYPE)) {
-      const nodeType = type as NodeType
-      let rootNode = this._rootNodesByType[nodeType]
-      if (!rootNode) await this.vivifyRootNode(nodeType)
-    }
     this.isInitialized = true
     return this;
   }
@@ -117,12 +112,6 @@ class FileStore {
       throw new Error(`Node not found: ${nodeId}`)
     }
     return node
-  }
-
-  private async vivifyRootNode(nodeType: NodeType): Promise<{ node: TreeNode, delta: TreeNodeSetDelta }> {
-    const rootNodesByType = this._rootNodesByType[nodeType]
-    if (rootNodesByType) return { node: rootNodesByType, delta: { removed: {}, updated: {} } }
-    return this.createNode(nodeType, ROOT_NODE_DEFAULT_PROPERTIES[nodeType], null)
   }
 
   getRootNode(nodeType: NodeType): TreeNode {
