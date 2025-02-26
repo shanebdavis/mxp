@@ -16,7 +16,6 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
       const nodes = fileStore.allNodes
       res.json(nodes)
     } catch (error: any) {
-      // This should never happen since getAllNodes creates the directory if needed
       console.error('Unexpected error getting nodes:', error)
       res.status(500).json({ error: 'Failed to get nodes' })
     }
@@ -27,8 +26,9 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
     try {
       const { node, parentNodeId, insertAtIndex } = req.body
       const { type, ...properties } = node
-      const newNode = await fileStore.createNode(type, properties, parentNodeId, insertAtIndex)
-      res.status(201).json(fileStore.allNodes)
+      const result = await fileStore.createNode(type, properties, parentNodeId, insertAtIndex)
+      // Return the exact same object structure as FileStore.createNode
+      res.status(201).json(result)
     } catch (error: any) {
       if (error.message?.includes('not found')) {
         res.status(404).json({ error: `Parent node ${req.body.parentNodeId} not found` })
@@ -42,8 +42,8 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
   // Update a node
   router.patch('/nodes/:nodeId', async (req, res) => {
     try {
-      await fileStore.updateNode(req.params.nodeId, req.body)
-      res.json(fileStore.allNodes)
+      const delta = await fileStore.updateNode(req.params.nodeId, req.body)
+      res.json(delta)
     } catch (error: any) {
       if (error.message?.includes('not found')) {
         res.status(404).json({ error: `Node ${req.params.nodeId} not found` })
@@ -57,8 +57,8 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
   // Delete a node
   router.delete('/nodes/:nodeId', async (req, res) => {
     try {
-      await fileStore.deleteNode(req.params.nodeId)
-      res.json(fileStore.allNodes)
+      const delta = await fileStore.deleteNode(req.params.nodeId)
+      res.json(delta)
     } catch (error: any) {
       if (error.message?.includes('not found')) {
         res.status(404).json({ error: `Node ${req.params.nodeId} not found` })
@@ -73,36 +73,8 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
   router.put('/nodes/:nodeId/parent', async (req, res) => {
     try {
       const { newParentId, insertAtIndex } = req.body
-      const oldNodes = fileStore.allNodes
-      await fileStore.setNodeParent(req.params.nodeId, newParentId, insertAtIndex)
-      const newNodes = fileStore.allNodes
-
-      // Only return nodes that have changed
-      const changedNodes: Record<string, any> = {}
-      Object.keys(newNodes).forEach(id => {
-        const oldNode = oldNodes[id]
-        const newNode = newNodes[id]
-        // Compare each property individually to handle array order changes
-        const oldChildrenIds = JSON.stringify(oldNode?.childrenIds)
-        const newChildrenIds = JSON.stringify(newNode?.childrenIds)
-        if (
-          !oldNode || // node was added
-          !newNode || // node was removed
-          oldChildrenIds !== newChildrenIds ||
-          oldNode.parentId !== newNode.parentId ||
-          oldNode.title !== newNode.title ||
-          oldNode.description !== newNode.description ||
-          JSON.stringify(oldNode.setMetrics) !== JSON.stringify(newNode.setMetrics) ||
-          JSON.stringify(oldNode.calculatedMetrics) !== JSON.stringify(newNode.calculatedMetrics) ||
-          oldNode.draft !== newNode.draft ||
-          oldNode.type !== newNode.type
-        ) {
-          console.log('  -> Changed!')
-          changedNodes[id] = newNode
-        }
-      })
-      console.log('Changed nodes:', Object.keys(changedNodes))
-      res.status(200).json(changedNodes)
+      const delta = await fileStore.setNodeParent(req.params.nodeId, newParentId, insertAtIndex)
+      res.status(200).json(delta)
     } catch (error: any) {
       console.error('Error changing node parent:', error)
       if (error.message?.includes('not found')) {

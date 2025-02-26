@@ -474,6 +474,11 @@ export const getTreeNodeSetDeltaForNodeParentChanged = (
     // If moving to a later position, we need to account for the removal of the current item
     const adjustedTargetIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
 
+    // Skip if the node is already at the target position
+    if (currentIndex === adjustedTargetIndex) {
+      return optionalDelta || { removed: {}, updated: {} };
+    }
+
     const delta: TreeNodeSetDelta = mergeTreeNodeSetDeltas(
       optionalDelta,
       {
