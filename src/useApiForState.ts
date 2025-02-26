@@ -1,5 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { TreeNode, TreeNodeSet, TreeNodeProperties, UpdateTreeNodeProperties, TreeNodeSetDelta } from './models'
+import type {
+  TreeNode,
+  TreeNodeSet,
+  TreeNodeProperties,
+  UpdateTreeNodeProperties,
+  TreeNodeSetDelta
+} from './TreeNode/TreeNodeTypes'
+import { getTreeNodeSetWithDeltaApplied } from './TreeNode'
 
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => Promise<string>
@@ -35,6 +42,11 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
   const [error, setError] = useState<Error | null>(null)
   const [rootNodeId, setRootNodeId] = useState<string | null>(null)
 
+  // Helper function to apply a delta to the current state
+  const applyDelta = useCallback((delta: TreeNodeSetDelta) => {
+    setNodes(prevNodes => getTreeNodeSetWithDeltaApplied(prevNodes, delta))
+  }, [])
+
   // Helper to make API calls and handle responses
   const apiCall = useCallback(async (
     path: string,
@@ -67,45 +79,15 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     // For POST /nodes (create node)
     if (method === 'POST' && path === '/nodes') {
       const createResult = result as CreateNodeResponse
-      // Apply the delta to update nodes state
       applyDelta(createResult.delta)
-      // Update rootNodeId if needed
-      if (!rootNodeId) {
-        const rootId = Object.values({ ...nodes, [createResult.node.id]: createResult.node }).find(node => !node.parentId)?.id
-        if (rootId) setRootNodeId(rootId)
-      }
       return createResult
     }
 
-    // For all other calls (PATCH, DELETE, PUT), handle delta format
+    // For all other calls (PATCH, DELETE, PUT), apply delta to state
     const deltaResult = result as TreeNodeSetDelta
     applyDelta(deltaResult)
     return deltaResult
-  }, [baseUrl, nodes, rootNodeId])
-
-  // Helper to apply a delta to the current state
-  const applyDelta = useCallback((delta: TreeNodeSetDelta) => {
-    setNodes(prevNodes => {
-      // Create a new state with updates applied and removed nodes filtered out
-      const updatedNodes = { ...prevNodes }
-
-      // Remove nodes
-      if (delta.removed) {
-        Object.keys(delta.removed).forEach(id => {
-          delete updatedNodes[id]
-        })
-      }
-
-      // Update nodes
-      if (delta.updated) {
-        Object.entries(delta.updated).forEach(([id, node]) => {
-          updatedNodes[id] = node
-        })
-      }
-
-      return updatedNodes
-    })
-  }, [])
+  }, [baseUrl, nodes, rootNodeId, applyDelta])
 
   // Load initial state
   useEffect(() => {
