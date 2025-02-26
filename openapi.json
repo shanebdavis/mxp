@@ -73,8 +73,14 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/TreeNode"
+                  "required": ["node", "delta"],
+                  "properties": {
+                    "node": {
+                      "$ref": "#/components/schemas/TreeNode"
+                    },
+                    "delta": {
+                      "$ref": "#/components/schemas/TreeNodeSetDelta"
+                    }
                   }
                 }
               }
@@ -114,10 +120,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/TreeNode"
-                  }
+                  "$ref": "#/components/schemas/TreeNodeSetDelta"
                 }
               }
             }
@@ -147,10 +150,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/TreeNode"
-                  }
+                  "$ref": "#/components/schemas/TreeNodeSetDelta"
                 }
               }
             }
@@ -202,10 +202,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "$ref": "#/components/schemas/TreeNode"
-                  }
+                  "$ref": "#/components/schemas/TreeNodeSetDelta"
                 }
               }
             }
@@ -222,6 +219,26 @@
   },
   "components": {
     "schemas": {
+      "TreeNodeSetDelta": {
+        "type": "object",
+        "required": ["updated", "removed"],
+        "properties": {
+          "updated": {
+            "type": "object",
+            "description": "Map of updated node IDs to their updated node data",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TreeNode"
+            }
+          },
+          "removed": {
+            "type": "object",
+            "description": "Map of removed node IDs to their removed node data",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TreeNode"
+            }
+          }
+        }
+      },
       "Metrics": {
         "type": "object",
         "required": ["readinessLevel"],
