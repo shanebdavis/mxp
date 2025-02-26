@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid'
 import { log, neq, objectHasKeys } from '../ArtStandardLib'
 import { moveElementInArray } from './arrayLib'
 import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeSet, TreeNodeWithChildren, TreeNodeSetDelta } from './TreeNodeTypes'
-import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds } from './TreeNodeLib'
+import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds, ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNodeLib'
 import { calculateAllMetricsFromNode, calculateAllMetricsFromSetMetricsAndChildrenMetrics, compactMergeMetrics, metricsAreSame } from './TreeNodeMetrics'
 
 //*******************************************
@@ -294,7 +294,7 @@ export const mergeTreeNodeSetDeltas = (
       removed: { ...getTreeNodeSetWithNodesRemoved(delta1?.removed, delta2?.updated), ...delta2?.removed }
     }) : delta1 || delta2 || { updated: {}, removed: {} }
 
-export const getRootNodesByType = (nodes: TreeNodeSet): { delta: TreeNodeSetDelta, rootNodesByType: RootNodesByType } => {
+export const vivifyRootNodesByType = (nodes: TreeNodeSet): { delta: TreeNodeSetDelta, rootNodesByType: RootNodesByType } => {
   const rootNodes = getAllRootNodes(nodes)
   const rootNodesByType: RootNodesByType = {} as RootNodesByType
 
@@ -319,6 +319,15 @@ export const getRootNodesByType = (nodes: TreeNodeSet): { delta: TreeNodeSetDelt
     } else {
       // This is the first root node of this type
       rootNodesByType[node.type] = node
+    }
+  })
+
+  // create any missing root nodes using ROOT_NODE_DEFAULT_PROPERTIES
+  Object.keys(ROOT_NODE_DEFAULT_PROPERTIES).forEach(typeKey => {
+    const type = typeKey as NodeType
+    if (!rootNodesByType[type]) {
+      const newRootNode = createNode(type, ROOT_NODE_DEFAULT_PROPERTIES[type])
+      delta.updated[newRootNode.id] = rootNodesByType[type] = newRootNode
     }
   })
 
@@ -537,6 +546,70 @@ export const getTreeNodeSetDeltaForNodeRemoved = (
 
     // Update metrics starting from the parent
     return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, node.parentId)
+  }
+
+  return delta
+}
+
+//*******************************************
+// Tree Healing Functions
+//*******************************************
+
+
+/**
+ * Creates a delta to heal children references by removing invalid child IDs
+ * from all nodes' childrenIds arrays.
+ *
+ * @param nodes The node set to heal
+ * @returns A delta representing the changes needed to heal children references
+ */
+export const getHealedChildrenIdsDelta = (nodes: TreeNodeSet): TreeNodeSetDelta => {
+  const delta: TreeNodeSetDelta = { removed: {}, updated: {} }
+
+  // First, collect all valid node IDs
+  const validNodeIds = new Set(Object.keys(nodes))
+
+  // Then, for each node, remove any childrenIds that don't exist
+  for (const node of Object.values(nodes)) {
+    const validChildren = node.childrenIds.filter(id => validNodeIds.has(id))
+    if (validChildren.length !== node.childrenIds.length) {
+      delta.updated[node.id] = {
+        ...node,
+        childrenIds: validChildren
+      }
+    }
+  }
+
+  return delta
+}
+
+
+/**
+ * Heals parent references by ensuring that all nodes have valid parent IDs.
+ * If a node references a non-existent parent, it's attached to the root node.
+ *
+ * @returns A delta representing the changes needed to heal parent references
+ */
+export const getHealedParentIdsDelta = (nodes: TreeNodeSet): TreeNodeSetDelta => {
+  // Find root node (node with no parent)
+  let { rootNodesByType, delta } = vivifyRootNodesByType(nodes)
+
+  // Check each node's parentId
+  for (const node of Object.values(nodes)) {
+    // Skip root node
+    if (!node.parentId) continue
+
+    // If parent doesn't exist, attach to root
+    if (!getNode(nodes, node.parentId, delta)) {
+      // Update the node with root as parent
+      delta = getTreeNodeSetDeltaForNodeParentChanged(nodes, node.id, rootNodesByType[node.type].id, null, delta)
+    } else {
+      // Parent exists, make sure this node is in parent's childrenIds
+      const parent = getNode(nodes, node.parentId, delta)
+      if (!parent.childrenIds.includes(node.id)) {
+        (delta.updated[node.parentId] ||= { ...parent }).childrenIds.push(node.id)
+      }
+    }
   }
 
   return delta

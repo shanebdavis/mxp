@@ -9,7 +9,7 @@ import {
   isParentOfInTree,
   type TreeNodeSet,
   getTreeNodeSetDeltaWithUpdatedNodeMetrics,
-  getRootNodesByType,
+  vivifyRootNodesByType,
   type NodeType,
 } from '../../models'
 
@@ -704,7 +704,7 @@ describe('TreeNode using Deltas', () => {
       }
 
       // Get root nodes by type
-      const { delta, rootNodesByType } = getRootNodesByType(nodes)
+      const { delta, rootNodesByType } = vivifyRootNodesByType(nodes)
 
       // Verify the rootNodesByType object
       expect(rootNodesByType.map).toBeDefined()
@@ -735,7 +735,7 @@ describe('TreeNode using Deltas', () => {
       }
 
       // Get root nodes by type
-      const { delta, rootNodesByType } = getRootNodesByType(nodes)
+      const { delta, rootNodesByType } = vivifyRootNodesByType(nodes)
 
       // Verify the rootNodesByType object
       expect(rootNodesByType.map).toBeDefined()
@@ -798,7 +798,7 @@ describe('TreeNode using Deltas', () => {
       }
 
       // Get root nodes by type
-      const { delta, rootNodesByType } = getRootNodesByType(nodes)
+      const { delta, rootNodesByType } = vivifyRootNodesByType(nodes)
 
       // Apply the delta to see the final tree structure
       const updatedNodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
@@ -829,13 +829,12 @@ describe('TreeNode using Deltas', () => {
 
     it('should handle empty nodes object', () => {
       const nodes: TreeNodeSet = {}
-      const { delta, rootNodesByType } = getRootNodesByType(nodes)
+      const { delta, rootNodesByType } = vivifyRootNodesByType(nodes)
 
-      // Verify the rootNodesByType object is empty
-      expect(Object.keys(rootNodesByType).length).toBe(0)
+      expect(Object.keys(rootNodesByType).length).toBe(3)
 
       // Verify no delta changes were made
-      expect(Object.keys(delta.updated).length).toBe(0)
+      expect(Object.keys(delta.updated).length).toBe(3)
       expect(Object.keys(delta.removed).length).toBe(0)
     })
 
@@ -857,16 +856,15 @@ describe('TreeNode using Deltas', () => {
       }
 
       // Get root nodes by type
-      const { delta, rootNodesByType } = getRootNodesByType(nodes)
+      const { delta, rootNodesByType } = vivifyRootNodesByType(nodes)
 
       // Verify the rootNodesByType object only contains the root nodes
-      expect(Object.keys(rootNodesByType).length).toBe(2)
+      expect(Object.keys(rootNodesByType).length).toBe(3)
+      expect(Object.keys(delta.updated).length).toBe(1) // one missing root node added
+      expect(Object.keys(delta.removed).length).toBe(0)
+
       expect(rootNodesByType.map.id).toBe(mapRoot.id)
       expect(rootNodesByType.waypoint.id).toBe(waypointRoot.id)
-
-      // Verify no delta changes were made since there's only one root node of each type
-      expect(Object.keys(delta.updated).length).toBe(0)
-      expect(Object.keys(delta.removed).length).toBe(0)
 
       // Apply the delta to see the final tree structure
       const updatedNodes = getTreeNodeSetWithDeltaApplied(nodes, delta)

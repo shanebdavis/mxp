@@ -3,13 +3,21 @@ import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
 import matter from 'gray-matter'
-import { TreeNode, TreeNodeProperties, NodeType, UpdateTreeNodeProperties, RootNodesByType } from './TreeNodeTypes'
-import { calculateAllMetricsFromNodeId } from './TreeNodeMetrics'
-import { nodesAreEqual, getDefaultFilename, ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNodeLib'
-import { createNode, getUpdatedNode, getRootNodesByType, getTreeWithNodeParentChanged, getTreeWithNodeAdded, getTreeWithNodeRemoved } from './TreeNode'
+import { TreeNode, TreeNodeProperties, NodeType, UpdateTreeNodeProperties, RootNodesByType, TreeNodeSet, TreeNodeSetDelta } from './TreeNodeTypes'
+import { ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNodeLib'
+import {
+  createNode,
+  vivifyRootNodesByType,
+  getTreeNodeSetDeltaForNodeAdded,
+  getTreeNodeSetDeltaForNodeUpdated,
+  getTreeNodeSetDeltaForNodeParentChanged,
+  getTreeNodeSetDeltaForNodeRemoved,
+  getTreeNodeSetWithDeltaApplied,
+  getHealedChildrenIdsDelta,
+  getHealedParentIdsDelta
+} from './TreeNode'
 
-const { eq } = require('art-standard-lib')
-import { array, formattedInspect, log } from '../ArtStandardLib'
+import { array, formattedInspect } from '../ArtStandardLib'
 
 interface NodeMetadata {
   id?: string
@@ -42,7 +50,7 @@ const vivifyDirectory = async (dir: string) => {
 class FileStore {
   // private baseDir: string
   private _baseDirsByType: Record<NodeType, string>
-  private _allNodes: Record<string, TreeNode>
+  private _allNodes: TreeNodeSet
   private isInitialized = false
   private _rootNodesByType: RootNodesByType
 
@@ -62,7 +70,7 @@ class FileStore {
     return this._rootNodesByType
   }
 
-  private set allNodes(nodes: Record<string, TreeNode>) {
+  private set allNodes(nodes: TreeNodeSet) {
     this._allNodes = nodes
   }
 
@@ -83,8 +91,8 @@ class FileStore {
     await this.ensureBaseDirs()
     await this.vivifyAllSubDirs()
     await this.loadAllNodes()
-    const { nodes, rootNodesByType } = getRootNodesByType(this._allNodes)
-    this.setAllNodesAndSaveAnyChanges(nodes)
+    const { delta, rootNodesByType } = vivifyRootNodesByType(this._allNodes)
+    await this.setAllNodesAndSaveAnyChanges(delta)
     this._rootNodesByType = rootNodesByType
 
     for (const [type, dir] of Object.entries(FILESTORE_SUB_DIRS_BY_TYPE)) {
@@ -111,14 +119,10 @@ class FileStore {
     return node
   }
 
-  private async vivifyRootNode(nodeType: NodeType): Promise<TreeNode> {
+  private async vivifyRootNode(nodeType: NodeType): Promise<{ node: TreeNode, delta: TreeNodeSetDelta }> {
     const rootNodesByType = this._rootNodesByType[nodeType]
-    if (rootNodesByType) return rootNodesByType
-    const newNode = createNode(nodeType, ROOT_NODE_DEFAULT_PROPERTIES[nodeType], null)
-    const newAllNodes = { ...this._allNodes, [newNode.id]: newNode }
-    await this.setAllNodesAndSaveAnyChanges(newAllNodes)
-    this._rootNodesByType[nodeType] = newNode
-    return newNode
+    if (rootNodesByType) return { node: rootNodesByType, delta: { removed: {}, updated: {} } }
+    return this.createNode(nodeType, ROOT_NODE_DEFAULT_PROPERTIES[nodeType], null)
   }
 
   getRootNode(nodeType: NodeType): TreeNode {
@@ -129,118 +133,77 @@ class FileStore {
     return this.rootNodesByType[nodeType]
   }
 
-  async createNode(nodeType: NodeType, properties: TreeNodeProperties, parentId?: string | null, insertAtIndex?: number | null): Promise<TreeNode> {
-    // Write the getFilename first
+  async createNode(nodeType: NodeType, properties: TreeNodeProperties, parentId?: string | null, insertAtIndex?: number | null): Promise<{ node: TreeNode, delta: TreeNodeSetDelta }> {
     parentId = parentId ?? this.getRootNode(nodeType).id
-    const newNode = createNode(nodeType, properties, parentId)
-    const newAllNodes = getTreeWithNodeAdded(this._allNodes, newNode, parentId, insertAtIndex)
-    await this.setAllNodesAndSaveAnyChanges(newAllNodes)
+    const node = createNode(nodeType, properties, parentId)
 
-    await this.saveNode(newAllNodes[newNode.id])
-    await this.saveNode(newAllNodes[parentId])
-
-    await this.updateNodeAndParentMetrics(parentId)
-    return newNode
+    // Return the node from the updated nodes
+    return {
+      node,
+      delta: await this.setAllNodesAndSaveAnyChanges(getTreeNodeSetDeltaForNodeAdded(
+        this._allNodes,
+        node,
+        parentId,
+        insertAtIndex
+      ))
+    };
   }
 
-  async updateNode(nodeId: string, properties: UpdateTreeNodeProperties): Promise<TreeNode> {
-    // Get all nodes to calculate metrics accurately
-    await this.saveNode(getUpdatedNode(this.getNode(nodeId), properties))
-
-    // Calculate new metrics for this node and its ancestors
-    await this.updateNodeAndParentMetrics(nodeId, true)
-
-    // Get the final node state after metrics update
-    return this.getNode(nodeId)
+  async updateNode(nodeId: string, properties: UpdateTreeNodeProperties): Promise<TreeNodeSetDelta> {
+    return this.setAllNodesAndSaveAnyChanges(getTreeNodeSetDeltaForNodeUpdated(
+      this._allNodes,
+      nodeId,
+      properties
+    ))
   }
 
-  async setNodeParent(nodeId: string, newParentId: string, insertAtIndex?: number | null): Promise<void> {
+  async setNodeParent(nodeId: string, newParentId: string, insertAtIndex?: number | null): Promise<TreeNodeSetDelta> {
     if (!this.getNode(nodeId).parentId) throw new Error('Cannot move a root node')
-    await this.setAllNodesAndSaveAnyChanges(getTreeWithNodeParentChanged(this._allNodes, nodeId, newParentId, insertAtIndex))
+
+    // Create delta for changing the parent
+    return this.setAllNodesAndSaveAnyChanges(getTreeNodeSetDeltaForNodeParentChanged(
+      this._allNodes,
+      nodeId,
+      newParentId,
+      insertAtIndex
+    ))
   }
 
-  async deleteNode(nodeId: string): Promise<void> {
+  async deleteNode(nodeId: string): Promise<TreeNodeSetDelta> {
     if (!this.getNode(nodeId).parentId) throw new Error('Cannot delete a root node')
-    await this.setAllNodesAndSaveAnyChanges(getTreeWithNodeRemoved(this._allNodes, nodeId))
+
+    // Create delta for removing the node
+    return this.setAllNodesAndSaveAnyChanges(getTreeNodeSetDeltaForNodeRemoved(this._allNodes, nodeId))
   }
 
   //**************************************************
   // PRIVATE METHODS
   //**************************************************
 
-  private getNodesWithHealedParentIds(): Record<string, TreeNode> {
-    // Find root node (node with no parent)
-    const rootNode = Object.values(this._allNodes).find(node => !node.parentId)
-    if (!rootNode) return this._allNodes // No root node found, can't heal
 
-    // Check each node's parentId
-    const healedNodes = { ...this._allNodes }
-
-    for (const node of Object.values(healedNodes)) {
-      // Skip root node
-      if (!node.parentId) continue
-
-      // If parent doesn't exist, attach to root
-      if (!healedNodes[node.parentId]) {
-        const updatedNode = {
-          ...node,
-          parentId: rootNode.id
-        }
-        healedNodes[node.id] = updatedNode
-        if (!rootNode.childrenIds.includes(node.id)) {
-          rootNode.childrenIds.push(node.id)
-        }
-
-      } else {
-        // Parent exists, make sure this node is in parent's childrenIds
-        const parent = healedNodes[node.parentId]
-        if (!parent.childrenIds.includes(node.id)) {
-          parent.childrenIds.push(node.id)
-        }
-      }
-    }
-
-    return healedNodes
+  /**
+   * Applies healing to all nodes and saves changes to disk.
+   * Uses the delta pattern internally for efficient updates.
+   */
+  private async healNodesAndSave() {
+    this.setAllNodesAndSaveAnyChanges(
+      getHealedChildrenIdsDelta(
+        getTreeNodeSetWithDeltaApplied(
+          this._allNodes,
+          getHealedParentIdsDelta(this._allNodes)
+        )
+      )
+    )
   }
 
+  private async setAllNodesAndSaveAnyChanges(delta: TreeNodeSetDelta) {
+    await Promise.all([
+      ...Object.keys(delta.updated).map(id => this.writeNodeFile(delta.updated[id])),
+      ...Object.keys(delta.removed).map(id => fs.unlink(this.getFilePath(delta.removed[id])))
+    ])
 
-
-  private getNodesWithHealedChildrenIds(nodes: Record<string, TreeNode>): Record<string, TreeNode> {
-    const healedNodes = { ...nodes }
-
-    // First, collect all valid node IDs
-    const validNodeIds = new Set(Object.keys(nodes))
-
-    // Then, for each node, remove any childrenIds that don't exist
-    for (const node of Object.values(healedNodes)) {
-      const validChildren = node.childrenIds.filter(id => validNodeIds.has(id))
-      if (validChildren.length !== node.childrenIds.length) {
-        healedNodes[node.id] = {
-          ...node,
-          childrenIds: validChildren
-        }
-      }
-    }
-
-    return healedNodes
-  }
-
-  private async setAllNodesAndSaveAnyChanges(updatedNodes: Record<string, TreeNode>) {
-    // iterate through all nodes and save the ones that have changed
-    const allOldNodes = this._allNodes
-
-    await Promise.all(Object.keys(updatedNodes).map(async id => {
-      if (!nodesAreEqual(allOldNodes[id], updatedNodes[id])) {
-        await this.writeNodeFile(updatedNodes[id])
-      }
-    }))
-    // update any deleted nodes
-    await Promise.all(Object.keys(allOldNodes).map(async id => {
-      if (!updatedNodes[id]) {
-        await fs.unlink(this.getFilePath(allOldNodes[id]))
-      }
-    }))
-    this._allNodes = updatedNodes
+    this._allNodes = getTreeNodeSetWithDeltaApplied(this._allNodes, delta)
+    return delta
   }
 
   private async loadAllNodes() {
@@ -251,7 +214,8 @@ class FileStore {
         this._allNodes[node.id] = node
       }
     }
-    await this.setAllNodesAndSaveAnyChanges(this.getNodesWithHealedChildrenIds(this.getNodesWithHealedParentIds()))
+    // Use the new healing method
+    await this.healNodesAndSave()
   }
 
   private async ensureBaseDirs() {
@@ -298,25 +262,11 @@ class FileStore {
       if (!metadata.id) {
         await fs.rename(filePath, this.getFilePath(node))
       }
+      // Use writeNodeFile directly as we're initializing the store
       await this.writeNodeFile(node)
     }
 
     return node
-  }
-
-  private async updateNodeAndParentMetrics(nodeId: string, forceCheckParent = false): Promise<void> {
-    const node = this.getNode(nodeId)
-
-    // Calculate new metrics for this node
-    const calculatedMetrics = calculateAllMetricsFromNodeId(nodeId, this._allNodes)
-
-    if (!eq(node.calculatedMetrics, calculatedMetrics) || forceCheckParent) {
-      await this.saveNode({ ...node, calculatedMetrics })
-      // If parent exists, update parent
-      if (node.parentId) {
-        await this.updateNodeAndParentMetrics(node.parentId)
-      }
-    }
   }
 
   /**
@@ -368,26 +318,10 @@ class FileStore {
     return node
   }
 
-  private async saveNode(node: TreeNode) {
-    this.ensureInitialized()
-    const oldNode = this._allNodes[node.id]
-    if (!nodesAreEqual(oldNode, node)) {
-      node = { ...node, filename: getDefaultFilename(node) }
-      const oldPath = this.getFilePath(oldNode)
-      const newPath = this.getFilePath(node)
-      if (oldPath !== newPath) await fs.rename(oldPath, newPath)
-
-      this._allNodes[node.id] = node
-      await this.writeNodeFile(node)
-    }
-    return this._allNodes[node.id]
-  }
-
   private async vivifyAllSubDirs() {
     await Promise.all(
       array(FILESTORE_SUB_DIRS_BY_TYPE, vivifyDirectory)
     )
-
   }
 }
 

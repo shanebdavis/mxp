@@ -133,9 +133,9 @@ describe('FileStore', () => {
     const { fileStore, testDir } = await newTestFileStore()
 
     // Create a parent with two children
-    const parent = await fileStore.createNode("map", { title: 'Parent' })
-    const child1 = await fileStore.createNode("map", { title: 'Child 1' }, parent.id)
-    const child2 = await fileStore.createNode("map", { title: 'Child 2' }, parent.id)
+    const { node: parent } = await fileStore.createNode("map", { title: 'Parent' })
+    const { node: child1 } = await fileStore.createNode("map", { title: 'Child 1' }, parent.id)
+    const { node: child2 } = await fileStore.createNode("map", { title: 'Child 2' }, parent.id)
 
     // Delete first child
     await fileStore.deleteNode(child1.id)
