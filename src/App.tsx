@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
 import { Add, ArrowRight, ArrowDropDown, Delete } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
-import type { TreeNode, TreeNodeMap } from './models'
+import type { TreeNode, TreeNodeSet } from './models'
 import { useApiForState } from './useApiForState'
 
 const MIN_PANEL_WIDTH = 200
@@ -43,7 +43,7 @@ const styles = {
   },
 } as const
 
-const getParentMap = (nodes: TreeNodeMap): Record<string, TreeNode> => {
+const getParentMap = (nodes: TreeNodeSet): Record<string, TreeNode> => {
   const result: Record<string, TreeNode> = {}
   Object.values(nodes).forEach(node => {
     node.childrenIds.forEach(childId => {
@@ -53,7 +53,7 @@ const getParentMap = (nodes: TreeNodeMap): Record<string, TreeNode> => {
   return result
 }
 
-const getIndexInParentMap = (nodes: TreeNodeMap): Record<string, number> => {
+const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> => {
   const result: Record<string, number> = {}
   Object.values(nodes).forEach(node => {
     node.childrenIds.forEach((childId, index) => {

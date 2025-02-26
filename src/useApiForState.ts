@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { TreeNode, TreeNodeMap, TreeNodeProperties, UpdateTreeNodeProperties } from './models/TreeNode'
+import type { TreeNode, TreeNodeSet, TreeNodeProperties, UpdateTreeNodeProperties } from './models'
 
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => Promise<string>
   updateNode: (nodeId: string, properties: UpdateTreeNodeProperties) => Promise<void>
-  setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => Promise<TreeNodeMap>
+  setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => Promise<TreeNodeSet>
   removeNode: (nodeId: string) => Promise<void>
   isParentOf: (nodeId: string, potentialChildId: string) => boolean
 }
@@ -18,14 +18,14 @@ interface UseApiForStateOptions {
  * Hook that implements TreeStateMethods using the API
  */
 export const useApiForState = (options: UseApiForStateOptions = {}): {
-  nodes: TreeNodeMap
+  nodes: TreeNodeSet
   treeStateMethods: TreeStateMethods
   rootNodeId: string | null
   loading: boolean
   error: Error | null
 } => {
   const baseUrl = options.baseUrl || '/api'
-  const [nodes, setNodes] = useState<TreeNodeMap>({})
+  const [nodes, setNodes] = useState<TreeNodeSet>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [rootNodeId, setRootNodeId] = useState<string | null>(null)
@@ -35,7 +35,7 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     path: string,
     method: string = 'GET',
     body?: any
-  ): Promise<TreeNodeMap> => {
+  ): Promise<TreeNodeSet> => {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
@@ -49,7 +49,7 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
       throw new Error(error.error || 'API call failed')
     }
 
-    const result = await response.json() as TreeNodeMap
+    const result = await response.json() as TreeNodeSet
 
     // For GET /nodes, replace the entire state
     if (method === 'GET' && path === '/nodes') {

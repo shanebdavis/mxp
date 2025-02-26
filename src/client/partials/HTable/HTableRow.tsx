@@ -4,10 +4,10 @@ import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode, TreeNodeMap } from '../../../models'
+import type { TreeNode, TreeNodeSet } from '../../../models'
 
 interface TreeNodeProps {
-  nodes: TreeNodeMap
+  nodes: TreeNodeSet
   nodeId: string
   level?: number
   itemNumber: number

@@ -1,4 +1,4 @@
-import type { TreeNode, TreeNodeMap, UpdateTreeNodeProperties } from "../../models"
+import type { TreeNode, TreeNodeSet, UpdateTreeNodeProperties } from "../../models"
 import { PanelHeader } from "./PanelHeader"
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -174,7 +174,7 @@ export const DetailsPanel = ({
   treeStateMethods: { updateNode: (id: string, props: UpdateTreeNodeProperties) => Promise<void> }
   nameColumnHeader?: string
   readinessColumnHeader?: string
-  nodes: TreeNodeMap
+  nodes: TreeNodeSet
 }) => {
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')

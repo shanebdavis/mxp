@@ -30,9 +30,14 @@ export interface TreeNode extends TreeNodeProperties {
   filename: string  // The name of the file storing this node
 }
 
-export type TreeNodeMap = Record<string, TreeNode>
+export type TreeNodeSet = Record<string, TreeNode>
 export type RootNodesByType = Record<NodeType, TreeNode>
 
 export type TreeNodeWithChildren = TreeNode & {
   children: TreeNodeWithChildren[]
+}
+
+export type TreeNodeSetDelta = {
+  removed: TreeNodeSet // removed nodes with their last values
+  updated: TreeNodeSet // added or updated nodes with their latest values
 }

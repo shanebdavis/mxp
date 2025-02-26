@@ -1,13 +1,13 @@
 import { useState, type FC, useRef, useMemo } from 'react'
 import React from 'react'
-import type { TreeNode, TreeNodeMap } from '../../../models'
+import type { TreeNode, TreeNodeSet } from '../../../models'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
 import { TreeStateMethods } from '../../../useApiForState'
 
 interface HTableProps {
-  nodes: TreeNodeMap
+  nodes: TreeNodeSet
   rootNodeId: string
   selectedNode: TreeNode | null
   selectNodeById: (nodeId: string) => void
@@ -19,7 +19,7 @@ interface HTableProps {
   readinessColumnHeader?: string
 }
 
-const getDisplayOrder = (nodes: TreeNodeMap, rootNodeId: string, expandedNodes: Record<string, boolean>): Array<{ nodeId: string, level: number, itemNumber: number }> => {
+const getDisplayOrder = (nodes: TreeNodeSet, rootNodeId: string, expandedNodes: Record<string, boolean>): Array<{ nodeId: string, level: number, itemNumber: number }> => {
   const result: Array<{ nodeId: string, level: number, itemNumber: number }> = []
 
   const addToResult = (nodeId: string, level: number) => {

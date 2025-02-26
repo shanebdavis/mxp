@@ -1,4 +1,4 @@
-import { Metrics, PartialMetrics, UpdateMetrics, TreeNode, TreeNodeMap } from './TreeNodeTypes'
+import { Metrics, PartialMetrics, UpdateMetrics, TreeNode, TreeNodeSet } from './TreeNodeTypes'
 import { getActiveChildren } from './TreeNodeLib'
 import { eq } from '../ArtStandardLib'
 
@@ -75,7 +75,7 @@ export const calculateAllMetricsFromNode = (node: TreeNode, children: TreeNode[]
   return calculateAllMetricsFromSetMetricsAndChildrenMetrics(node.setMetrics ?? {}, children.map(child => child.calculatedMetrics))
 }
 
-export const calculateAllMetricsFromNodeId = (nodeId: string, allNodes: TreeNodeMap): Metrics => {
+export const calculateAllMetricsFromNodeId = (nodeId: string, allNodes: TreeNodeSet): Metrics => {
   const node = allNodes[nodeId]
   if (!node) throw new Error(`Node not found: ${nodeId}`)
   return calculateAllMetricsFromNode(node, getActiveChildren(allNodes, nodeId))

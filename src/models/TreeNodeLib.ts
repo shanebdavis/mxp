@@ -1,4 +1,4 @@
-import { NodeType, TreeNode, TreeNodeMap, TreeNodeProperties } from './TreeNodeTypes'
+import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from './TreeNodeTypes'
 const { eq } = require('art-standard-lib')
 
 export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
@@ -20,16 +20,16 @@ export const getChildrenIdsWithRemoval = (childrenIds: string[], nodeId: string)
   childrenIds.filter(id => id !== nodeId)
 
 
-export const getActiveChildren = (nodes: TreeNodeMap, nodeId: string): TreeNode[] => {
+export const getActiveChildren = (nodes: TreeNodeSet, nodeId: string): TreeNode[] => {
   const node = nodes[nodeId]
   if (!node) return []
   return node.childrenIds.map(id => nodes[id]).filter(child => !child.draft)
 }
 
-export const getChildIds = (nodes: TreeNodeMap, nodeId: string): string[] =>
+export const getChildIds = (nodes: TreeNodeSet, nodeId: string): string[] =>
   nodes[nodeId].childrenIds
 
-export const getChildNodes = (nodes: TreeNodeMap, nodeId: string): TreeNode[] =>
+export const getChildNodes = (nodes: TreeNodeSet, nodeId: string): TreeNode[] =>
   getChildIds(nodes, nodeId).map(id => nodes[id])
 
 

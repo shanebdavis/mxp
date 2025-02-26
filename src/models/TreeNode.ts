@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid'
-import { log } from '../ArtStandardLib'
+import { log, neq } from '../ArtStandardLib'
 import { moveElementInArray } from './arrayLib'
-import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeMap, TreeNodeWithChildren } from './TreeNodeTypes'
+import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeSet, TreeNodeWithChildren, TreeNodeSetDelta } from './TreeNodeTypes'
 import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds } from './TreeNodeLib'
 import { calculateAllMetricsFromNode, calculateAllMetricsFromSetMetricsAndChildrenMetrics, compactMergeMetrics, metricsAreSame } from './TreeNodeMetrics'
 
@@ -41,9 +41,9 @@ export const getUpdatedNode = (
  * @param startNodeId - The node to start the update from
  * @returns A new nodes object with the all nodes, updated and old
  */
-const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeMap, startNodeId: string): TreeNodeMap => {
+const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeSet, startNodeId: string): TreeNodeSet => {
   // create map of only the nodes we're going to modify
-  const updatedNodes: TreeNodeMap = { ...nodes }
+  const updatedNodes: TreeNodeSet = { ...nodes }
   let changes = 0
 
   const updateNode = (nodeId: string) => {
@@ -74,11 +74,11 @@ const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeMap, startNodeId: string):
 
 
 export const getTreeWithNodeAdded = (
-  nodes: TreeNodeMap,
+  nodes: TreeNodeSet,
   nodeToAdd: TreeNode,
   parentId: string,
   insertAtIndex?: number | null
-): TreeNodeMap => {
+): TreeNodeSet => {
   if (!nodes[parentId]) throw new Error(`Parent node ${parentId} not found`)
 
   // First add the node to the tree, ensuring it starts with readinessLevel 0
@@ -100,10 +100,10 @@ export const getTreeWithNodeAdded = (
 }
 
 export const getTreeWithNodeUpdated = (
-  nodes: TreeNodeMap,
+  nodes: TreeNodeSet,
   nodeId: string,
   updates: UpdateTreeNodeProperties
-): TreeNodeMap => {
+): TreeNodeSet => {
   const node = nodes[nodeId]
   if (!node) throw new Error(`Node ${nodeId} not found`)
 
@@ -132,11 +132,11 @@ export const getTreeWithNodeUpdated = (
  * @returns A new nodes object with the node moved
  */
 export const getTreeWithNodeParentChanged = (
-  nodes: TreeNodeMap,
+  nodes: TreeNodeSet,
   nodeId: string,
   newParentId: string,
   insertAtIndex?: number | null
-): TreeNodeMap => {
+): TreeNodeSet => {
   const node = nodes[nodeId]
   if (!node) throw new Error(`Node ${nodeId} not found`)
   if (!nodes[newParentId]) throw new Error(`New parent node ${newParentId} not found`)
@@ -187,9 +187,9 @@ export const getTreeWithNodeParentChanged = (
 }
 
 export const getTreeWithNodeRemoved = (
-  nodes: TreeNodeMap,
+  nodes: TreeNodeSet,
   nodeId: string
-): TreeNodeMap => {
+): TreeNodeSet => {
   const node = nodes[nodeId]
   if (!node) throw new Error(`Node ${nodeId} not found`)
 
@@ -222,11 +222,11 @@ export const getTreeWithNodeRemoved = (
 // Readonly Tree Inspectors
 //*******************************************
 
-export const getAllRootNodes = (nodes: TreeNodeMap): TreeNode[] => {
+export const getAllRootNodes = (nodes: TreeNodeSet): TreeNode[] => {
   return Object.values(nodes).filter(node => !node.parentId)
 }
 
-export const getRootNodesByType = (nodes: TreeNodeMap): { nodes: TreeNodeMap, rootNodesByType: RootNodesByType } => {
+export const getRootNodesByType = (nodes: TreeNodeSet): { nodes: TreeNodeSet, rootNodesByType: RootNodesByType } => {
   const rootNodes = getAllRootNodes(nodes)
   const rootNodesByType: RootNodesByType = {} as RootNodesByType
   rootNodes.forEach(node => {
@@ -241,7 +241,7 @@ export const getRootNodesByType = (nodes: TreeNodeMap): { nodes: TreeNodeMap, ro
 }
 
 export const isParentOfInTree = (
-  nodes: TreeNodeMap,
+  nodes: TreeNodeSet,
   parentId: string,
   childId: string
 ): boolean => {
@@ -252,7 +252,58 @@ export const isParentOfInTree = (
   return isParentOfInTree(nodes, parentId, child.parentId)
 }
 
-export const inspectTree = (nodes: TreeNodeMap, rootNodeId: string): TreeNodeWithChildren => ({
+export const inspectTree = (nodes: TreeNodeSet, rootNodeId: string): TreeNodeWithChildren => ({
   ...nodes[rootNodeId],
   children: nodes[rootNodeId].childrenIds.map(id => inspectTree(nodes, id))
 })
+
+export const getRemovedNodes = (oldNodes: TreeNodeSet, newNodes: TreeNodeSet): TreeNodeSet =>
+  Object.keys(oldNodes).filter(id => !newNodes[id]).reduce((acc, id) => ({ ...acc, [id]: oldNodes[id] }), {})
+
+export const getUpdatedNodes = (oldNodes: TreeNodeSet, newNodes: TreeNodeSet): TreeNodeSet =>
+  Object.keys(newNodes).filter(id => neq(oldNodes[id], newNodes[id])).reduce((acc, id) => ({ ...acc, [id]: newNodes[id] }), {})
+
+export const getTreeNodeSetDelta = (oldNodes: TreeNodeSet, newNodes: TreeNodeSet): TreeNodeSetDelta =>
+  ({ removed: getRemovedNodes(oldNodes, newNodes), updated: getUpdatedNodes(oldNodes, newNodes) })
+
+export const getTreeNodeSetWithNodesRemoved = (nodes: TreeNodeSet, nodesToRemove: TreeNodeSet): TreeNodeSet =>
+  Object.keys(nodes).filter(id => !nodesToRemove[id]).reduce((acc, id) => ({ ...acc, [id]: nodes[id] }), {})
+
+export const getTreeNodeSetWithDeltaApplied = (nodes: TreeNodeSet, delta: TreeNodeSetDelta): TreeNodeSet =>
+  getTreeNodeSetWithNodesRemoved(
+    { ...nodes, ...delta.updated },
+    delta.removed
+  )
+
+//*******************************************
+// Tree Delta Functions
+//*******************************************
+
+export const getTreeNodeSetDeltaForNodeAdded = (
+  nodes: TreeNodeSet,
+  nodeToAdd: TreeNode,
+  parentId: string,
+  insertAtIndex?: number | null
+): TreeNodeSetDelta =>
+  getTreeNodeSetDelta(nodes, getTreeWithNodeAdded(nodes, nodeToAdd, parentId, insertAtIndex))
+
+export const getTreeNodeSetDeltaForNodeUpdated = (
+  nodes: TreeNodeSet,
+  nodeId: string,
+  updates: UpdateTreeNodeProperties
+): TreeNodeSetDelta =>
+  getTreeNodeSetDelta(nodes, getTreeWithNodeUpdated(nodes, nodeId, updates))
+
+export const getTreeNodeSetDeltaForNodeParentChanged = (
+  nodes: TreeNodeSet,
+  nodeId: string,
+  newParentId: string,
+  insertAtIndex?: number | null
+): TreeNodeSetDelta =>
+  getTreeNodeSetDelta(nodes, getTreeWithNodeParentChanged(nodes, nodeId, newParentId, insertAtIndex))
+
+export const getTreeNodeSetDeltaForNodeRemoved = (
+  nodes: TreeNodeSet,
+  nodeId: string
+): TreeNodeSetDelta =>
+  getTreeNodeSetDelta(nodes, getTreeWithNodeRemoved(nodes, nodeId))

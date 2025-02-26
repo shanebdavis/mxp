@@ -6,11 +6,11 @@ import {
   getTreeWithNodeUpdated,
   getTreeWithNodeParentChanged,
   isParentOfInTree,
-  type TreeNodeMap,
+  type TreeNodeSet,
 } from '../../models'
 
 describe('TreeNode', () => {
-  let testNodes: TreeNodeMap
+  let testNodes: TreeNodeSet
   let rootNodeId: string
 
   beforeEach(() => {
@@ -404,7 +404,7 @@ describe('TreeNode', () => {
     })
 
     it('correctly reorders children within the same parent', async () => {
-      let nodes: TreeNodeMap = testNodes
+      let nodes: TreeNodeSet = testNodes
 
       const addNode = (title: string, parentId: string) => {
         const node = createNode("map", { title, description: 'Child node' })
