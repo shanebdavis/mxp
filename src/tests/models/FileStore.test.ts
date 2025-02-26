@@ -49,7 +49,7 @@ describe('FileStore', () => {
       childrenIds: [],
       setMetrics: { readinessLevel: 5 },
       calculatedMetrics: { readinessLevel: 5 },
-      filename: 'My First Node.md',
+      filename: `${createdNode.id}.md`,
       type: "map"
     })
 
@@ -59,10 +59,11 @@ describe('FileStore', () => {
 
     // verify maps files
     const mapsFiles = await fs.readdir(path.join(testDir, 'maps'))
-    expect(mapsFiles.sort()).toEqual(['My First Node.md', 'Root Problem.md'])
+    expect(mapsFiles).toContain(`${createdNode.id}.md`)
+    expect(mapsFiles).toContain('Root Problem.md')
 
     // Verify the file contents
-    const content = await fs.readFile(path.join(testDir, 'maps', 'My First Node.md'), 'utf-8')
+    const content = await fs.readFile(path.join(testDir, 'maps', `${createdNode.id}.md`), 'utf-8')
     expect(content).toMatch(/^---\n/) // starts with frontmatter
     expect(content).toContain(`id: ${createdNode.id}`)
     expect(content).toContain('title: My First Node')
@@ -86,10 +87,11 @@ describe('FileStore', () => {
     // Verify file was created
     const files = await fs.readdir(fileStore.baseDirsByType.map)
     expect(files).toHaveLength(2)
-    expect(files.sort()).toEqual(['Root Problem.md', 'Test Node.md'])
+    expect(files).toContain(`${node.id}.md`)
+    expect(files).toContain('Root Problem.md')
 
     // Verify file contents
-    const content = await fs.readFile(path.join(fileStore.baseDirsByType.map, 'Test Node.md'), 'utf-8')
+    const content = await fs.readFile(path.join(fileStore.baseDirsByType.map, `${node.id}.md`), 'utf-8')
     expect(content).toContain('Test Description')
     expect(content).toContain('id: ' + node.id)
   })
@@ -161,6 +163,9 @@ describe('FileStore', () => {
       description: 'Test'
     }, null)
 
+    // Get the filename (which should be ID-based)
+    const idBasedFilename = `${node.id}.md`
+
     // Update the title and wait for it to complete
     const delta = await fileStore.updateNode(node.id, {
       title: 'New Title'
@@ -168,16 +173,16 @@ describe('FileStore', () => {
     // Give filesystem time to update
     await new Promise(resolve => setTimeout(resolve, 500))
 
-    // Verify file with original name still exists and no new file was created
+    // Verify file with ID-based name exists and no new file was created
     const files = await fs.readdir(fileStore.baseDirsByType.map)
-    expect(files).toContain('Original Title.md')
+    expect(files).toContain(idBasedFilename)
     expect(files).not.toContain('New Title.md')
 
     // Verify node data is preserved by getting the node from allNodes
     const updatedNode = fileStore.getNode(node.id)
     expect(updatedNode.id).toBe(node.id)
     expect(updatedNode.title).toBe('New Title')
-    expect(updatedNode.filename).toBe('Original Title.md')
+    expect(updatedNode.filename).toBe(idBasedFilename)
     expect(updatedNode.description).toBe('Test')
   })
 
@@ -335,20 +340,20 @@ calculatedMetrics:
   it('handles empty and missing titles correctly', async () => {
     const initHelper = await newTestFileStore()
 
-    // Create node with empty title
+    // Create a node with empty title
     const { node: emptyTitleNode } = await initHelper.fileStore.createNode("map", {
       title: '',
       description: 'Node with empty title'
-    }, null)
+    })
 
-    // Verify node has empty title but file is named "untitled"
+    // Verify the node was created with empty title and ID-based filename
     expect(emptyTitleNode.title).toBe('')
     const files = await fs.readdir(initHelper.fileStore.baseDirsByType.map)
-    expect(files).toContain('untitled.md')
+    expect(files).toContain(`${emptyTitleNode.id}.md`)
 
     // Verify the empty title is preserved in the file
-    const content = await fs.readFile(initHelper.fileStore.getFilePath(emptyTitleNode), 'utf-8')
-    expect(content).toContain('\ntitle: ""\n')
+    const emptyTitleContent = await fs.readFile(path.join(initHelper.fileStore.baseDirsByType.map, `${emptyTitleNode.id}.md`), 'utf-8')
+    expect(emptyTitleContent).toContain('title: ""')
 
     // Create file with no title field
     await fs.writeFile(path.join(initHelper.fileStore.baseDirsByType.map, 'test-file.md'), `---

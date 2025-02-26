@@ -131,6 +131,9 @@ class FileStore {
     parentId = parentId ?? this.getRootNode(nodeType).id
     const node = createNode(nodeType, properties, parentId)
 
+    // Override the filename to use the node ID instead of title
+    node.filename = this.getFilenameFromId(node.id)
+
     // Return the node from the updated nodes
     return {
       node,
@@ -342,6 +345,10 @@ class FileStore {
     await Promise.all(
       array(FILESTORE_SUB_DIRS_BY_TYPE, vivifyDirectory)
     )
+  }
+
+  getFilenameFromId(id: string): string {
+    return `${id}.md`
   }
 }
 
