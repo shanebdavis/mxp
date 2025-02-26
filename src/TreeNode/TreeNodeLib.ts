@@ -1,4 +1,4 @@
-import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from './TreeNodeTypes'
+import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from '../models/TreeNodeTypes'
 const { eq } = require('art-standard-lib')
 
 export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {

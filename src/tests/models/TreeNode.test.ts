@@ -7,7 +7,7 @@ import {
   getTreeWithNodeParentChanged,
   isParentOfInTree,
   type TreeNodeSet,
-} from '../../models'
+} from '../../TreeNode'
 
 describe('TreeNode', () => {
   let testNodes: TreeNodeSet

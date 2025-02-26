@@ -10,9 +10,8 @@ import {
   type TreeNodeSet,
   getTreeNodeSetDeltaWithUpdatedNodeMetrics,
   vivifyRootNodesByType,
-  type NodeType,
-} from '../../models'
-import { getActiveChildren } from '../../models/TreeNodeLib'
+} from '../../TreeNode'
+import { getActiveChildren } from '../../TreeNode/TreeNodeLib'
 
 describe('TreeNode using Deltas', () => {
   let testNodes: TreeNodeSet

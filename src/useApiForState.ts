@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import type { TreeNode, TreeNodeSet, TreeNodeProperties, UpdateTreeNodeProperties } from './models'
+import type { TreeNode, TreeNodeSet, TreeNodeProperties, UpdateTreeNodeProperties, TreeNodeSetDelta } from './models'
 
 export interface TreeStateMethods {
   addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => Promise<string>
@@ -12,6 +12,11 @@ export interface TreeStateMethods {
 interface UseApiForStateOptions {
   /** Base URL for the API. Defaults to /api */
   baseUrl?: string
+}
+
+interface CreateNodeResponse {
+  node: TreeNode
+  delta: TreeNodeSetDelta
 }
 
 /**
@@ -35,7 +40,7 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     path: string,
     method: string = 'GET',
     body?: any
-  ): Promise<TreeNodeSet> => {
+  ): Promise<TreeNodeSet | TreeNodeSetDelta | CreateNodeResponse> => {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
@@ -49,29 +54,58 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
       throw new Error(error.error || 'API call failed')
     }
 
-    const result = await response.json() as TreeNodeSet
+    const result = await response.json()
 
     // For GET /nodes, replace the entire state
     if (method === 'GET' && path === '/nodes') {
-      setNodes(result)
-      const rootId = Object.values(result).find(node => !node.parentId)?.id
+      setNodes(result as TreeNodeSet)
+      const rootId = Object.values(result as TreeNodeSet).find(node => !node.parentId)?.id
       setRootNodeId(rootId ?? null)
       return result
     }
 
-    // For all other calls, merge changes into existing state
-    setNodes(prevNodes => {
-      const updatedNodes = { ...prevNodes, ...result }
+    // For POST /nodes (create node)
+    if (method === 'POST' && path === '/nodes') {
+      const createResult = result as CreateNodeResponse
+      // Apply the delta to update nodes state
+      applyDelta(createResult.delta)
       // Update rootNodeId if needed
       if (!rootNodeId) {
-        const rootId = Object.values(updatedNodes).find(node => !node.parentId)?.id
-        setRootNodeId(rootId ?? null)
+        const rootId = Object.values({ ...nodes, [createResult.node.id]: createResult.node }).find(node => !node.parentId)?.id
+        if (rootId) setRootNodeId(rootId)
       }
+      return createResult
+    }
+
+    // For all other calls (PATCH, DELETE, PUT), handle delta format
+    const deltaResult = result as TreeNodeSetDelta
+    applyDelta(deltaResult)
+    return deltaResult
+  }, [baseUrl, nodes, rootNodeId])
+
+  // Helper to apply a delta to the current state
+  const applyDelta = useCallback((delta: TreeNodeSetDelta) => {
+    setNodes(prevNodes => {
+      // Create a new state with updates applied and removed nodes filtered out
+      const updatedNodes = { ...prevNodes }
+
+      // Remove nodes
+      if (delta.removed) {
+        Object.keys(delta.removed).forEach(id => {
+          delete updatedNodes[id]
+        })
+      }
+
+      // Update nodes
+      if (delta.updated) {
+        Object.entries(delta.updated).forEach(([id, node]) => {
+          updatedNodes[id] = node
+        })
+      }
+
       return updatedNodes
     })
-
-    return result
-  }, [baseUrl])
+  }, [])
 
   // Load initial state
   useEffect(() => {
@@ -90,14 +124,11 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
       node,
       parentNodeId,
       insertAtIndex
-    })
-    // Find and return the ID of the newly created node
-    const newNodeId = Object.keys(result).find(
-      id => !Object.keys(nodes).includes(id)
-    )
-    if (!newNodeId) throw new Error('Failed to get ID of new node')
-    return newNodeId
-  }, [apiCall, nodes])
+    }) as CreateNodeResponse
+
+    // Return the ID of the newly created node from the response
+    return result.node.id
+  }, [apiCall])
 
   const updateNode = useCallback(async (
     nodeId: string,
@@ -106,15 +137,17 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     await apiCall(`/nodes/${nodeId}`, 'PATCH', properties)
   }, [apiCall])
 
-  const setNodeParent = useCallback((
+  const setNodeParent = useCallback(async (
     nodeId: string,
     newParentId: string,
     insertAtIndex?: number | null
-  ) => apiCall(`/nodes/${nodeId}/parent`, 'PUT', {
-    newParentId,
-    insertAtIndex
-  })
-    , [apiCall])
+  ) => {
+    const result = await apiCall(`/nodes/${nodeId}/parent`, 'PUT', {
+      newParentId,
+      insertAtIndex
+    })
+    return nodes // Return current state after changes
+  }, [apiCall, nodes])
 
   const removeNode = useCallback(async (nodeId: string) => {
     await apiCall(`/nodes/${nodeId}`, 'DELETE')

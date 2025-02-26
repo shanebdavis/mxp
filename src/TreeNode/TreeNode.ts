@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import { log, neq, objectHasKeys } from '../ArtStandardLib'
-import { moveElementInArray } from './arrayLib'
+import { moveElementInArray } from '../arrayLib'
 import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeSet, TreeNodeWithChildren, TreeNodeSetDelta } from './TreeNodeTypes'
 import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds, ROOT_NODE_DEFAULT_PROPERTIES, getActiveChildren } from './TreeNodeLib'
 import { calculateAllMetricsFromNode, calculateAllMetricsFromSetMetricsAndChildrenMetrics, compactMergeMetrics, metricsAreSame } from './TreeNodeMetrics'

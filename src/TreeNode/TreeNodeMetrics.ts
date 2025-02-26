@@ -1,4 +1,4 @@
-import { Metrics, PartialMetrics, UpdateMetrics, TreeNode, TreeNodeSet } from './TreeNodeTypes'
+import { Metrics, PartialMetrics, UpdateMetrics, TreeNode, TreeNodeSet } from '../models/TreeNodeTypes'
 import { getActiveChildren } from './TreeNodeLib'
 import { eq } from '../ArtStandardLib'
 

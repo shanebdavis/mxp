@@ -3,9 +3,14 @@ import path from 'path'
 import yaml from 'js-yaml'
 import { v4 as uuid } from 'uuid'
 import matter from 'gray-matter'
-import { TreeNode, TreeNodeProperties, NodeType, UpdateTreeNodeProperties, RootNodesByType, TreeNodeSet, TreeNodeSetDelta } from './TreeNodeTypes'
-import { ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNodeLib'
 import {
+  TreeNode,
+  TreeNodeProperties,
+  NodeType,
+  UpdateTreeNodeProperties,
+  RootNodesByType,
+  TreeNodeSet,
+  TreeNodeSetDelta,
   createNode,
   vivifyRootNodesByType,
   getTreeNodeSetDeltaForNodeAdded,
@@ -15,7 +20,7 @@ import {
   getTreeNodeSetWithDeltaApplied,
   getHealedChildrenIdsDelta,
   getHealedParentIdsDelta
-} from './TreeNode'
+} from '../TreeNode'
 
 import { array, formattedInspect } from '../ArtStandardLib'
 
