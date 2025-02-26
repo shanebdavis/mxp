@@ -1,5 +1,5 @@
-import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from '../models/TreeNodeTypes'
-const { eq } = require('art-standard-lib')
+import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from './TreeNodeTypes'
+import { eq } from '../ArtStandardLib'
 
 export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
   map: { title: 'Root Problem', description: 'What is the root problem you are trying to solve? Trace your "why" back to the fundamental human needs you are serving. Who are you serving? What is the problem you are solving for them? What is the impact of that problem on their lives?' },

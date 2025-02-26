@@ -17,7 +17,7 @@ interface ServerOptions {
 const START_SCRIPT = realpathSync(process.argv[1])
 const PACKAGE_ROOT = path.join(START_SCRIPT, '..')
 
-export const startServer = ({
+export const startServer = async ({
   port = process.env.PORT != null ? parseInt(process.env.PORT) : 3001,
   storageFolder = process.env.STORAGE_FOLDER || join(process.cwd(), 'expedition'),
   autoOpenInBrowser = false
@@ -27,8 +27,9 @@ export const startServer = ({
   app.use(cors())
   app.use(express.json())
 
-  // Mount API routes
-  app.use('/api', createApiRouter({ storageFolder }))
+  // Mount API routes - correctly await the async router creation
+  const apiRouter = await createApiRouter({ storageFolder })
+  app.use('/api', apiRouter)
 
   // Serve Swagger UI at /api-docs to match OpenAPI spec server URL
   const openApiSpec = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'openapi.json'), 'utf8'))

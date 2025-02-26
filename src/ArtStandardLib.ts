@@ -1,4 +1,4 @@
-const ArtStandardLib = require('art-standard-lib');
+import ArtStandardLib from 'art-standard-lib';
 import { Simplify } from 'type-fest';
 
 type NotPresent = null | undefined;

@@ -87,7 +87,7 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     const deltaResult = result as TreeNodeSetDelta
     applyDelta(deltaResult)
     return deltaResult
-  }, [baseUrl, nodes, rootNodeId, applyDelta])
+  }, [baseUrl, applyDelta])
 
   // Load initial state
   useEffect(() => {
@@ -124,12 +124,12 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     newParentId: string,
     insertAtIndex?: number | null
   ) => {
-    const result = await apiCall(`/nodes/${nodeId}/parent`, 'PUT', {
+    await apiCall(`/nodes/${nodeId}/parent`, 'PUT', {
       newParentId,
       insertAtIndex
     })
-    return nodes // Return current state after changes
-  }, [apiCall, nodes])
+    return nodes // Get the freshest state
+  }, [apiCall])
 
   const removeNode = useCallback(async (nodeId: string) => {
     await apiCall(`/nodes/${nodeId}`, 'DELETE')

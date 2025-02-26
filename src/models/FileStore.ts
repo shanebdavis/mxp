@@ -210,8 +210,28 @@ class FileStore {
     for (const [type, dir] of Object.entries(this._baseDirsByType)) {
       const files = await fs.readdir(dir)
       for (const file of files) {
-        const node = await this.readNodeFile(path.join(dir, file))
-        this._allNodes[node.id] = node
+        const filePath = path.join(dir, file)
+
+        // Check if it's actually a file, not a directory
+        try {
+          const stats = await fs.stat(filePath)
+          if (stats.isDirectory()) {
+            console.warn(`Skipping directory: ${filePath}`)
+            continue
+          }
+
+          // Only process markdown files
+          if (!file.endsWith('.md')) {
+            console.warn(`Skipping non-markdown file: ${filePath}`)
+            continue
+          }
+
+          const node = await this.readNodeFile(filePath)
+          this._allNodes[node.id] = node
+        } catch (error) {
+          console.error(`Error processing file ${filePath}:`, error)
+          // Continue with other files even if this one fails
+        }
       }
     }
     // Use the new healing method
