@@ -4,7 +4,7 @@ import { styles } from './styles'
 import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode, TreeNodeSet } from '../../../TreeNodeTypes'
+import type { TreeNode, TreeNodeSet } from '../../../TreeNode'
 
 interface TreeNodeProps {
   nodes: TreeNodeSet

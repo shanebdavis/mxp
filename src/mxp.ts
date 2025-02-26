@@ -1,10 +1,8 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { startServer } from './server.js'
-import { FileStore } from './models/FileStore.js'
 import { execSync } from 'child_process'
 import { createInterface } from 'readline'
-import { initFileStore } from './models/FileStoreInit.js'
 
 const isGitRepo = (dir: string) => {
   try {
@@ -50,11 +48,8 @@ export const main = async (startDir: string = process.cwd()) => {
     await fs.mkdir(expeditionDir, { recursive: true })
   }
 
-  // Initialize FileStore and start server
-  await initFileStore(expeditionDir)
-
   // Start the server
-  const { server } = startServer({
+  const { server } = await startServer({
     storageFolder: expeditionDir,
     port: 0, // let the OS assign a port
     autoOpenInBrowser: true

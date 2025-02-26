@@ -300,6 +300,14 @@ export const mergeTreeNodeSetDeltas = (
       removed: { ...getTreeNodeSetWithNodesRemoved(delta1?.removed, delta2?.updated), ...delta2?.removed }
     }) : delta1 || delta2 || { updated: {}, removed: {} }
 
+export const getRootNodesByType = (nodes: TreeNodeSet): RootNodesByType => {
+  const rootNodesByType: RootNodesByType = {} as RootNodesByType
+  getAllRootNodes(nodes).forEach(node => {
+    rootNodesByType[node.type] = node
+  })
+  return rootNodesByType
+}
+
 export const vivifyRootNodesByType = (nodes: TreeNodeSet): { delta: TreeNodeSetDelta, rootNodesByType: RootNodesByType } => {
   const rootNodes = getAllRootNodes(nodes)
   const rootNodesByType: RootNodesByType = {} as RootNodesByType

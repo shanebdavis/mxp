@@ -1,6 +1,6 @@
-import { FC, useState, useRef, useEffect, useMemo } from 'react'
+import { FC, useState, useRef, useMemo } from 'react'
 import React from 'react'
-import type { TreeNode, TreeNodeSet } from '../../../TreeNodeTypes'
+import type { TreeNode, TreeNodeSet } from '../../../TreeNode'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
@@ -122,7 +122,7 @@ export const HTable: FC<HTableProps> = ({
     // ... existing code ...
   }
 
-  let draftNodesVisited: TreeNodeSet = {}
+  let draftNodesVisited: Record<string, boolean> = {}
 
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
@@ -172,9 +172,8 @@ export const HTable: FC<HTableProps> = ({
         <tbody>
           {displayOrder.map(({ nodeId, level, itemNumber }: { nodeId: string, level: number, itemNumber: number }, index: number) => {
             const node = nodes[nodeId]
-            const isDraftSubtree = node.nodeState === "draft" || draftNodesVisited[node.parentId]
+            const isDraftSubtree = node.nodeState === "draft" || draftNodesVisited[node.parentId ?? ""]
             if (isDraftSubtree) draftNodesVisited[nodeId] = true
-            const parentNode = node.parentId ? nodes[node.parentId] : null
 
             return (
               <HTableRow

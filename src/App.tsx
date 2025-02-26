@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
 import { Add, ArrowRight, ArrowDropDown, Delete } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
-import type { TreeNode, TreeNodeSet } from './models'
+import type { TreeNode, TreeNodeSet } from './TreeNode'
 import { useApiForState } from './useApiForState'
 
 const MIN_PANEL_WIDTH = 200
@@ -71,7 +71,7 @@ const App = () => {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
   const { nodes, rootNodeId, treeStateMethods, loading, error } = useApiForState()
-  const [selectedNodeId, selectNodeById] = useState<string | null>(rootNodeId)
+  const [selectedNodeId, selectNodeById] = useState<string | undefined>(rootNodeId)
 
   // Update selectedNodeId when rootNodeId changes
   useEffect(() => {

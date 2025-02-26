@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { useTempDir } from './helpers/tempDir'
 import { startTestServer, TestServer } from './helpers/testServer'
 import { log } from '../ArtStandardLib'
-import { TreeNode } from '../TreeNodeTypes'
+import { TreeNode } from '../TreeNode'
 
 type ApiNode = TreeNode & {
   id: string

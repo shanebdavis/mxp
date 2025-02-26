@@ -3,7 +3,7 @@ import { Switch, FormControlLabel } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
 import { SolutionItems } from '../widgets/SolutionItems'
-import type { TreeNode, TreeNodeSet, UpdateTreeNodeProperties } from '../../TreeNodeTypes'
+import type { TreeNode, TreeNodeSet, UpdateTreeNodeProperties } from '../../TreeNode'
 import { PanelHeader } from "./PanelHeader"
 import { useRef as useReactRef } from 'react'
 import remarkGfm from 'remark-gfm'

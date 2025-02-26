@@ -1,5 +1,5 @@
 import React from 'react'
-import type { TreeNode } from '../../TreeNodeTypes'
+import type { TreeNode } from '../../TreeNode'
 
 interface SolutionItemsProps {
   node: TreeNode
