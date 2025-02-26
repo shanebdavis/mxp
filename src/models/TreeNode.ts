@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid'
 import { log, neq, objectHasKeys } from '../ArtStandardLib'
 import { moveElementInArray } from './arrayLib'
 import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeSet, TreeNodeWithChildren, TreeNodeSetDelta } from './TreeNodeTypes'
-import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds, ROOT_NODE_DEFAULT_PROPERTIES } from './TreeNodeLib'
+import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds, ROOT_NODE_DEFAULT_PROPERTIES, getActiveChildren } from './TreeNodeLib'
 import { calculateAllMetricsFromNode, calculateAllMetricsFromSetMetricsAndChildrenMetrics, compactMergeMetrics, metricsAreSame } from './TreeNodeMetrics'
 
 //*******************************************
@@ -41,6 +41,9 @@ const getNode = (nodes: TreeNodeSet, nodeId: string, optionalDelta: TreeNodeSetD
 const getChildNodesWithOptionalDelta = (nodes: TreeNodeSet, nodeId: string, optionalDelta: TreeNodeSetDelta | undefined): TreeNode[] =>
   getNode(nodes, nodeId, optionalDelta).childrenIds.map(childId => getNode(nodes, childId, optionalDelta))
 
+const getActiveChildNodesWithOptionalDelta = (nodes: TreeNodeSet, nodeId: string, optionalDelta: TreeNodeSetDelta | undefined): TreeNode[] =>
+  getChildNodesWithOptionalDelta(nodes, nodeId, optionalDelta).filter(child => !child.draft)
+
 //*******************************************
 // Whole Tree Mutators
 //*******************************************
@@ -60,7 +63,8 @@ const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeSet, startNodeId: string):
     const node = updatedNodes[nodeId]
     if (!node) return
 
-    const children = getChildNodes(updatedNodes, nodeId)
+    // Use getActiveChildren to filter out draft nodes for metrics calculations
+    const children = getActiveChildren(updatedNodes, nodeId)
     const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
 
     if (!metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
@@ -104,8 +108,9 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
     // Get the node, considering both the original nodes and the delta
     const node = getNode(nodes, nodeId, updatedDelta)
 
-    // Get children using the helper function that considers the delta
-    const newCalculatedMetrics = calculateAllMetricsFromNode(node, getChildNodesWithOptionalDelta(nodes, nodeId, updatedDelta))
+    // Use getActiveChildNodesWithOptionalDelta to filter out draft nodes for metrics calculations
+    const children = getActiveChildNodesWithOptionalDelta(nodes, nodeId, updatedDelta)
+    const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
 
     if (!metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
       // Update the node in the delta
@@ -431,6 +436,16 @@ export const getTreeNodeSetDeltaForNodeUpdated = (
   }
 
   // Update metrics for this node and its ancestors
+  // If draft status is changing, we need to force an update of the parent's metrics
+  // even if this node's metrics didn't change
+  if ('draft' in updates && node.parentId) {
+    // First update the node's own metrics
+    const updatedDelta = getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, nodeId)
+
+    // Then force an update of the parent's metrics
+    return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, updatedDelta, node.parentId)
+  }
+
   return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, nodeId)
 }
 
@@ -599,15 +614,23 @@ export const getHealedParentIdsDelta = (nodes: TreeNodeSet): TreeNodeSetDelta =>
     // Skip root node
     if (!node.parentId) continue
 
-    // If parent doesn't exist, attach to root
-    if (!getNode(nodes, node.parentId, delta)) {
-      // Update the node with root as parent
+    // Check if the parentId exists in the nodes object or delta.updated
+    const parentExists = nodes[node.parentId] !== undefined || (delta.updated[node.parentId] !== undefined);
+
+    if (!parentExists) {
+      // If parent doesn't exist in nodes, attach to root
       delta = getTreeNodeSetDeltaForNodeParentChanged(nodes, node.id, rootNodesByType[node.type].id, null, delta)
     } else {
-      // Parent exists, make sure this node is in parent's childrenIds
-      const parent = getNode(nodes, node.parentId, delta)
-      if (!parent.childrenIds.includes(node.id)) {
-        (delta.updated[node.parentId] ||= { ...parent }).childrenIds.push(node.id)
+      // Parent exists, check if it's not being removed in the delta
+      try {
+        const parent = getNode(nodes, node.parentId, delta)
+        // Make sure this node is in parent's childrenIds
+        if (!parent.childrenIds.includes(node.id)) {
+          (delta.updated[node.parentId] ||= { ...parent }).childrenIds.push(node.id)
+        }
+      } catch (e) {
+        // If there was an error getting the parent (e.g., it's being removed), attach to root
+        delta = getTreeNodeSetDeltaForNodeParentChanged(nodes, node.id, rootNodesByType[node.type].id, null, delta)
       }
     }
   }

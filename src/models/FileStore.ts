@@ -175,14 +175,20 @@ class FileStore {
    * Uses the delta pattern internally for efficient updates.
    */
   private async healNodesAndSave() {
-    this.setAllNodesAndSaveAnyChanges(
-      getHealedChildrenIdsDelta(
-        getTreeNodeSetWithDeltaApplied(
-          this._allNodes,
-          getHealedParentIdsDelta(this._allNodes)
-        )
-      )
-    )
+    // First heal parent ids
+    const parentDelta = getHealedParentIdsDelta(this._allNodes);
+
+    // Apply the parent healing
+    this._allNodes = getTreeNodeSetWithDeltaApplied(this._allNodes, parentDelta);
+
+    // Then heal children ids
+    const childrenDelta = getHealedChildrenIdsDelta(this._allNodes);
+
+    // Save all changes
+    await this.setAllNodesAndSaveAnyChanges({
+      updated: { ...parentDelta.updated, ...childrenDelta.updated },
+      removed: { ...parentDelta.removed, ...childrenDelta.removed }
+    });
   }
 
   private async setAllNodesAndSaveAnyChanges(delta: TreeNodeSetDelta) {

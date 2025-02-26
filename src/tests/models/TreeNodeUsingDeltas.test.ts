@@ -12,6 +12,7 @@ import {
   vivifyRootNodesByType,
   type NodeType,
 } from '../../models'
+import { getActiveChildren } from '../../models/TreeNodeLib'
 
 describe('TreeNode using Deltas', () => {
   let testNodes: TreeNodeSet
@@ -322,10 +323,10 @@ describe('TreeNode using Deltas', () => {
       expect(nodesWithSet[child1Id].calculatedMetrics.readinessLevel).toBe(3)
 
       // Clear metrics
-      const delta2 = getTreeNodeSetDeltaForNodeUpdated(nodesWithSet, child1Id, {
+      const delta2 = getTreeNodeSetDeltaForNodeUpdated(testNodes, child1Id, {
         setMetrics: { readinessLevel: null }
       })
-      const nodesWithCleared = getTreeNodeSetWithDeltaApplied(nodesWithSet, delta2)
+      const nodesWithCleared = getTreeNodeSetWithDeltaApplied(testNodes, delta2)
 
       expect(nodesWithCleared[child1Id].setMetrics?.readinessLevel).toBeUndefined()
       expect(nodesWithCleared[child1Id].calculatedMetrics.readinessLevel).toBe(0)
@@ -874,6 +875,101 @@ describe('TreeNode using Deltas', () => {
       expect(updatedNodes[mapChild.id].parentId).toBe(mapRoot.id)
       expect(updatedNodes[waypointRoot.id].childrenIds).toContain(waypointChild.id)
       expect(updatedNodes[waypointChild.id].parentId).toBe(waypointRoot.id)
+    })
+  })
+
+  describe('distinguishes between readinessLevel 0 and draft mode when using deltas', () => {
+    it('should distinguish between readinessLevel 0 and draft mode when using deltas', () => {
+      // Start with empty nodes set
+      let nodes: TreeNodeSet = {}
+
+      // Create parent node
+      const parent = createNode('map', { title: 'Parent' })
+      nodes[parent.id] = parent
+
+      // Create child1 with readinessLevel 0 (not draft)
+      const child1 = createNode('map', {
+        title: 'Child 1',
+        setMetrics: { readinessLevel: 0 }
+      }, parent.id)
+
+      // Add child1 to parent and update nodes
+      let delta = getTreeNodeSetDeltaForNodeAdded(nodes, child1, parent.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Create child2 with readinessLevel 3 and draft:true
+      const child2 = createNode('map', {
+        title: 'Child 2',
+        setMetrics: { readinessLevel: 3 },
+        draft: true
+      }, parent.id)
+
+      // Add child2 to parent and update nodes
+      delta = getTreeNodeSetDeltaForNodeAdded(nodes, child2, parent.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Create child3 with readinessLevel 5
+      const child3 = createNode('map', {
+        title: 'Child 3',
+        setMetrics: { readinessLevel: 5 }
+      }, parent.id)
+
+      // Add child3 to parent and update nodes
+      delta = getTreeNodeSetDeltaForNodeAdded(nodes, child3, parent.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Verify initial state
+      expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
+      expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
+      expect(nodes[child3.id].calculatedMetrics.readinessLevel).toBe(5)
+
+      // Parent should have readinessLevel 0 (min of active children: child1=0, child3=5)
+      expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+      // Now set child1 to draft mode using direct delta functions
+      delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { draft: true })
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Now parent should only consider child3's readinessLevel since both child1 and child2 are draft
+      expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(5)
+
+      // Ensure that active children are correctly filtered
+      const activeChildren = getActiveChildren(nodes, parent.id)
+      expect(activeChildren.length).toBe(1)
+      expect(activeChildren[0].id).toBe(child3.id)
+    })
+
+    it('should handle all children being draft nodes properly', () => {
+      // Start with empty nodes set
+      let nodes: TreeNodeSet = {}
+
+      // Create parent node
+      const parent = createNode('map', { title: 'Parent' })
+      nodes[parent.id] = parent
+
+      // Create child1 with readinessLevel 3
+      const child1 = createNode('map', {
+        title: 'Child 1',
+        setMetrics: { readinessLevel: 3 }
+      }, parent.id)
+
+      // Add child1 to parent and update nodes
+      let delta = getTreeNodeSetDeltaForNodeAdded(nodes, child1, parent.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Verify initial state
+      expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(3)
+      expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(3)
+
+      // Now set child1 to draft mode
+      delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { draft: true })
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Parent should default to 0 when all children are draft
+      expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+
+      // Ensure that active children are correctly filtered
+      const activeChildren = getActiveChildren(nodes, parent.id)
+      expect(activeChildren.length).toBe(0)
     })
   })
 })

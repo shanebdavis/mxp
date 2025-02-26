@@ -4,6 +4,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { createFileStore, FileStore, getTreeWithNodeParentChanged } from '../../models'
+import { getActiveChildren } from '../../models/TreeNodeLib'
 import { useTempDir } from '../helpers/tempDir'
 import { v4 as uuid } from 'uuid'
 import { log } from '../../ArtStandardLib'
@@ -529,10 +530,7 @@ calculatedMetrics:
 
     // Verify state
     let nodes = fileStore.allNodes
-    // Child1 (RL0) should be included in parent's calculation
-    // Child2 (draft) should be excluded
-    // Child3 (RL5) should be included
-    // Parent should be 0 (min of 0 and 5)
+
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
     expect(nodes[child3.id].calculatedMetrics.readinessLevel).toBe(5)
@@ -541,6 +539,7 @@ calculatedMetrics:
     // Now set child1 to draft mode
     await fileStore.updateNode(child1.id, { draft: true })
     nodes = fileStore.allNodes
+
     // Parent should now only consider child3's value since both child1 and child2 are draft
     expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(5)
   })
