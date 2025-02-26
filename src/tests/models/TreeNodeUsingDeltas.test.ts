@@ -8,6 +8,7 @@ import {
   getTreeNodeSetWithDeltaApplied,
   isParentOfInTree,
   type TreeNodeSet,
+  getTreeNodeSetDeltaWithUpdatedNodeMetrics,
 } from '../../models'
 
 describe('TreeNode using Deltas', () => {
@@ -582,6 +583,107 @@ describe('TreeNode using Deltas', () => {
       const movedTree = getTreeNodeSetWithDeltaApplied(treeWithUser, delta4)
       expect(movedTree[waypoint.id].type).toBe("waypoint")
       expect(movedTree[user.id].type).toBe("user")
+    })
+  })
+
+  describe('getTreeNodeSetDeltaWithUpdatedNodeMetrics', () => {
+    it('should update metrics in a delta', () => {
+      const rootId = Object.keys(testNodes)[0]
+      const child1Id = testNodes[rootId].childrenIds[0]
+
+      // Create a delta that updates a node's metrics
+      const initialDelta = {
+        removed: {},
+        updated: {
+          [child1Id]: {
+            ...testNodes[child1Id],
+            setMetrics: { readinessLevel: 3 }
+          }
+        }
+      }
+
+      // Apply the delta with updated metrics
+      const updatedDelta = getTreeNodeSetDeltaWithUpdatedNodeMetrics(testNodes, initialDelta, child1Id)
+
+      // Verify the delta contains the updated metrics
+      expect(updatedDelta.updated[child1Id].calculatedMetrics.readinessLevel).toBe(3)
+
+      // Apply the delta to the tree
+      const updatedTree = getTreeNodeSetWithDeltaApplied(testNodes, updatedDelta)
+
+      // Verify the metrics were updated in the tree
+      expect(updatedTree[child1Id].calculatedMetrics.readinessLevel).toBe(3)
+      expect(updatedTree[rootId].calculatedMetrics.readinessLevel).toBe(3)
+    })
+
+    it('should propagate metrics up the tree in a delta', () => {
+      const rootId = Object.keys(testNodes)[0]
+      const child1Id = testNodes[rootId].childrenIds[0]
+
+      // Add a grandchild
+      const grandChild = createNode("map", {
+        title: 'Grandchild',
+        setMetrics: { readinessLevel: 0 }
+      })
+      const addDelta = getTreeNodeSetDeltaForNodeAdded(testNodes, grandChild, child1Id)
+      const treeWithGrandchild = getTreeNodeSetWithDeltaApplied(testNodes, addDelta)
+
+      // Create a delta that updates the grandchild's metrics
+      const initialDelta = {
+        removed: {},
+        updated: {
+          [grandChild.id]: {
+            ...treeWithGrandchild[grandChild.id],
+            setMetrics: { readinessLevel: 5 }
+          }
+        }
+      }
+
+      // Apply the delta with updated metrics
+      const updatedDelta = getTreeNodeSetDeltaWithUpdatedNodeMetrics(treeWithGrandchild, initialDelta, grandChild.id)
+
+      // Verify the delta contains updates for all affected nodes
+      expect(updatedDelta.updated[grandChild.id].calculatedMetrics.readinessLevel).toBe(5)
+      expect(updatedDelta.updated[child1Id].calculatedMetrics.readinessLevel).toBe(5)
+      expect(updatedDelta.updated[rootId].calculatedMetrics.readinessLevel).toBe(5)
+
+      // Apply the delta to the tree
+      const updatedTree = getTreeNodeSetWithDeltaApplied(treeWithGrandchild, updatedDelta)
+
+      // Verify the metrics were updated in the tree
+      expect(updatedTree[grandChild.id].calculatedMetrics.readinessLevel).toBe(5)
+      expect(updatedTree[child1Id].calculatedMetrics.readinessLevel).toBe(5)
+      expect(updatedTree[rootId].calculatedMetrics.readinessLevel).toBe(5)
+    })
+
+    it('should handle nodes being removed in the delta', () => {
+      const rootId = Object.keys(testNodes)[0]
+      const child1Id = testNodes[rootId].childrenIds[0]
+
+      // Create a delta that removes a node
+      const initialDelta = {
+        removed: { [child1Id]: testNodes[child1Id] },
+        updated: {
+          [rootId]: {
+            ...testNodes[rootId],
+            childrenIds: []
+          }
+        }
+      }
+
+      // Apply the delta with updated metrics
+      const updatedDelta = getTreeNodeSetDeltaWithUpdatedNodeMetrics(testNodes, initialDelta, rootId)
+
+      // Verify the delta still contains the removed node
+      expect(updatedDelta.removed[child1Id]).toBeDefined()
+
+      // Apply the delta to the tree
+      const updatedTree = getTreeNodeSetWithDeltaApplied(testNodes, updatedDelta)
+
+      // Verify the node was removed
+      expect(updatedTree[child1Id]).toBeUndefined()
+      expect(updatedTree[rootId].childrenIds.length).toBe(0)
+      expect(updatedTree[rootId].calculatedMetrics.readinessLevel).toBe(0)
     })
   })
 })

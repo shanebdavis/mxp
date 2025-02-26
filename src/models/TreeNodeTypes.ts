@@ -38,6 +38,6 @@ export type TreeNodeWithChildren = TreeNode & {
 }
 
 export type TreeNodeSetDelta = {
-  removed: TreeNodeSet // removed nodes with their last values
   updated: TreeNodeSet // added or updated nodes with their latest values
+  removed: TreeNodeSet // removed nodes with their last values
 }
