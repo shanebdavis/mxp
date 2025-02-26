@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-import { log, neq } from '../ArtStandardLib'
+import { log, neq, objectHasKeys } from '../ArtStandardLib'
 import { moveElementInArray } from './arrayLib'
 import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeSet, TreeNodeWithChildren, TreeNodeSetDelta } from './TreeNodeTypes'
 import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds } from './TreeNodeLib'
@@ -31,15 +31,15 @@ export const getUpdatedNode = (
   setMetrics: compactMergeMetrics(node.setMetrics, updates.setMetrics)
 })
 
-const getNodeWithSetAndDelta = (nodes: TreeNodeSet, delta: TreeNodeSetDelta, nodeId: string): TreeNode => {
-  if (delta.removed[nodeId]) throw new Error(`Node ${nodeId} is being removed`)
-  const node = delta.updated[nodeId] || nodes[nodeId]
+const getNode = (nodes: TreeNodeSet, nodeId: string, optionalDelta: TreeNodeSetDelta | undefined): TreeNode => {
+  if (optionalDelta?.removed[nodeId]) throw new Error(`Node ${nodeId} is being removed`)
+  const node = optionalDelta?.updated[nodeId] || nodes[nodeId]
   if (!node) throw new Error(`Node ${nodeId} not found`)
   return node
 }
 
-const getChildNodesWithSetAndDelta = (nodes: TreeNodeSet, delta: TreeNodeSetDelta, nodeId: string): TreeNode[] =>
-  getNodeWithSetAndDelta(nodes, delta, nodeId).childrenIds.map(childId => getNodeWithSetAndDelta(nodes, delta, childId))
+const getChildNodesWithOptionalDelta = (nodes: TreeNodeSet, nodeId: string, optionalDelta: TreeNodeSetDelta | undefined): TreeNode[] =>
+  getNode(nodes, nodeId, optionalDelta).childrenIds.map(childId => getNode(nodes, childId, optionalDelta))
 
 //*******************************************
 // Whole Tree Mutators
@@ -92,7 +92,7 @@ const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeSet, startNodeId: string):
 export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
   nodes: TreeNodeSet,
   delta: TreeNodeSetDelta,
-  startNodeId: string
+  startNodeId: string,
 ): TreeNodeSetDelta => {
   // Create a working copy of the delta
   const updatedDelta: TreeNodeSetDelta = {
@@ -102,10 +102,10 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
 
   const updateNodeMetrics = (nodeId: string) => {
     // Get the node, considering both the original nodes and the delta
-    const node = getNodeWithSetAndDelta(nodes, updatedDelta, nodeId)
+    const node = getNode(nodes, nodeId, updatedDelta)
 
     // Get children using the helper function that considers the delta
-    const newCalculatedMetrics = calculateAllMetricsFromNode(node, getChildNodesWithSetAndDelta(nodes, updatedDelta, nodeId))
+    const newCalculatedMetrics = calculateAllMetricsFromNode(node, getChildNodesWithOptionalDelta(nodes, nodeId, updatedDelta))
 
     if (!metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
       // Update the node in the delta
@@ -278,18 +278,59 @@ export const getAllRootNodes = (nodes: TreeNodeSet): TreeNode[] => {
   return Object.values(nodes).filter(node => !node.parentId)
 }
 
-export const getRootNodesByType = (nodes: TreeNodeSet): { nodes: TreeNodeSet, rootNodesByType: RootNodesByType } => {
+/**
+ * Merges two TreeNodeSetDelta objects into a single delta
+ * @param delta1 - The first delta
+ * @param delta2 - The second delta to merge into the first
+ * @returns A new delta with both deltas merged
+ */
+export const mergeTreeNodeSetDeltas = (
+  delta1: TreeNodeSetDelta | undefined,
+  delta2: TreeNodeSetDelta | undefined
+): TreeNodeSetDelta =>
+  delta1 && delta2 ?
+    ({
+      updated: { ...getTreeNodeSetWithNodesRemoved(delta1?.updated, delta2?.removed), ...delta2?.updated },
+      removed: { ...getTreeNodeSetWithNodesRemoved(delta1?.removed, delta2?.updated), ...delta2?.removed }
+    }) : delta1 || delta2 || { updated: {}, removed: {} }
+
+export const getRootNodesByType = (nodes: TreeNodeSet): { delta: TreeNodeSetDelta, rootNodesByType: RootNodesByType } => {
   const rootNodes = getAllRootNodes(nodes)
   const rootNodesByType: RootNodesByType = {} as RootNodesByType
+
+  // Initialize an empty delta
+  let delta: TreeNodeSetDelta = {
+    updated: {},
+    removed: {}
+  }
+
   rootNodes.forEach(node => {
-    if (rootNodesByType[node.type]) {
-      // already have a root node of this type, so add this node as a child
-      nodes = getTreeWithNodeParentChanged(nodes, node.id, rootNodesByType[node.type].id)
+    const existingRootOfType = rootNodesByType[node.type]
+
+    if (existingRootOfType) {
+      delta = getTreeNodeSetDeltaForNodeParentChanged(
+        nodes,
+        node.id,
+        existingRootOfType.id,
+        null,
+        delta
+      )
+
     } else {
+      // This is the first root node of this type
       rootNodesByType[node.type] = node
     }
   })
-  return { nodes, rootNodesByType }
+
+  // Update rootNodesByType to reflect the final state
+  // This ensures rootNodesByType has the latest versions of the nodes
+  Object.keys(rootNodesByType).forEach(typeKey => {
+    const type = typeKey as NodeType
+    const nodeId = rootNodesByType[type].id
+    rootNodesByType[type] = getNode(nodes, nodeId, delta)
+  })
+
+  return { delta, rootNodesByType }
 }
 
 export const isParentOfInTree = (
@@ -319,11 +360,13 @@ export const getTreeNodeSetDelta = (oldNodes: TreeNodeSet, newNodes: TreeNodeSet
   ({ removed: getRemovedNodes(oldNodes, newNodes), updated: getUpdatedNodes(oldNodes, newNodes) })
 
 export const getTreeNodeSetWithNodesRemoved = (nodes: TreeNodeSet, nodesToRemove: TreeNodeSet): TreeNodeSet =>
-  Object.keys(nodes).filter(id => !nodesToRemove[id]).reduce((acc, id) => ({ ...acc, [id]: nodes[id] }), {})
+  objectHasKeys(nodesToRemove)
+    ? Object.keys(nodes).filter(id => !nodesToRemove[id]).reduce((acc, id) => ({ ...acc, [id]: nodes[id] }), {})
+    : nodes
 
 export const getTreeNodeSetWithDeltaApplied = (nodes: TreeNodeSet, delta: TreeNodeSetDelta): TreeNodeSet =>
   getTreeNodeSetWithNodesRemoved(
-    { ...nodes, ...delta.updated },
+    objectHasKeys(delta.updated) ? { ...nodes, ...delta.updated } : nodes,
     delta.removed
   )
 
@@ -386,18 +429,19 @@ export const getTreeNodeSetDeltaForNodeParentChanged = (
   nodes: TreeNodeSet,
   nodeId: string,
   newParentId: string,
-  insertAtIndex?: number | null
+  insertAtIndex?: number | null,
+  optionalDelta?: TreeNodeSetDelta
 ): TreeNodeSetDelta => {
-  const node = nodes[nodeId]
+  const node = getNode(nodes, nodeId, optionalDelta)
   if (!node) throw new Error(`Node ${nodeId} not found`)
-  if (!nodes[newParentId]) throw new Error(`New parent node ${newParentId} not found`)
+  if (!getNode(nodes, newParentId, optionalDelta)) throw new Error(`New parent node ${newParentId} not found`)
   if (isParentOfInTree(nodes, nodeId, newParentId)) {
     throw new Error('Cannot move a node to one of its descendants')
   }
 
   // If moving within the same parent, handle differently
   if (node.parentId === newParentId) {
-    const parent = nodes[newParentId];
+    const parent = getNode(nodes, newParentId, optionalDelta);
     const currentIndex = parent.childrenIds.indexOf(nodeId);
     if (currentIndex === -1) throw new Error(`Node ${nodeId} not found in parent's children`);
 
@@ -406,19 +450,22 @@ export const getTreeNodeSetDeltaForNodeParentChanged = (
     // If moving to a later position, we need to account for the removal of the current item
     const adjustedTargetIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
 
-    const delta: TreeNodeSetDelta = {
-      removed: {},
-      updated: {
-        [newParentId]: {
-          ...parent,
-          childrenIds: moveElementInArray(
-            parent.childrenIds,
-            currentIndex,
-            adjustedTargetIndex
-          )
+    const delta: TreeNodeSetDelta = mergeTreeNodeSetDeltas(
+      optionalDelta,
+      {
+        removed: {},
+        updated: {
+          [newParentId]: {
+            ...parent,
+            childrenIds: moveElementInArray(
+              parent.childrenIds,
+              currentIndex,
+              adjustedTargetIndex
+            )
+          }
         }
-      }
-    }
+      },
+    )
 
     return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, newParentId);
   }
@@ -426,16 +473,19 @@ export const getTreeNodeSetDeltaForNodeParentChanged = (
   // Otherwise, handle moving to a new parent
   const oldParent = node.parentId ? nodes[node.parentId] : null
 
-  const delta: TreeNodeSetDelta = {
-    removed: {},
-    updated: {
-      [nodeId]: { ...node, parentId: newParentId },
-      [newParentId]: {
-        ...nodes[newParentId],
-        childrenIds: getChildrenIdsWithInsertion(nodes[newParentId].childrenIds, nodeId, insertAtIndex)
+  const delta: TreeNodeSetDelta = mergeTreeNodeSetDeltas(
+    optionalDelta,
+    {
+      removed: {},
+      updated: {
+        [nodeId]: { ...node, parentId: newParentId },
+        [newParentId]: {
+          ...nodes[newParentId],
+          childrenIds: getChildrenIdsWithInsertion(nodes[newParentId].childrenIds, nodeId, insertAtIndex)
+        }
       }
     }
-  }
+  )
 
   if (oldParent) {
     delta.updated[oldParent.id] = {
