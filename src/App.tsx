@@ -794,6 +794,11 @@ const App = () => {
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
+        <img
+          src="/expedition-logo-256-alpha.png"
+          alt="Expedition Logo"
+          style={{ height: '24px', marginRight: '12px' }}
+        />
         <h1 style={styles.title}>Mxp: The Expedition Method</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <div style={{ display: 'flex', gap: 4 }}>
