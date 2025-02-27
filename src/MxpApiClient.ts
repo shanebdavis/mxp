@@ -4,7 +4,8 @@ import {
   TreeNodeProperties,
   UpdateTreeNodeProperties,
   TreeNodeSetDelta,
-  isParentOfInTree
+  isParentOfInTree,
+  NodeType
 } from './TreeNode'
 
 export interface TreeStateMethods {
@@ -45,8 +46,16 @@ export class MxpApiClient implements TreeStateMethods {
   }
 
   async addNode(node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null): Promise<string> {
+    const parentNode = this.nodes[parentNodeId];
+    if (!parentNode) {
+      throw new Error(`Parent node ${parentNodeId} not found`);
+    }
+
     const response = (await apiFetch(this.baseUrl, '/nodes', 'POST', {
-      node,
+      node: {
+        ...node,
+        type: parentNode.type
+      },
       parentNodeId,
       insertAtIndex
     })) as CreateNodeResponse
