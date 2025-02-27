@@ -12,7 +12,7 @@ import {
   DragHandle
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
-import type { TreeNode, TreeNodeSet } from './TreeNode'
+import type { TreeNode, TreeNodeSet, NodeType } from './TreeNode'
 import { useApiForState } from './useApiForState'
 
 const MIN_PANEL_WIDTH_PERCENTAGE = 10 // Minimum percentage of window width
@@ -291,17 +291,49 @@ const App = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const { nodes, rootNodeId, treeStateMethods, loading, error } = useApiForState()
-  const [selectedNodeId, selectNodeById] = useState<string | undefined>(rootNodeId)
+  const { nodes, rootNodesByType, treeNodesApi, loading, error } = useApiForState()
 
-  // Update selectedNodeId when rootNodeId changes
+  // Track selected node ID for each type
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Record<string, string | undefined>>({})
+
+  // Get the selected node for the specified type
+  const getSelectedNode = (type: NodeType) => {
+    const selectedId = selectedNodeIds[type]
+    return selectedId ? nodes[selectedId] : null
+  }
+
+  // Select a node by ID for a specific type
+  const selectNodeById = (nodeId: string, type: NodeType) => {
+    setSelectedNodeIds(prev => ({
+      ...prev,
+      [type]: nodeId
+    }))
+  }
+
+  // Update selectedNodeIds when rootNodesByType changes
   useEffect(() => {
-    if (rootNodeId && !selectedNodeId) {
-      selectNodeById(rootNodeId)
+    if (Object.keys(rootNodesByType).length > 0) {
+      // Initialize selected nodes with root nodes if not already selected
+      setSelectedNodeIds(prev => {
+        const newSelection = { ...prev }
+        Object.entries(rootNodesByType).forEach(([type, node]) => {
+          if (!prev[type]) {
+            newSelection[type] = node.id
+          }
+        })
+        return newSelection
+      })
     }
-  }, [rootNodeId, selectedNodeId])
+  }, [rootNodesByType])
 
-  const selectedNode = selectedNodeId ? nodes[selectedNodeId] : null
+  // Get the currently selected node (for details panel)
+  const selectedNode = useMemo(() => {
+    // Default to map node, then any selected node
+    return getSelectedNode('map') ||
+      Object.values(selectedNodeIds)
+        .map(id => id ? nodes[id] : null)
+        .filter(Boolean)[0] || null
+  }, [selectedNodeIds, nodes])
 
   const indexInParentMap = useMemo(() =>
     getIndexInParentMap(nodes)
@@ -512,11 +544,11 @@ const App = () => {
                 <button
                   onClick={async () => {
                     if (selectedNode) {
-                      const newNodeId = await treeStateMethods.addNode({
+                      const newNodeId = await treeNodesApi.addNode({
                         title: '',
                         setMetrics: { readinessLevel: 0 },
                       }, selectedNode.id)
-                      selectNodeById(newNodeId)
+                      selectNodeById(newNodeId, selectedNode.type)
                       setEditingNodeId(newNodeId)
                     }
                   }}
@@ -541,11 +573,11 @@ const App = () => {
                 <button
                   onClick={async () => {
                     if (selectedNode?.parentId) {
-                      const newNodeId = await treeStateMethods.addNode({
+                      const newNodeId = await treeNodesApi.addNode({
                         title: '',
                         setMetrics: { readinessLevel: 0 },
                       }, selectedNode.parentId)
-                      selectNodeById(newNodeId)
+                      selectNodeById(newNodeId, selectedNode.type)
                       setEditingNodeId(newNodeId)
                     }
                   }}
@@ -568,11 +600,11 @@ const App = () => {
             <Tooltip title="Delete node">
               <span>
                 <button
-                  onClick={async () => selectedNode && await treeStateMethods.removeNode(selectedNode.id)}
-                  disabled={!selectedNode || selectedNode.id === rootNodeId}
+                  onClick={async () => selectedNode && await treeNodesApi.removeNode(selectedNode.id)}
+                  disabled={!selectedNode || selectedNode.id === rootNodesByType.map.id}
                   style={{
-                    opacity: selectedNode && selectedNode.id !== rootNodeId ? 1 : 0.5,
-                    cursor: selectedNode && selectedNode.id !== rootNodeId ? 'pointer' : 'default',
+                    opacity: selectedNode && selectedNode.id !== rootNodesByType.map.id ? 1 : 0.5,
+                    cursor: selectedNode && selectedNode.id !== rootNodesByType.map.id ? 'pointer' : 'default',
                     padding: 4,
                     background: 'none',
                     border: 'none',
@@ -673,7 +705,7 @@ const App = () => {
           </div>
         )}
 
-        {activeViews.map && (
+        {activeViews.map && rootNodesByType.map && (
           <div
             data-section-type="map"
             style={{
@@ -719,29 +751,23 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              {rootNodeId ? (
-                <HTable
-                  nodes={nodes}
-                  rootNodeId={rootNodeId}
-                  selectedNode={selectedNode}
-                  selectNodeById={selectNodeById}
-                  treeStateMethods={treeStateMethods}
-                  editingNodeId={editingNodeId}
-                  setEditingNodeId={setEditingNodeId}
-                  indexInParentMap={indexInParentMap}
-                  nameColumnHeader="Problem"
-                  readinessColumnHeader="Solution Readiness"
-                />
-              ) : (
-                <div style={{ padding: '12px', color: 'var(--text-secondary)' }}>
-                  No nodes found. Create your first node to get started.
-                </div>
-              )}
+              <HTable
+                nodes={nodes}
+                rootNodeId={rootNodesByType.map.id}
+                selectedNode={getSelectedNode('map')}
+                selectNodeById={(nodeId) => selectNodeById(nodeId, 'map')}
+                treeNodesApi={treeNodesApi}
+                editingNodeId={editingNodeId}
+                setEditingNodeId={setEditingNodeId}
+                indexInParentMap={indexInParentMap}
+                nameColumnHeader="Problem"
+                readinessColumnHeader="Solution Readiness"
+              />
             </div>
           </div>
         )}
 
-        {activeViews.waypoints && (
+        {activeViews.waypoints && rootNodesByType.waypoint && (
           <div
             data-section-type="waypoints"
             style={{
@@ -787,14 +813,23 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              <div style={{ padding: '12px' }}>
-                <p>Waypoints content will go here.</p>
-              </div>
+              <HTable
+                nodes={nodes}
+                rootNodeId={rootNodesByType.waypoint.id}
+                selectedNode={getSelectedNode('waypoint')}
+                selectNodeById={(nodeId) => selectNodeById(nodeId, 'waypoint')}
+                treeNodesApi={treeNodesApi}
+                editingNodeId={editingNodeId}
+                setEditingNodeId={setEditingNodeId}
+                indexInParentMap={indexInParentMap}
+                nameColumnHeader="Waypoint"
+                readinessColumnHeader="Completion Level"
+              />
             </div>
           </div>
         )}
 
-        {activeViews.users && (
+        {activeViews.users && rootNodesByType.user && (
           <div
             data-section-type="users"
             style={{
@@ -840,9 +875,18 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              <div style={{ padding: '12px' }}>
-                <p>Users content will go here.</p>
-              </div>
+              <HTable
+                nodes={nodes}
+                rootNodeId={rootNodesByType.user.id}
+                selectedNode={getSelectedNode('user')}
+                selectNodeById={(nodeId) => selectNodeById(nodeId, 'user')}
+                treeNodesApi={treeNodesApi}
+                editingNodeId={editingNodeId}
+                setEditingNodeId={setEditingNodeId}
+                indexInParentMap={indexInParentMap}
+                nameColumnHeader="User"
+                readinessColumnHeader="Status"
+              />
             </div>
           </div>
         )}
@@ -856,7 +900,7 @@ const App = () => {
         setRightPanelCollapsed={setRightPanelCollapsed}
         selectedNode={selectedNode}
         isResizing={isResizing}
-        treeStateMethods={treeStateMethods}
+        treeNodesApi={treeNodesApi}
         nameColumnHeader="Problem"
         readinessColumnHeader="Solution Readiness"
         nodes={nodes}

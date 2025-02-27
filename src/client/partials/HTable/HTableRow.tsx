@@ -15,7 +15,7 @@ interface TreeNodeProps {
   toggleNode: (id: string) => void
   selectNodeById: (nodeId: string) => void
   selectedNode: TreeNode | null
-  treeStateMethods: TreeStateMethods
+  treeNodesApi: TreeStateMethods
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
   dragTarget: DragTarget
@@ -37,7 +37,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   toggleNode,
   selectNodeById,
   selectedNode,
-  treeStateMethods,
+  treeNodesApi,
   draggedNode,
   setDraggedNode,
   dragTarget,
@@ -50,8 +50,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   isDraftSubtree = false,
 }) => {
   const node = nodes[nodeId]
-  const { setNodeParent, isParentOf } = treeStateMethods
-  const isValidTarget = draggedNode && draggedNode.id !== nodeId && !isParentOf(nodeId, draggedNode.id)
+  const isValidTarget = draggedNode && draggedNode.id !== nodeId && !treeNodesApi.isParentOf(nodeId, draggedNode.id)
   const isDragTarget = dragTarget.nodeId === nodeId && isValidTarget
   const showAsDraft = isDraftSubtree || node.nodeState === "draft"
 
@@ -118,18 +117,18 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
-    if (dragItem.id !== nodeId && !isParentOf(dragItem.id, nodeId)) {
+    if (dragItem.id !== nodeId && !treeNodesApi.isParentOf(dragItem.id, nodeId)) {
       const rect = e.currentTarget.getBoundingClientRect()
 
       if (dragTarget.position === 'inside') {
         if (node.childrenIds.length > 0 && !expanded) {
           toggleNode(nodeId)
         }
-        await setNodeParent(dragItem.id, nodeId, 0)
+        await treeNodesApi.setNodeParent(dragItem.id, nodeId, 0)
       } else if (!isRoot && node.parentId) {
         const parent = nodes[node.parentId]
         const indexInParent = parent.childrenIds.indexOf(nodeId)
-        await setNodeParent(
+        await treeNodesApi.setNodeParent(
           dragItem.id,
           node.parentId,
           dragTarget.position === 'before' ? indexInParent : indexInParent + 1
@@ -141,7 +140,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleInputBlur = async () => {
     if (justCreated && editValue.trim() === '') {
-      await treeStateMethods.updateNode(nodeId, { title: 'TBD' })
+      await treeNodesApi.updateNode(nodeId, { title: 'TBD' })
     }
     setIsEditing(false)
   }
@@ -153,10 +152,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
       // Handle blank title
       if (editValue.trim() === '') {
-        await treeStateMethods.updateNode(nodeId, { title: 'TBD' })
+        await treeNodesApi.updateNode(nodeId, { title: 'TBD' })
       } else if (editValue !== node.title) {
         // Save current edits if needed
-        await treeStateMethods.updateNode(nodeId, { title: editValue })
+        await treeNodesApi.updateNode(nodeId, { title: editValue })
       }
 
       // Clear justCreated since we're saving changes
@@ -170,7 +169,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
       // Handle node creation based on modifier keys
       if (e.shiftKey && node.parentId) {  // Shift + Enter - add sibling
-        const newNodeId = await treeStateMethods.addNode({
+        const newNodeId = await treeNodesApi.addNode({
           title: '',
           setMetrics: { readinessLevel: 0 },
         }, node.parentId)
@@ -179,9 +178,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
       } else if ((e.metaKey || e.ctrlKey)) {  // Command/Ctrl + Enter - add child
         // If this is the first child, clear parent's setMetrics
         if (node.childrenIds.length === 0) {
-          await treeStateMethods.updateNode(nodeId, { setMetrics: {} })
+          await treeNodesApi.updateNode(nodeId, { setMetrics: {} })
         }
-        const newNodeId = await treeStateMethods.addNode({
+        const newNodeId = await treeNodesApi.addNode({
           title: '',
           setMetrics: { readinessLevel: 0 },
         }, nodeId)
@@ -199,7 +198,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       if (justCreated) {
         const currentIndex = displayOrder.indexOf(nodeId)
         const nextSelectedId = displayOrder[currentIndex - 1]
-        await treeStateMethods.removeNode(nodeId)
+        await treeNodesApi.removeNode(nodeId)
         if (nextSelectedId) {
           selectNodeById(nextSelectedId)
         }
@@ -230,7 +229,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           e.preventDefault()
           const level = parseInt(e.key)
           if (level !== node.calculatedMetrics.readinessLevel) {
-            await treeStateMethods.updateNode(nodeId, { setMetrics: { readinessLevel: level } })
+            await treeNodesApi.updateNode(nodeId, { setMetrics: { readinessLevel: level } })
           }
           break
 
@@ -244,9 +243,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
             // If this is the first child, clear parent's setMetrics
             if (node.childrenIds.length === 0) {
-              await treeStateMethods.updateNode(nodeId, { setMetrics: {} })
+              await treeNodesApi.updateNode(nodeId, { setMetrics: {} })
             }
-            const newNodeId = await treeStateMethods.addNode({
+            const newNodeId = await treeNodesApi.addNode({
               title: '',
               setMetrics: { readinessLevel: 0 },
             }, nodeId)
@@ -257,7 +256,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             selectNodeById(newNodeId)
             setEditingNodeId(newNodeId)
           } else if (node.parentId) {  // Regular Enter - add sibling (if not root)
-            const newNodeId = await treeStateMethods.addNode({
+            const newNodeId = await treeNodesApi.addNode({
               title: '',
               setMetrics: { readinessLevel: 0 },
             }, node.parentId)
@@ -281,7 +280,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               const currentIndex = parent.childrenIds.indexOf(nodeId)
               if (currentIndex > 0) {
                 try {
-                  const result = await setNodeParent(nodeId, node.parentId, currentIndex - 1)
+                  const result = await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex - 1)
                 } catch (error) {
                   console.error('Error moving node:', error)
                 }
@@ -304,7 +303,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               const currentIndex = parent.childrenIds.indexOf(nodeId)
               if (currentIndex < parent.childrenIds.length - 1) {
                 try {
-                  await setNodeParent(nodeId, node.parentId, currentIndex + 1)
+                  await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex + 1)
                 } catch (error) {
                   console.error('Error moving node:', error)
                 }
@@ -325,7 +324,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             if (node.parentId && nodes[node.parentId]) {
               const parent = nodes[node.parentId]
               if (parent.parentId) {
-                await setNodeParent(nodeId, parent.parentId)
+                await treeNodesApi.setNodeParent(nodeId, parent.parentId)
               }
             }
           } else if (expanded) {
@@ -343,7 +342,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               const currentIndex = indexInParentMap[nodeId]
               if (currentIndex > 0) {
                 const prevSiblingId = nodes[node.parentId].childrenIds[currentIndex - 1]
-                await setNodeParent(nodeId, prevSiblingId)
+                await treeNodesApi.setNodeParent(nodeId, prevSiblingId)
                 if (!expandedNodes[prevSiblingId]) {
                   toggleNode(prevSiblingId)
                 }
@@ -362,7 +361,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (!isRoot) {  // Prevent deleting root node
             const currentIndex = displayOrder.indexOf(nodeId)
             const nextSelectedId = displayOrder[currentIndex - 1]
-            await treeStateMethods.removeNode(nodeId)
+            await treeNodesApi.removeNode(nodeId)
             if (nextSelectedId) {
               selectNodeById(nextSelectedId)
             }
@@ -383,8 +382,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
     selectNodeById,
     displayOrder,
     setEditingNodeId,
-    treeStateMethods,
-    setNodeParent,
+    treeNodesApi,
     nodes,
     indexInParentMap,
     isRoot
@@ -442,7 +440,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           readinessLevel={node.calculatedMetrics.readinessLevel}
           auto={node.setMetrics?.readinessLevel == null}
           onChange={async level => {
-            await treeStateMethods.updateNode(nodeId, {
+            await treeNodesApi.updateNode(nodeId, {
               setMetrics: { readinessLevel: level ?? null }
             })
           }}

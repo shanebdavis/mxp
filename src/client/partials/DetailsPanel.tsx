@@ -161,7 +161,7 @@ export const DetailsPanel = ({
   setRightPanelCollapsed,
   selectedNode,
   isResizing,
-  treeStateMethods,
+  treeNodesApi,
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
   nodes,
@@ -172,7 +172,7 @@ export const DetailsPanel = ({
   setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
   selectedNode: TreeNode | null
   isResizing: boolean
-  treeStateMethods: { updateNode: (id: string, props: UpdateTreeNodeProperties) => Promise<void> }
+  treeNodesApi: { updateNode: (id: string, props: UpdateTreeNodeProperties) => Promise<void> }
   nameColumnHeader?: string
   readinessColumnHeader?: string
   nodes: TreeNodeSet
@@ -189,7 +189,7 @@ export const DetailsPanel = ({
 
   const handleDescriptionBlur = async () => {
     if (selectedNode && descriptionDraft !== selectedNode.description) {
-      await treeStateMethods.updateNode(selectedNode.id, { description: descriptionDraft })
+      await treeNodesApi.updateNode(selectedNode.id, { description: descriptionDraft })
     }
     setIsEditingDescription(false)
   }
@@ -248,7 +248,7 @@ export const DetailsPanel = ({
                     checked={selectedNode.nodeState !== "draft"}
                     onChange={async (e) => {
                       if (selectedNode) {
-                        await treeStateMethods.updateNode(selectedNode.id, {
+                        await treeNodesApi.updateNode(selectedNode.id, {
                           nodeState: e.target.checked ? "active" : "draft"
                         })
                       }
@@ -268,7 +268,7 @@ export const DetailsPanel = ({
                   readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
                   auto={selectedNode.setMetrics?.readinessLevel == null}
                   onChange={async level => {
-                    await treeStateMethods.updateNode(selectedNode.id, {
+                    await treeNodesApi.updateNode(selectedNode.id, {
                       setMetrics: { readinessLevel: level ?? null }
                     })
                   }}

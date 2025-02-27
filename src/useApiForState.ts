@@ -9,8 +9,8 @@ interface UseApiForStateOptions {
 
 export const useApiForState = (options: UseApiForStateOptions = {}): {
   nodes: TreeNodeSet
-  treeStateMethods: TreeStateMethods
-  rootNodeId: string | undefined
+  treeNodesApi: TreeStateMethods
+  rootNodesByType: RootNodesByType
   loading: boolean
   error: Error | null
 } => {
@@ -18,7 +18,7 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
   const [nodes, setNodes] = useState<TreeNodeSet>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const [rootNodesByType, setRootNodesByType] = useState<Partial<RootNodesByType>>({})
+  const [rootNodesByType, setRootNodesByType] = useState<RootNodesByType>({} as RootNodesByType)
   // Helper function to apply a delta to the current state
   const applyDelta = useCallback((delta: TreeNodeSetDelta) => {
     setNodes((prevNodes: TreeNodeSet) => getTreeNodeSetWithDeltaApplied(prevNodes, delta))
@@ -42,8 +42,8 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
 
   return {
     nodes,
-    treeStateMethods: apiClient,
-    rootNodeId: rootNodesByType?.map?.id,
+    treeNodesApi: apiClient,
+    rootNodesByType,
     loading,
     error
   }

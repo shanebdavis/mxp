@@ -1,6 +1,6 @@
 import { FC, useState, useRef, useMemo } from 'react'
 import React from 'react'
-import type { TreeNode, TreeNodeSet } from '../../../TreeNode'
+import type { TreeNode, TreeNodeSet, NodeType } from '../../../TreeNode'
 import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
@@ -11,27 +11,45 @@ interface HTableProps {
   rootNodeId: string
   selectedNode: TreeNode | null
   selectNodeById: (nodeId: string) => void
-  treeStateMethods: TreeStateMethods
+  treeNodesApi: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
+  nodeType?: NodeType
 }
 
-const getDisplayOrder = (nodes: TreeNodeSet, rootNodeId: string, expandedNodes: Record<string, boolean>): Array<{ nodeId: string, level: number, itemNumber: number }> => {
-  const result: Array<{ nodeId: string, level: number, itemNumber: number }> = []
+const getDisplayOrder = (
+  nodes: TreeNodeSet,
+  rootNodeId: string,
+  expandedNodes: Record<string, boolean>
+): { nodeId: string, level: number, itemNumber: number }[] => {
+  const displayOrder: { nodeId: string, level: number, itemNumber: number }[] = []
+  let itemNumbers: Record<string, number> = {}
 
-  const addToResult = (nodeId: string, level: number) => {
+  const processNode = (nodeId: string, level: number): void => {
     const node = nodes[nodeId]
     if (!node) return
-    result.push({ nodeId, level, itemNumber: node.parentId && nodes[node.parentId] ? nodes[node.parentId].childrenIds.indexOf(nodeId) + 1 : 1 })
-    if (expandedNodes[nodeId]) {
-      node.childrenIds.forEach(childId => addToResult(childId, level + 1))
+
+    displayOrder.push({
+      nodeId,
+      level,
+      itemNumber: itemNumbers[nodeId] || 0
+    })
+
+    if (expandedNodes[nodeId] && node.childrenIds.length > 0) {
+      node.childrenIds.forEach((childId, index) => {
+        itemNumbers[childId] = index + 1
+        processNode(childId, level + 1)
+      })
     }
   }
-  addToResult(rootNodeId, 0)
-  return result
+
+  itemNumbers[rootNodeId] = 1
+  processNode(rootNodeId, 0)
+
+  return displayOrder
 }
 
 export const HTable: FC<HTableProps> = ({
@@ -39,12 +57,13 @@ export const HTable: FC<HTableProps> = ({
   rootNodeId,
   selectNodeById,
   selectedNode,
-  treeStateMethods,
+  treeNodesApi,
   editingNodeId,
   setEditingNodeId,
   indexInParentMap,
   nameColumnHeader = "Name",
-  readinessColumnHeader = "Readiness Level"
+  readinessColumnHeader = "Readiness Level",
+  nodeType // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
 }) => {
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
@@ -187,7 +206,7 @@ export const HTable: FC<HTableProps> = ({
                   toggleNode,
                   selectNodeById,
                   selectedNode,
-                  treeStateMethods,
+                  treeNodesApi,
                   draggedNode,
                   setDraggedNode,
                   dragTarget,
