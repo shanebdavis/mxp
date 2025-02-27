@@ -397,9 +397,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
         ...styles.row,
         ...(isSelected ? styles.selectedRow : {}),
         ...(isDragTarget ? styles.dragTargetRow : {}),
-        ...(showAsDraft ? {
-          opacity: 0.5,
-        } : {}),
       }}
       onClick={handleRowClick}
       draggable
@@ -433,7 +430,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
               style={styles.input}
             />
           ) : (
-            <span style={{ fontStyle: showAsDraft ? 'italic' : 'normal' }}>{node.title || '(blank)'}</span>
+            <span style={{
+              color: showAsDraft ? '#777' : 'var(--text-primary)',
+              fontStyle: showAsDraft ? 'italic' : 'normal'
+            }}>{node.title || '(blank)'}</span>
           )}
         </div>
       </td>
