@@ -346,11 +346,21 @@ const App = () => {
     setFocusedSection(type as SectionName)
   }
 
-  // Get the currently selected node (for details panel) - modified to use focused section
+  // Add a mapping between section names and node types
+  const sectionToNodeType = {
+    dashboard: 'dashboard',
+    map: 'map',
+    waypoints: 'waypoint',
+    users: 'user'
+  } as const
+
+  // Get the currently selected node (for details panel) - modified to use focused section with mapping
   const selectedNode = useMemo(() => {
-    // Use the selected node from the focused section
-    const focusedNodeId = selectedNodeIds[focusedSection as NodeType]
-    return focusedNodeId ? nodes[focusedNodeId] : null
+    // Map the focused section to its corresponding node type
+    const nodeType = sectionToNodeType[focusedSection] as NodeType
+    // Use the selected node from the focused section's corresponding node type
+    const selectedNodeId = selectedNodeIds[nodeType]
+    return selectedNodeId ? nodes[selectedNodeId] : null
   }, [selectedNodeIds, nodes, focusedSection])
 
   const indexInParentMap = useMemo(() =>
@@ -545,9 +555,9 @@ const App = () => {
   // Add helper to generate section header styles based on focus
   const getSectionHeaderStyle = (section: SectionName) => ({
     ...styles.sectionHeader,
-    borderBottom: focusedSection === section
-      ? '2px solid var(--selected-color)'
-      : '1px solid var(--border-color)',
+    borderBottom: '1px solid ' + (focusedSection === section
+      ? 'var(--selected-color)'
+      : 'var(--border-color)'),
     background: focusedSection === section
       ? 'var(--selected-color-light, var(--background-secondary))'
       : 'var(--background-secondary)',
@@ -630,10 +640,10 @@ const App = () => {
               <span>
                 <button
                   onClick={async () => selectedNode && await treeNodesApi.removeNode(selectedNode.id)}
-                  disabled={!selectedNode || selectedNode.id === rootNodesByType.map.id}
+                  disabled={!selectedNode || Object.values(rootNodesByType).some(rootNode => rootNode.id === selectedNode?.id)}
                   style={{
-                    opacity: selectedNode && selectedNode.id !== rootNodesByType.map.id ? 1 : 0.5,
-                    cursor: selectedNode && selectedNode.id !== rootNodesByType.map.id ? 'pointer' : 'default',
+                    opacity: selectedNode && !Object.values(rootNodesByType).some(rootNode => rootNode.id === selectedNode?.id) ? 1 : 0.5,
+                    cursor: selectedNode && !Object.values(rootNodesByType).some(rootNode => rootNode.id === selectedNode?.id) ? 'pointer' : 'default',
                     padding: 4,
                     background: 'none',
                     border: 'none',
@@ -685,7 +695,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Users" placement="right">
+        <Tooltip title="Contributors" placement="right">
           <button
             style={{
               ...styles.navButton,
@@ -874,7 +884,7 @@ const App = () => {
           >
             <div style={getSectionHeaderStyle('users')}>
               <People sx={styles.sectionHeaderIcon} />
-              Users
+              Contributors
               {/* Add drag handle if not the first section */}
               {activeSections.indexOf('users') > 0 && (
                 <div

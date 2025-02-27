@@ -4,7 +4,7 @@ import { eq } from '../ArtStandardLib'
 export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
   map: { title: 'Root Problem', description: 'What is the root problem you are trying to solve? Trace your "why" back to the fundamental human needs you are serving. Who are you serving? What is the problem you are solving for them? What is the impact of that problem on their lives?' },
   waypoint: { title: 'Waypoints', description: 'What is the next deliverable? What does it require? When do you need it?' },
-  user: { title: 'Contributors', description: 'Who is contributing to this expedition?' }
+  user: { title: 'All Contributors', description: 'Who is contributing to this expedition?' }
 }
 
 export const getDefaultFilename = (properties: TreeNodeProperties): string => {

@@ -186,7 +186,7 @@ export const HTable: FC<HTableProps> = ({
         </colgroup>
         <thead>
           <tr>
-            <th style={{ ...styles.headerCell, ...styles.nameColumn }} className="field-label">{nameColumnHeader}</th>
+            <th style={{ ...styles.headerCell, ...styles.nameColumn }} className="field-label">{nameColumnHeader === 'User' ? 'Group/Contributor' : nameColumnHeader}</th>
             <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">{readinessColumnHeader}</th>
           </tr>
         </thead>

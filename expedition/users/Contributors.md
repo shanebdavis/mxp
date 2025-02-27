@@ -1,10 +1,10 @@
 ---
 id: d2246094-a061-4322-b12a-dffc88122df2
-title: Contributors
+title: All Contributors
 filename: Contributors.md
 parentId: null
 childrenIds:
-  - 8955dbc2-a6ef-45c4-ab4c-a7dff5492530
+  - c1918c64-ce63-4fd1-99d8-6d54f0e2e616
 calculatedMetrics:
   readinessLevel: 0
 nodeState: active

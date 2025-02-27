@@ -63,8 +63,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(node.title)
   const [justCreated, setJustCreated] = useState(false)
+  const wasFocusedRef = useRef(isFocused)
   const inputRef = useRef<HTMLInputElement>(null)
   const rowRef = useRef<HTMLTableRowElement>(null)
+
+  // Update the wasFocused ref after each render
+  useEffect(() => {
+    wasFocusedRef.current = isFocused;
+  });
 
   // Add styles for unfocused selected rows
   const unfocusedSelectedStyle = {
@@ -95,12 +101,18 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }, [isSelected])
 
   const handleRowClick = (e: React.MouseEvent) => {
-    if (!(e.target as HTMLElement).closest('.toggle-button')) {
-      if (isSelected) {
-        setIsEditing(true)
-      } else {
-        selectNodeById(nodeId)
-      }
+    // Ignore clicks on the toggle button
+    if ((e.target as HTMLElement).closest('.toggle-button')) {
+      return;
+    }
+
+    // Only enter edit mode if the row was already selected AND the section was already focused
+    if (isSelected && wasFocusedRef.current) {
+      setIsEditing(true);
+    }
+    // Otherwise just select the row (don't start editing)
+    else {
+      selectNodeById(nodeId);
     }
   }
 
@@ -147,9 +159,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputBlur = async () => {
-    if (justCreated && editValue.trim() === '') {
+    if (editValue.trim() === '') {
+      // If empty, use 'TBD' as a placeholder
       await treeNodesApi.updateNode(nodeId, { title: 'TBD' })
+    } else if (editValue !== node.title) {
+      // Save changes if the title has been modified
+      await treeNodesApi.updateNode(nodeId, { title: editValue })
     }
+
+    // Clear justCreated flag since we're saving changes
+    if (justCreated) {
+      setJustCreated(false)
+    }
+
     setIsEditing(false)
   }
 

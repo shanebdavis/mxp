@@ -6,6 +6,8 @@ parentId: null
 childrenIds: []
 calculatedMetrics:
   readinessLevel: 0
+nodeState: active
 type: waypoint
+setMetrics: {}
 ---
 What is the next deliverable? What does it require? When do you need it?
