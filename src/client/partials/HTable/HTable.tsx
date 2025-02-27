@@ -217,6 +217,13 @@ export const HTable: FC<HTableProps> = ({
 
   let draftNodesVisited: Record<string, boolean> = {}
 
+  // Determine the node type from the root node
+  const rootNodeType = nodes[rootNodeId]?.type || 'map'
+
+  // Flag to determine if we should show the readiness column
+  // Only show readiness column for 'map' type, hide for 'user' and 'waypoint'
+  const showReadinessColumn = rootNodeType === 'map'
+
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
       {dropIndicator.show && (
@@ -254,12 +261,12 @@ export const HTable: FC<HTableProps> = ({
       <table style={styles.table}>
         <colgroup>
           <col style={styles.nameColumn} />
-          <col style={styles.levelColumn} />
+          {showReadinessColumn && <col style={styles.levelColumn} />}
         </colgroup>
         <thead>
           <tr>
             <th style={{ ...styles.headerCell, ...styles.nameColumn }} className="field-label">{nameColumnHeader === 'User' ? 'Group/Contributor' : nameColumnHeader}</th>
-            <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">{readinessColumnHeader}</th>
+            {showReadinessColumn && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">{readinessColumnHeader}</th>}
           </tr>
         </thead>
         <tbody>
@@ -293,6 +300,7 @@ export const HTable: FC<HTableProps> = ({
                   indexInParentMap,
                   isDraftSubtree,
                   isFocused,
+                  showReadinessColumn,
                 }}
               />
             )

@@ -28,6 +28,7 @@ interface TreeNodeProps {
   indexInParentMap: Record<string, number>
   isDraftSubtree?: boolean
   isFocused?: boolean
+  showReadinessColumn?: boolean
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -52,6 +53,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   indexInParentMap,
   isDraftSubtree = false,
   isFocused = true,
+  showReadinessColumn = true,
 }) => {
   const node = nodes[nodeId]
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !treeNodesApi.isParentOf(nodeId, draggedNode.id)
@@ -584,17 +586,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
           )}
         </div>
       </td>
-      <td style={styles.cell}>
-        <EditableRlPill
-          readinessLevel={node.calculatedMetrics.readinessLevel}
-          auto={node.setMetrics?.readinessLevel == null}
-          onChange={async level => {
-            await treeNodesApi.updateNode(nodeId, {
-              setMetrics: { readinessLevel: level ?? null }
-            })
-          }}
-        />
-      </td>
+      {showReadinessColumn && (
+        <td style={styles.cell}>
+          <EditableRlPill
+            readinessLevel={node.calculatedMetrics.readinessLevel}
+            auto={node.setMetrics?.readinessLevel == null}
+            onChange={async level => {
+              await treeNodesApi.updateNode(nodeId, {
+                setMetrics: { readinessLevel: level ?? null }
+              })
+            }}
+          />
+        </td>
+      )}
     </tr>
   )
 }
