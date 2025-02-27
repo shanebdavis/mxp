@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
 import {
   Add,
@@ -8,7 +8,8 @@ import {
   Dashboard,
   Map as MapIcon,
   LocationOn,
-  People
+  People,
+  DragHandle
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import type { TreeNode, TreeNodeSet } from './TreeNode'
@@ -17,6 +18,7 @@ import { useApiForState } from './useApiForState'
 const MIN_PANEL_WIDTH_PERCENTAGE = 10 // Minimum percentage of window width
 const MAX_PANEL_WIDTH_PERCENTAGE = 67 // Maximum percentage of window width
 const DEFAULT_PANEL_WIDTH_PERCENTAGE = 25 // Default percentage of window width
+const MIN_SECTION_WEIGHT = 0.2 // Minimum relative weight for a section
 
 const styles = {
   layout: {
@@ -85,7 +87,7 @@ const styles = {
   section: {
     border: 'none',
     borderRadius: '0',
-    overflow: 'auto',
+    overflow: 'hidden',
     background: 'var(--background-primary)',
     flex: '1',
     minHeight: '100px',
@@ -101,6 +103,10 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
+    position: 'relative',
+    userSelect: 'none',
+    cursor: 'default',
+    minHeight: '28px',
   },
   sectionHeaderIcon: {
     fontSize: '16px',
@@ -110,6 +116,30 @@ const styles = {
     padding: '0',
     overflow: 'auto',
     flex: 1,
+  },
+  dragHandle: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+    cursor: 'row-resize',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  dragHandleHover: {
+    background: 'rgba(0, 0, 0, 0.05)',
+  },
+  dragHandleIcon: {
+    fontSize: '16px',
+    opacity: 0,
+    transition: 'opacity 0.2s',
+    pointerEvents: 'none',
+  },
+  dragHandleActive: {
+    background: 'rgba(0, 0, 0, 0.1)',
   },
 } as const
 
@@ -139,6 +169,15 @@ interface ActiveViews {
   map: boolean;
   waypoints: boolean;
   users: boolean;
+}
+
+// Add a type for section weights
+type SectionName = 'dashboard' | 'map' | 'waypoints' | 'users'
+interface SectionWeights {
+  dashboard: number;
+  map: number;
+  waypoints: number;
+  users: number;
 }
 
 const App = () => {
@@ -266,6 +305,153 @@ const App = () => {
       }
     }
   }, [isResizing, resize, stopResize])
+
+  // Add state for section weights
+  const [sectionWeights, setSectionWeights] = useState<SectionWeights>(() => {
+    const savedWeights = localStorage.getItem('sectionWeights')
+    return savedWeights ? JSON.parse(savedWeights) : {
+      dashboard: 1.0,
+      map: 1.0,
+      waypoints: 1.0,
+      users: 1.0
+    }
+  })
+
+  // Save section weights to localStorage
+  useEffect(() => {
+    localStorage.setItem('sectionWeights', JSON.stringify(sectionWeights))
+  }, [sectionWeights])
+
+  // Track which section is being resized
+  const [resizingSection, setResizingSection] = useState<{
+    section: SectionName,
+    nextSection: SectionName,
+    startY: number,
+    initialHeight: number,
+    initialNextHeight: number
+  } | null>(null)
+
+  // Ref for the main container to get section elements
+  const mainRef = useRef<HTMLDivElement>(null)
+
+  // Get the active sections in display order
+  const activeSections = useMemo(() =>
+    (Object.entries(activeViews) as [SectionName, boolean][])
+      .filter(([_, isActive]) => isActive)
+      .map(([name]) => name),
+    [activeViews]
+  )
+
+  // Calculate flex values for each section based on weights
+  const getSectionFlex = useCallback((section: SectionName) => {
+    // If there's only one section active, it should take full space
+    if (activeSections.length === 1) return 1
+
+    // Calculate the total weight of all active sections
+    const totalWeight = activeSections.reduce(
+      (sum, name) => sum + sectionWeights[name],
+      0
+    )
+
+    // Return the proportional flex value
+    return sectionWeights[section] / totalWeight
+  }, [activeSections, sectionWeights])
+
+  // Completely revise the startSectionResize function
+  const startSectionResize = useCallback((e: React.MouseEvent, section: SectionName) => {
+    // The error was here - when dragging section at index 1, we need to resize sections at index 0 and 1
+
+    // We need to find the previous section (the one being resized)
+    const sectionIndex = activeSections.indexOf(section)
+    if (sectionIndex === 0) return // Cannot resize the first section (no previous section)
+
+    // Get the previous section (the one above the drag handle)
+    const previousSection = activeSections[sectionIndex - 1]
+
+    // Get section elements to calculate heights
+    if (!mainRef.current) return
+
+    // Get all visible section elements
+    const sections = Array.from(mainRef.current.children).filter(el => {
+      return el.tagName === 'DIV' &&
+        el.getAttribute('data-section-type') &&
+        activeSections.includes(el.getAttribute('data-section-type') as SectionName)
+    }) as HTMLElement[]
+
+    // Find the previous section and current section elements
+    const previousSectionElement = sections.find(el => el.getAttribute('data-section-type') === previousSection)
+    const currentSectionElement = sections.find(el => el.getAttribute('data-section-type') === section)
+
+    if (!previousSectionElement || !currentSectionElement) return
+
+    // Store initial information for the resize operation
+    setResizingSection({
+      section: previousSection, // Save previous section
+      nextSection: section,     // Save current section
+      startY: e.clientY,
+      initialHeight: previousSectionElement.offsetHeight,
+      initialNextHeight: currentSectionElement.offsetHeight
+    })
+
+    // Set cursor and prevent default
+    document.body.style.cursor = 'row-resize'
+    e.preventDefault()
+    e.stopPropagation()
+  }, [activeSections])
+
+  // Update the handleSectionResize function to use data-section-type
+  const handleSectionResize = useCallback((e: MouseEvent) => {
+    if (!resizingSection || !mainRef.current) return
+
+    const { section, nextSection, startY, initialHeight, initialNextHeight } = resizingSection
+
+    // Calculate the delta movement
+    const deltaY = e.clientY - startY
+
+    // Total height of both sections
+    const totalHeight = initialHeight + initialNextHeight
+
+    // Calculate new weights based on new heights
+    let newSectionWeight = ((initialHeight + deltaY) / totalHeight) * (sectionWeights[section] + sectionWeights[nextSection])
+    let newNextSectionWeight = ((initialNextHeight - deltaY) / totalHeight) * (sectionWeights[section] + sectionWeights[nextSection])
+
+    // Enforce minimum weights
+    if (newSectionWeight < MIN_SECTION_WEIGHT) {
+      newSectionWeight = MIN_SECTION_WEIGHT
+      newNextSectionWeight = sectionWeights[section] + sectionWeights[nextSection] - MIN_SECTION_WEIGHT
+    } else if (newNextSectionWeight < MIN_SECTION_WEIGHT) {
+      newNextSectionWeight = MIN_SECTION_WEIGHT
+      newSectionWeight = sectionWeights[section] + sectionWeights[nextSection] - MIN_SECTION_WEIGHT
+    }
+
+    // Update weights
+    setSectionWeights(prev => ({
+      ...prev,
+      [section]: newSectionWeight,
+      [nextSection]: newNextSectionWeight
+    }))
+  }, [resizingSection, sectionWeights])
+
+  // End resizing
+  const endSectionResize = useCallback(() => {
+    setResizingSection(null)
+    document.body.style.cursor = ''
+  }, [])
+
+  // Add and remove event listeners for section resizing
+  useEffect(() => {
+    if (resizingSection) {
+      document.addEventListener('mousemove', handleSectionResize)
+      document.addEventListener('mouseup', endSectionResize)
+      return () => {
+        document.removeEventListener('mousemove', handleSectionResize)
+        document.removeEventListener('mouseup', endSectionResize)
+      }
+    }
+  }, [resizingSection, handleSectionResize, endSectionResize])
+
+  // Add state for hover detection
+  const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
 
   // Add loading and error states
   if (loading) {
@@ -412,9 +598,15 @@ const App = () => {
         </Tooltip>
       </nav>
 
-      <main style={styles.main}>
+      <main ref={mainRef} style={styles.main}>
         {activeViews.dashboard && (
-          <div style={styles.section}>
+          <div
+            data-section-type="dashboard"
+            style={{
+              ...styles.section,
+              flex: getSectionFlex('dashboard')
+            }}
+          >
             <div style={styles.sectionHeader}>
               <Dashboard sx={styles.sectionHeaderIcon} />
               Dashboard
@@ -428,10 +620,34 @@ const App = () => {
         )}
 
         {activeViews.map && (
-          <div style={styles.section}>
+          <div
+            data-section-type="map"
+            style={{
+              ...styles.section,
+              flex: getSectionFlex('map')
+            }}
+          >
             <div style={styles.sectionHeader}>
               <MapIcon sx={styles.sectionHeaderIcon} />
               Map
+              {/* Add drag handle if not the first section */}
+              {activeSections.indexOf('map') > 0 && (
+                <div
+                  style={{
+                    ...styles.dragHandle,
+                    ...(resizingSection?.nextSection === 'map' ? styles.dragHandleActive : {}),
+                    ...(hoverSection === 'map' ? styles.dragHandleHover : {})
+                  }}
+                  onMouseDown={(e) => startSectionResize(e, 'map')}
+                  onMouseEnter={() => setHoverSection('map')}
+                  onMouseLeave={() => setHoverSection(null)}
+                >
+                  <DragHandle sx={{
+                    ...styles.dragHandleIcon,
+                    opacity: (resizingSection?.nextSection === 'map' || hoverSection === 'map') ? 0.5 : 0,
+                  }} />
+                </div>
+              )}
             </div>
             <div style={styles.sectionContent}>
               {rootNodeId ? (
@@ -457,10 +673,34 @@ const App = () => {
         )}
 
         {activeViews.waypoints && (
-          <div style={styles.section}>
+          <div
+            data-section-type="waypoints"
+            style={{
+              ...styles.section,
+              flex: getSectionFlex('waypoints')
+            }}
+          >
             <div style={styles.sectionHeader}>
               <LocationOn sx={styles.sectionHeaderIcon} />
               Waypoints
+              {/* Add drag handle if not the first section */}
+              {activeSections.indexOf('waypoints') > 0 && (
+                <div
+                  style={{
+                    ...styles.dragHandle,
+                    ...(resizingSection?.nextSection === 'waypoints' ? styles.dragHandleActive : {}),
+                    ...(hoverSection === 'waypoints' ? styles.dragHandleHover : {})
+                  }}
+                  onMouseDown={(e) => startSectionResize(e, 'waypoints')}
+                  onMouseEnter={() => setHoverSection('waypoints')}
+                  onMouseLeave={() => setHoverSection(null)}
+                >
+                  <DragHandle sx={{
+                    ...styles.dragHandleIcon,
+                    opacity: (resizingSection?.nextSection === 'waypoints' || hoverSection === 'waypoints') ? 0.5 : 0,
+                  }} />
+                </div>
+              )}
             </div>
             <div style={styles.sectionContent}>
               <div style={{ padding: '12px' }}>
@@ -471,10 +711,34 @@ const App = () => {
         )}
 
         {activeViews.users && (
-          <div style={styles.section}>
+          <div
+            data-section-type="users"
+            style={{
+              ...styles.section,
+              flex: getSectionFlex('users')
+            }}
+          >
             <div style={styles.sectionHeader}>
               <People sx={styles.sectionHeaderIcon} />
               Users
+              {/* Add drag handle if not the first section */}
+              {activeSections.indexOf('users') > 0 && (
+                <div
+                  style={{
+                    ...styles.dragHandle,
+                    ...(resizingSection?.nextSection === 'users' ? styles.dragHandleActive : {}),
+                    ...(hoverSection === 'users' ? styles.dragHandleHover : {})
+                  }}
+                  onMouseDown={(e) => startSectionResize(e, 'users')}
+                  onMouseEnter={() => setHoverSection('users')}
+                  onMouseLeave={() => setHoverSection(null)}
+                >
+                  <DragHandle sx={{
+                    ...styles.dragHandleIcon,
+                    opacity: (resizingSection?.nextSection === 'users' || hoverSection === 'users') ? 0.5 : 0,
+                  }} />
+                </div>
+              )}
             </div>
             <div style={styles.sectionContent}>
               <div style={{ padding: '12px' }}>
