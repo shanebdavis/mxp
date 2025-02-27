@@ -189,7 +189,7 @@ interface ActiveViews {
   users: boolean;
 }
 
-// Add a type for section weights
+// Add types for section names and focused section
 type SectionName = 'dashboard' | 'map' | 'waypoints' | 'users'
 interface SectionWeights {
   dashboard: number;
@@ -326,14 +326,32 @@ const App = () => {
     }
   }, [rootNodesByType])
 
-  // Get the currently selected node (for details panel)
+  // Add state to track which section is currently focused
+  const [focusedSection, setFocusedSection] = useState<SectionName>(() => {
+    // Default to the first active section, preferring map
+    if (activeViews.map) return 'map'
+    if (activeViews.dashboard) return 'dashboard'
+    if (activeViews.waypoints) return 'waypoints'
+    if (activeViews.users) return 'users'
+    return 'map' // Default to map as fallback
+  })
+
+  // Update selectedNodeIds with a function that also changes focus
+  const selectNodeAndFocus = (nodeId: string, type: NodeType) => {
+    setSelectedNodeIds(prev => ({
+      ...prev,
+      [type]: nodeId
+    }))
+    // When selecting a node, also focus that section
+    setFocusedSection(type as SectionName)
+  }
+
+  // Get the currently selected node (for details panel) - modified to use focused section
   const selectedNode = useMemo(() => {
-    // Default to map node, then any selected node
-    return getSelectedNode('map') ||
-      Object.values(selectedNodeIds)
-        .map(id => id ? nodes[id] : null)
-        .filter(Boolean)[0] || null
-  }, [selectedNodeIds, nodes])
+    // Use the selected node from the focused section
+    const focusedNodeId = selectedNodeIds[focusedSection as NodeType]
+    return focusedNodeId ? nodes[focusedNodeId] : null
+  }, [selectedNodeIds, nodes, focusedSection])
 
   const indexInParentMap = useMemo(() =>
     getIndexInParentMap(nodes)
@@ -524,6 +542,17 @@ const App = () => {
   // Add state for close button hover
   const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
 
+  // Add helper to generate section header styles based on focus
+  const getSectionHeaderStyle = (section: SectionName) => ({
+    ...styles.sectionHeader,
+    borderBottom: focusedSection === section
+      ? '2px solid var(--selected-color)'
+      : '1px solid var(--border-color)',
+    background: focusedSection === section
+      ? 'var(--selected-color-light, var(--background-secondary))'
+      : 'var(--background-secondary)',
+  })
+
   // Add loading and error states
   if (loading) {
     return <div style={{ padding: 20 }}>Loading...</div>
@@ -548,7 +577,7 @@ const App = () => {
                         title: '',
                         setMetrics: { readinessLevel: 0 },
                       }, selectedNode.id)
-                      selectNodeById(newNodeId, selectedNode.type)
+                      selectNodeAndFocus(newNodeId, selectedNode.type)
                       setEditingNodeId(newNodeId)
                     }
                   }}
@@ -577,7 +606,7 @@ const App = () => {
                         title: '',
                         setMetrics: { readinessLevel: 0 },
                       }, selectedNode.parentId)
-                      selectNodeById(newNodeId, selectedNode.type)
+                      selectNodeAndFocus(newNodeId, selectedNode.type)
                       setEditingNodeId(newNodeId)
                     }
                   }}
@@ -677,8 +706,9 @@ const App = () => {
               ...styles.section,
               flex: getSectionFlex('dashboard')
             }}
+            onClick={() => setFocusedSection('dashboard')}
           >
-            <div style={styles.sectionHeader}>
+            <div style={getSectionHeaderStyle('dashboard')}>
               <Dashboard sx={styles.sectionHeaderIcon} />
               Dashboard
               <div
@@ -712,8 +742,9 @@ const App = () => {
               ...styles.section,
               flex: getSectionFlex('map')
             }}
+            onClick={() => setFocusedSection('map')}
           >
-            <div style={styles.sectionHeader}>
+            <div style={getSectionHeaderStyle('map')}>
               <MapIcon sx={styles.sectionHeaderIcon} />
               Map
               {/* Add drag handle if not the first section */}
@@ -755,13 +786,14 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
-                selectNodeById={(nodeId) => selectNodeById(nodeId, 'map')}
+                selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'map')}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
                 indexInParentMap={indexInParentMap}
                 nameColumnHeader="Problem"
                 readinessColumnHeader="Solution Readiness"
+                isFocused={focusedSection === 'map'}
               />
             </div>
           </div>
@@ -774,8 +806,9 @@ const App = () => {
               ...styles.section,
               flex: getSectionFlex('waypoints')
             }}
+            onClick={() => setFocusedSection('waypoints')}
           >
-            <div style={styles.sectionHeader}>
+            <div style={getSectionHeaderStyle('waypoints')}>
               <LocationOn sx={styles.sectionHeaderIcon} />
               Waypoints
               {/* Add drag handle if not the first section */}
@@ -817,13 +850,14 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
-                selectNodeById={(nodeId) => selectNodeById(nodeId, 'waypoint')}
+                selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'waypoint')}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
                 indexInParentMap={indexInParentMap}
                 nameColumnHeader="Waypoint"
                 readinessColumnHeader="Completion Level"
+                isFocused={focusedSection === 'waypoints'}
               />
             </div>
           </div>
@@ -836,8 +870,9 @@ const App = () => {
               ...styles.section,
               flex: getSectionFlex('users')
             }}
+            onClick={() => setFocusedSection('users')}
           >
-            <div style={styles.sectionHeader}>
+            <div style={getSectionHeaderStyle('users')}>
               <People sx={styles.sectionHeaderIcon} />
               Users
               {/* Add drag handle if not the first section */}
@@ -879,20 +914,21 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
-                selectNodeById={(nodeId) => selectNodeById(nodeId, 'user')}
+                selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'user')}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
                 indexInParentMap={indexInParentMap}
                 nameColumnHeader="User"
                 readinessColumnHeader="Status"
+                isFocused={focusedSection === 'users'}
               />
             </div>
           </div>
         )}
       </main>
 
-      {/* Details Panel - always present regardless of active views */}
+      {/* Details Panel - show focused section's selected node */}
       <DetailsPanel
         isRightPanelCollapsed={isRightPanelCollapsed}
         rightPanelWidth={rightPanelWidth}
@@ -901,8 +937,16 @@ const App = () => {
         selectedNode={selectedNode}
         isResizing={isResizing}
         treeNodesApi={treeNodesApi}
-        nameColumnHeader="Problem"
-        readinessColumnHeader="Solution Readiness"
+        nameColumnHeader={
+          focusedSection === 'map' ? "Problem" :
+            focusedSection === 'waypoints' ? "Waypoint" :
+              focusedSection === 'users' ? "User" : "Name"
+        }
+        readinessColumnHeader={
+          focusedSection === 'map' ? "Solution Readiness" :
+            focusedSection === 'waypoints' ? "Completion Level" :
+              focusedSection === 'users' ? "Status" : "Readiness Level"
+        }
         nodes={nodes}
       />
 

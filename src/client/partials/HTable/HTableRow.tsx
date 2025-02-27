@@ -26,6 +26,7 @@ interface TreeNodeProps {
   displayOrder: string[]
   indexInParentMap: Record<string, number>
   isDraftSubtree?: boolean
+  isFocused?: boolean
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -48,6 +49,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   displayOrder,
   indexInParentMap,
   isDraftSubtree = false,
+  isFocused = true,
 }) => {
   const node = nodes[nodeId]
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !treeNodesApi.isParentOf(nodeId, draggedNode.id)
@@ -63,6 +65,12 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [justCreated, setJustCreated] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const rowRef = useRef<HTMLTableRowElement>(null)
+
+  // Add styles for unfocused selected rows
+  const unfocusedSelectedStyle = {
+    backgroundColor: 'rgba(var(--selected-color-rgb, 0, 120, 255), 0.15)',
+    color: 'var(--text-secondary)',
+  }
 
   useEffect(() => {
     if (isEditing) {
@@ -212,6 +220,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
   // Add this effect for keyboard handling
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Only handle keyboard events if this section is focused
+      if (!isFocused) return
       if (!isSelected) return
       if (isEditing) return  // Add this line to prevent handling keys while editing
 
@@ -370,8 +380,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    // Only add event listeners if this section is focused
+    if (isFocused) {
+      window.addEventListener('keydown', handleKeyDown)
+      return () => window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [
     isSelected,
     isEditing,
@@ -385,7 +398,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
     treeNodesApi,
     nodes,
     indexInParentMap,
-    isRoot
+    isRoot,
+    isFocused // Add isFocused to dependencies
   ])
 
   return (
@@ -393,7 +407,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       ref={rowRef}
       style={{
         ...styles.row,
-        ...(isSelected ? styles.selectedRow : {}),
+        ...(isSelected ? (isFocused ? styles.selectedRow : unfocusedSelectedStyle) : {}),
         ...(isDragTarget ? styles.dragTargetRow : {}),
       }}
       onClick={handleRowClick}

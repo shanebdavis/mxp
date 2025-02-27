@@ -18,6 +18,7 @@ interface HTableProps {
   nameColumnHeader?: string
   readinessColumnHeader?: string
   nodeType?: NodeType
+  isFocused?: boolean
 }
 
 const getDisplayOrder = (
@@ -63,7 +64,8 @@ export const HTable: FC<HTableProps> = ({
   indexInParentMap,
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
-  nodeType // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
+  nodeType, // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
+  isFocused = true // Default to true for backward compatibility
 }) => {
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
@@ -217,6 +219,7 @@ export const HTable: FC<HTableProps> = ({
                   displayOrder: displayOrder.map(x => x.nodeId),
                   indexInParentMap,
                   isDraftSubtree,
+                  isFocused,
                 }}
               />
             )
