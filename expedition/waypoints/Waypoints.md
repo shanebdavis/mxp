@@ -5,9 +5,10 @@ filename: Waypoints.md
 parentId: null
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 2
 nodeState: active
 type: waypoint
-setMetrics: {}
+setMetrics:
+  readinessLevel: 2
 ---
 What is the next deliverable? What does it require? When do you need it?

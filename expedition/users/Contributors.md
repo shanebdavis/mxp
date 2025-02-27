@@ -6,9 +6,10 @@ parentId: null
 childrenIds:
   - c1918c64-ce63-4fd1-99d8-6d54f0e2e616
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 4
 nodeState: active
 type: user
-setMetrics: {}
+setMetrics:
+  readinessLevel: 4
 ---
 Who is contributing to this expedition?

@@ -228,6 +228,8 @@ const App = () => {
 
   // Toggle a view on/off
   const toggleView = (view: keyof ActiveViews) => {
+    const isFocusedSection = view === focusedSection;
+
     setActiveViews(prev => {
       // Calculate what the new state would be
       const newState = {
@@ -240,6 +242,9 @@ const App = () => {
 
       // If all would be off, turn on dashboard instead
       if (allOff) {
+        // We'll turn on dashboard, so set it as focused too
+        setTimeout(() => setFocusedSection('dashboard'), 0);
+
         return {
           ...prev,
           dashboard: true,
@@ -247,9 +252,62 @@ const App = () => {
         }
       }
 
-      // Otherwise return the new state as planned
-      return newState
-    })
+      // If we're hiding the currently focused section, focus another section
+      if (isFocusedSection && !newState[view]) {
+        // Calculate the current active sections in display order
+        const currentActiveSections = (Object.entries(prev) as [SectionName, boolean][])
+          .filter(([_, isActive]) => isActive)
+          .map(([name]) => name);
+
+        // Get the updated active sections (after hiding the current one)
+        const updatedActiveSections = (Object.entries(newState) as [SectionName, boolean][])
+          .filter(([_, isActive]) => isActive)
+          .map(([name]) => name);
+
+        // Find the index of the section being hidden
+        const currentSectionIndex = currentActiveSections.indexOf(view);
+
+        // Select the next section in order, or the previous if there is no next
+        setTimeout(() => {
+          // If the section being hidden is not found or it's the only section, use dashboard as fallback
+          if (currentSectionIndex === -1 || updatedActiveSections.length === 0) {
+            setFocusedSection('dashboard');
+            return;
+          }
+
+          // Try to focus the next section in display order
+          if (currentSectionIndex < currentActiveSections.length - 1) {
+            // There is a next section
+            const nextSection = currentActiveSections[currentSectionIndex + 1];
+            // Check if it's still active in the new state
+            if (newState[nextSection]) {
+              setFocusedSection(nextSection);
+              return;
+            }
+          }
+
+          // Try to focus the previous section if there's no next or next is hidden
+          if (currentSectionIndex > 0) {
+            const prevSection = currentActiveSections[currentSectionIndex - 1];
+            if (newState[prevSection]) {
+              setFocusedSection(prevSection);
+              return;
+            }
+          }
+
+          // If neither next nor previous worked, use the first active section
+          if (updatedActiveSections.length > 0) {
+            setFocusedSection(updatedActiveSections[0]);
+          } else {
+            // Fallback to dashboard (should never happen due to allOff check)
+            setFocusedSection('dashboard');
+          }
+        }, 0);
+      }
+
+      // Return the new state
+      return newState;
+    });
   }
 
   const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useState(() => {
@@ -571,6 +629,43 @@ const App = () => {
       : 'var(--background-secondary)',
   })
 
+  // Add section keyboard shortcut handler after the useEffect for section resizing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only respond to Command/Ctrl + number key combinations
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
+        let sectionName: SectionName | null = null;
+
+        // Map number keys to sections
+        switch (e.key) {
+          case '1': sectionName = 'dashboard'; break;
+          case '2': sectionName = 'map'; break;
+          case '3': sectionName = 'waypoints'; break;
+          case '4': sectionName = 'users'; break;
+          default: return; // Not a shortcut we handle
+        }
+
+        e.preventDefault(); // Prevent browser's default behavior
+
+        // Handle the section toggle logic
+        if (!activeViews[sectionName]) {
+          // Section not shown: show and focus it
+          setActiveViews(prev => ({ ...prev, [sectionName]: true }));
+          setFocusedSection(sectionName);
+        } else if (focusedSection !== sectionName) {
+          // Section shown but not focused: focus it
+          setFocusedSection(sectionName);
+        } else {
+          // Section is shown and focused: hide it
+          toggleView(sectionName);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeViews, focusedSection, toggleView]); // Dependencies
+
   // Add loading and error states
   if (loading) {
     return <div style={{ padding: 20 }}>Loading...</div>
@@ -583,7 +678,7 @@ const App = () => {
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Expedition Map</h1>
+        <h1 style={styles.title}>Mxp: The Expedition Method</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <div style={{ display: 'flex', gap: 4 }}>
             <Tooltip title="Add Child">

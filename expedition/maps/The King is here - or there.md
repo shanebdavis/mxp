@@ -15,6 +15,7 @@ calculatedMetrics:
   readinessLevel: 3
 nodeState: active
 type: map
+setMetrics: {}
 ---
 # Why?
 
