@@ -218,6 +218,9 @@ export const DetailsPanel = ({
     },
   }
 
+  // Determine if we should show the readiness section based on node type
+  const showReadinessSection = selectedNode && selectedNode.type === 'map';
+
   return (
     <aside style={{
       ...styles.rightPanel,
@@ -262,18 +265,20 @@ export const DetailsPanel = ({
                 <div className="field-label">{nameColumnHeader}</div>
                 <h3 style={{ margin: 0 }}>{selectedNode.title}</h3>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', margin: '8px 0' }}>
-                <div className="field-label">{readinessColumnHeader}</div>
-                <EditableRlPill
-                  readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
-                  auto={selectedNode.setMetrics?.readinessLevel == null}
-                  onChange={async level => {
-                    await treeNodesApi.updateNode(selectedNode.id, {
-                      setMetrics: { readinessLevel: level ?? null }
-                    })
-                  }}
-                />
-              </div>
+              {showReadinessSection && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', margin: '8px 0' }}>
+                  <div className="field-label">{readinessColumnHeader}</div>
+                  <EditableRlPill
+                    readinessLevel={selectedNode.calculatedMetrics.readinessLevel}
+                    auto={selectedNode.setMetrics?.readinessLevel == null}
+                    onChange={async level => {
+                      await treeNodesApi.updateNode(selectedNode.id, {
+                        setMetrics: { readinessLevel: level ?? null }
+                      })
+                    }}
+                  />
+                </div>
+              )}
               {selectedNode.childrenIds.length > 0 && (
                 <SolutionItems
                   node={selectedNode}
