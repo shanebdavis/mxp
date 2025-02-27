@@ -472,6 +472,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 className="toggle-button"
                 onClick={handleToggleClick}
                 style={styles.toggleButton}
+                tabIndex={-1}
               >
                 {expanded ? <ArrowDropDown /> : <ArrowRight />}
               </button>

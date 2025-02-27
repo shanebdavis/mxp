@@ -761,6 +761,18 @@ const App = () => {
               flex: getSectionFlex('map')
             }}
             onClick={() => setFocusedSection('map')}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setFocusedSection('map');
+                e.preventDefault();
+              }
+            }}
+            onFocus={() => {
+              // When tabbed to, focus this section just like when clicked
+              setFocusedSection('map');
+            }}
+            aria-label="Map section"
           >
             <div style={getSectionHeaderStyle('map')}>
               <MapIcon sx={styles.sectionHeaderIcon} />
@@ -826,6 +838,18 @@ const App = () => {
               flex: getSectionFlex('waypoints')
             }}
             onClick={() => setFocusedSection('waypoints')}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setFocusedSection('waypoints');
+                e.preventDefault();
+              }
+            }}
+            onFocus={() => {
+              // When tabbed to, focus this section just like when clicked
+              setFocusedSection('waypoints');
+            }}
+            aria-label="Waypoints section"
           >
             <div style={getSectionHeaderStyle('waypoints')}>
               <LocationOn sx={styles.sectionHeaderIcon} />
@@ -891,6 +915,18 @@ const App = () => {
               flex: getSectionFlex('users')
             }}
             onClick={() => setFocusedSection('users')}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setFocusedSection('users');
+                e.preventDefault();
+              }
+            }}
+            onFocus={() => {
+              // When tabbed to, focus this section just like when clicked
+              setFocusedSection('users');
+            }}
+            aria-label="Contributors section"
           >
             <div style={getSectionHeaderStyle('users')}>
               <People sx={styles.sectionHeaderIcon} />

@@ -48,6 +48,17 @@ body {
   color: var(--text-primary);
 }
 
+/* Add keyboard focus styles for section containers */
+[data-section-type]:focus {
+  outline: 2px solid var(--selected-color);
+  outline-offset: -2px;
+}
+
+/* Focus without outline on mouse clicks */
+[data-section-type]:focus:not(:focus-visible) {
+  outline: none;
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
