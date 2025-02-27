@@ -95,7 +95,7 @@ const styles = {
     flexDirection: 'column',
   },
   sectionHeader: {
-    padding: '6px 12px',
+    padding: '6px 0 6px 12px',
     background: 'var(--background-secondary)',
     fontWeight: 600,
     fontSize: '13px',
@@ -140,6 +140,24 @@ const styles = {
   },
   dragHandleActive: {
     background: 'rgba(0, 0, 0, 0.1)',
+  },
+  closeButton: {
+    marginLeft: 'auto',
+    cursor: 'pointer',
+    opacity: 0.5,
+    transition: 'opacity 0.2s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 20,
+    height: '100%',
+    width: '30px',
+    fontSize: '16px',
+  },
+  closeButtonHover: {
+    opacity: 0.8,
+    background: 'rgba(0, 0, 0, 0.05)',
   },
 } as const
 
@@ -453,6 +471,9 @@ const App = () => {
   // Add state for hover detection
   const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
 
+  // Add state for close button hover
+  const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
+
   // Add loading and error states
   if (loading) {
     return <div style={{ padding: 20 }}>Loading...</div>
@@ -610,6 +631,21 @@ const App = () => {
             <div style={styles.sectionHeader}>
               <Dashboard sx={styles.sectionHeaderIcon} />
               Dashboard
+              <div
+                style={{
+                  ...styles.closeButton,
+                  ...(hoverCloseButton === 'dashboard' ? styles.closeButtonHover : {})
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleView('dashboard');
+                }}
+                onMouseEnter={() => setHoverCloseButton('dashboard')}
+                onMouseLeave={() => setHoverCloseButton(null)}
+                title="Close section"
+              >
+                ✕
+              </div>
             </div>
             <div style={styles.sectionContent}>
               <div style={{ padding: '12px' }}>
@@ -648,6 +684,21 @@ const App = () => {
                   }} />
                 </div>
               )}
+              <div
+                style={{
+                  ...styles.closeButton,
+                  ...(hoverCloseButton === 'map' ? styles.closeButtonHover : {})
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleView('map');
+                }}
+                onMouseEnter={() => setHoverCloseButton('map')}
+                onMouseLeave={() => setHoverCloseButton(null)}
+                title="Close section"
+              >
+                ✕
+              </div>
             </div>
             <div style={styles.sectionContent}>
               {rootNodeId ? (
@@ -701,6 +752,21 @@ const App = () => {
                   }} />
                 </div>
               )}
+              <div
+                style={{
+                  ...styles.closeButton,
+                  ...(hoverCloseButton === 'waypoints' ? styles.closeButtonHover : {})
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleView('waypoints');
+                }}
+                onMouseEnter={() => setHoverCloseButton('waypoints')}
+                onMouseLeave={() => setHoverCloseButton(null)}
+                title="Close section"
+              >
+                ✕
+              </div>
             </div>
             <div style={styles.sectionContent}>
               <div style={{ padding: '12px' }}>
@@ -739,6 +805,21 @@ const App = () => {
                   }} />
                 </div>
               )}
+              <div
+                style={{
+                  ...styles.closeButton,
+                  ...(hoverCloseButton === 'users' ? styles.closeButtonHover : {})
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleView('users');
+                }}
+                onMouseEnter={() => setHoverCloseButton('users')}
+                onMouseLeave={() => setHoverCloseButton(null)}
+                title="Close section"
+              >
+                ✕
+              </div>
             </div>
             <div style={styles.sectionContent}>
               <div style={{ padding: '12px' }}>
