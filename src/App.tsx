@@ -37,7 +37,7 @@ const styles = {
   header: {
     gridArea: 'header',
     borderBottom: '1px solid var(--border-color)',
-    padding: '8px 16px',
+    padding: '8px 8px',
     display: 'flex',
     alignItems: 'center',
     background: 'var(--background-primary)',
@@ -61,7 +61,7 @@ const styles = {
   },
   nav: {
     gridArea: 'nav',
-    width: '60px',
+    width: '40px',
     background: 'var(--background-secondary)',
     borderRight: '1px solid var(--border-color)',
     display: 'flex',
@@ -73,10 +73,11 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    width: '40px',
-    height: '40px',
-    borderRadius: '8px',
-    margin: '8px 0',
+    width: '30px',
+    height: '30px',
+    borderRadius: '6px',
+    margin: '4px 0',
+    padding: 0,
     background: 'none',
     border: 'none',
     color: 'var(--text-secondary)',
@@ -818,7 +819,7 @@ const App = () => {
         <img
           src="/expedition-logo-256-alpha.png"
           alt="Expedition Logo"
-          style={{ height: '24px', marginRight: '12px' }}
+          style={{ height: '24px', marginRight: '16px' }}
         />
         <h1 style={styles.title}>MXP: Method Expedition</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>

@@ -194,6 +194,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
+    e.stopPropagation();
     console.log(`Input keydown: ${e.key}, meta: ${e.metaKey}, shift: ${e.shiftKey}`);
 
     switch (e.key) {
@@ -276,9 +277,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
       }
 
       case 'Escape': {
-        e.preventDefault()
-        setEditValue(node.title)
-        setIsEditing(false)
+        e.preventDefault();
+        setEditValue(node.title);
+        setIsEditing(false);
         // If this was a new node (empty title), remove it on cancel
         if (!node.title && !isRoot) {
           await treeNodesApi.removeNode(nodeId)
@@ -286,7 +287,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             localSelectNode(node.parentId)
           }
         }
-        break
+        break;
       }
 
       default:
