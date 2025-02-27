@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { HTable, DetailsPanel, CommentsPanel, Dashboard } from './client/partials'
+import { HTable, DetailsPanel, CommentsPanel, Dashboard, StatusBar } from './client/partials'
 import {
   Add,
   ArrowRight,
@@ -10,9 +10,11 @@ import {
   LocationOn,
   People,
   DragHandle,
-  Explore
+  Explore,
+  VisibilityOutlined,
+  VisibilityOffOutlined
 } from '@mui/icons-material'
-import { Tooltip } from '@mui/material'
+import { Tooltip, Switch, FormControlLabel } from '@mui/material'
 import type { TreeNode, TreeNodeSet, NodeType } from './TreeNode'
 import { useApiForState } from './useApiForState'
 
@@ -65,7 +67,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '16px 0',
+    padding: '4px 0',
   },
   navButton: {
     display: 'flex',
@@ -86,7 +88,7 @@ const styles = {
     color: 'var(--text-primary)',
   },
   section: {
-    border: 'none',
+    borderTop: '1px solid var(--border-color)',
     borderRadius: '0',
     overflow: 'hidden',
     background: 'var(--background-primary)',
@@ -143,7 +145,6 @@ const styles = {
     background: 'rgba(0, 0, 0, 0.1)',
   },
   closeButton: {
-    marginLeft: 'auto',
     cursor: 'pointer',
     opacity: 0.5,
     transition: 'opacity 0.2s',
@@ -222,10 +223,30 @@ const App = () => {
     }
   })
 
+  // State for "show draft" toggles
+  const [showDraftMap, setShowDraftMap] = useState(() => {
+    const savedValue = localStorage.getItem('showDraftMap')
+    return savedValue === null ? true : savedValue === 'true'
+  })
+
+  const [showDraftWaypoints, setShowDraftWaypoints] = useState(() => {
+    const savedValue = localStorage.getItem('showDraftWaypoints')
+    return savedValue === null ? true : savedValue === 'true'
+  })
+
   // Save active views to localStorage
   useEffect(() => {
     localStorage.setItem('activeViews', JSON.stringify(activeViews))
   }, [activeViews])
+
+  // Save toggle states to localStorage
+  useEffect(() => {
+    localStorage.setItem('showDraftMap', showDraftMap.toString())
+  }, [showDraftMap])
+
+  useEffect(() => {
+    localStorage.setItem('showDraftWaypoints', showDraftWaypoints.toString())
+  }, [showDraftWaypoints])
 
   // Toggle a view on/off
   const toggleView = (view: keyof ActiveViews) => {
@@ -799,7 +820,7 @@ const App = () => {
           alt="Expedition Logo"
           style={{ height: '24px', marginRight: '12px' }}
         />
-        <h1 style={styles.title}>Mxp: The Expedition Method</h1>
+        <h1 style={styles.title}>MXP: Method Expedition</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <div style={{ display: 'flex', gap: 4 }}>
             <Tooltip title="Add Child">
@@ -1000,7 +1021,8 @@ const App = () => {
           >
             <div style={getSectionHeaderStyle('map')}>
               <MapIcon sx={styles.sectionHeaderIcon} />
-              Map
+              Problem / Solution Map
+
               {/* Add drag handle if not the first section */}
               {activeSections.indexOf('map') > 0 && (
                 <div
@@ -1019,6 +1041,45 @@ const App = () => {
                   }} />
                 </div>
               )}
+
+
+              {/* Add toggle for show/hide drafts */}
+              <Tooltip title={showDraftMap ? "Hide draft problems" : "Show draft problems"}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showDraftMap}
+                      onChange={(e) => {
+                        e.stopPropagation(); // Prevent event from reaching drag handlers
+                        setShowDraftMap(e.target.checked);
+                      }}
+                    />
+                  }
+                  label={
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      {showDraftMap ?
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
+                        </span> :
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <VisibilityOffOutlined sx={{ fontSize: 14 }} /> Drafts
+                        </span>
+                      }
+                    </span>
+                  }
+                  style={{
+                    margin: 0,
+                    marginLeft: 'auto', // Push to right
+                    marginRight: '0px', // No space before close button
+                    position: 'relative',
+                    zIndex: 25, // Higher than both drag handle and close button
+                  }}
+                  onClick={(e) => e.stopPropagation()} // Prevent triggering parent click events
+                  onMouseDown={(e) => e.stopPropagation()} // Also prevent drag handle activation
+                />
+              </Tooltip>
+
               <div
                 style={{
                   ...styles.closeButton,
@@ -1051,6 +1112,7 @@ const App = () => {
                 isFocused={focusedSection === 'map'}
                 expandedNodes={expandedMapNodes}
                 setExpandedNodes={setExpandedMapNodes}
+                showDraft={showDraftMap}
               />
             </div>
           </div>
@@ -1079,7 +1141,45 @@ const App = () => {
           >
             <div style={getSectionHeaderStyle('waypoints')}>
               <LocationOn sx={styles.sectionHeaderIcon} />
-              Waypoints
+              Waypoints (Deliverables & Milestones)
+
+              {/* Add toggle for show/hide drafts */}
+              <Tooltip title={showDraftWaypoints ? "Hide draft waypoints" : "Show draft waypoints"}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      checked={showDraftWaypoints}
+                      onChange={(e) => {
+                        e.stopPropagation(); // Prevent event from reaching drag handlers
+                        setShowDraftWaypoints(e.target.checked);
+                      }}
+                    />
+                  }
+                  label={
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      {showDraftWaypoints ?
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
+                        </span> :
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <VisibilityOffOutlined sx={{ fontSize: 14 }} /> Drafts
+                        </span>
+                      }
+                    </span>
+                  }
+                  style={{
+                    margin: 0,
+                    marginLeft: 'auto', // Push to right
+                    marginRight: '0px', // No space before close button
+                    position: 'relative',
+                    zIndex: 25, // Higher than both drag handle and close button
+                  }}
+                  onClick={(e) => e.stopPropagation()} // Prevent triggering parent click events
+                  onMouseDown={(e) => e.stopPropagation()} // Also prevent drag handle activation
+                />
+              </Tooltip>
+
               {/* Add drag handle if not the first section */}
               {activeSections.indexOf('waypoints') > 0 && (
                 <div
@@ -1130,6 +1230,7 @@ const App = () => {
                 isFocused={focusedSection === 'waypoints'}
                 expandedNodes={expandedWaypointNodes}
                 setExpandedNodes={setExpandedWaypointNodes}
+                showDraft={showDraftWaypoints}
               />
             </div>
           </div>
@@ -1242,6 +1343,9 @@ const App = () => {
         isFooterCollapsed={isFooterCollapsed}
         setFooterCollapsed={setFooterCollapsed}
       />
+
+      {/* Status Bar */}
+      <StatusBar nodes={nodes} />
     </div>
   )
 }

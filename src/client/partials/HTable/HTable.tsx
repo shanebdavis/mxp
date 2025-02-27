@@ -22,16 +22,75 @@ interface HTableProps {
   isFocused?: boolean
   expandedNodes?: Record<string, boolean>
   setExpandedNodes?: (newState: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
+  showDraft?: boolean
 }
 
 const getDisplayOrder = (
   nodes: TreeNodeSet,
   rootNodeId: string,
-  expandedNodes: Record<string, boolean>
+  expandedNodes: Record<string, boolean>,
+  showDraft: boolean = true
 ): { nodeId: string, level: number, itemNumber: number }[] => {
   const displayOrder: { nodeId: string, level: number, itemNumber: number }[] = []
   let itemNumbers: Record<string, number> = {}
 
+  // If showDraft is false, we need to filter out draft nodes and their children
+  if (!showDraft) {
+    // First pass: identify all draft nodes
+    const draftParents = new Set<string>()
+
+    // First pass: identify direct draft nodes
+    Object.values(nodes).forEach(node => {
+      if (node.nodeState === "draft") {
+        draftParents.add(node.id)
+      }
+    })
+
+    // Second pass: identify children of draft nodes
+    let hasNewDraftParents = true
+    while (hasNewDraftParents) {
+      hasNewDraftParents = false
+      Object.values(nodes).forEach(node => {
+        if (node.parentId && draftParents.has(node.parentId) && !draftParents.has(node.id)) {
+          draftParents.add(node.id)
+          hasNewDraftParents = true
+        }
+      })
+    }
+
+    // Now filter the nodes to only include non-draft nodes
+    const allNodes = Object.values(nodes).filter(node => !draftParents.has(node.id))
+    const filteredNodes: TreeNodeSet = {}
+    allNodes.forEach(node => {
+      filteredNodes[node.id] = node
+    })
+
+    // Process only non-draft nodes
+    const processNode = (nodeId: string, level: number): void => {
+      const node = filteredNodes[nodeId]
+      if (!node) return
+
+      displayOrder.push({
+        nodeId,
+        level,
+        itemNumber: itemNumbers[nodeId] || 0
+      })
+
+      if (expandedNodes[nodeId] && node.childrenIds.length > 0) {
+        node.childrenIds
+          .filter(childId => filteredNodes[childId]) // Only include children that aren't drafts
+          .forEach((childId, index) => {
+            itemNumbers[childId] = index + 1
+            processNode(childId, level + 1)
+          })
+      }
+    }
+
+    processNode(rootNodeId, 0)
+    return displayOrder
+  }
+
+  // Original code for showing drafts
   const processNode = (nodeId: string, level: number): void => {
     const node = nodes[nodeId]
     if (!node) return
@@ -50,9 +109,7 @@ const getDisplayOrder = (
     }
   }
 
-  itemNumbers[rootNodeId] = 1
   processNode(rootNodeId, 0)
-
   return displayOrder
 }
 
@@ -71,7 +128,8 @@ export const HTable: FC<HTableProps> = ({
   nodeType, // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
   isFocused = true, // Default to true for backward compatibility
   expandedNodes: externalExpandedNodes,
-  setExpandedNodes: externalSetExpandedNodes
+  setExpandedNodes: externalSetExpandedNodes,
+  showDraft = true // Default to showing drafts
 }) => {
   // Use internal state if external state is not provided
   const [internalExpandedNodes, setInternalExpandedNodes] = useState<Record<string, boolean>>({})
@@ -94,10 +152,13 @@ export const HTable: FC<HTableProps> = ({
     setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  const displayOrder = useMemo(() =>
-    getDisplayOrder(nodes, rootNodeId, expandedNodes),
-    [nodes, rootNodeId, expandedNodes]
-  )
+  // Get the display order and filter out draft nodes if showDraft is false
+  const displayOrder = useMemo(() => getDisplayOrder(nodes, rootNodeId, expandedNodes, showDraft), [
+    nodes,
+    rootNodeId,
+    expandedNodes,
+    showDraft
+  ])
 
   const handleDragOver = (nodeId: string, indexInParent: number, level: number) => (e: React.DragEvent) => {
     e.preventDefault()
