@@ -65,10 +65,19 @@ const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> => {
 
 const App = () => {
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(false)
-  const [isFooterCollapsed, setFooterCollapsed] = useState(false)
+  const [isFooterCollapsed, setFooterCollapsed] = useState(() => {
+    // Try to get saved state from localStorage, default to true (closed) if not found
+    const savedState = localStorage.getItem('commentsPanel.collapsed')
+    return savedState !== null ? savedState === 'true' : true
+  })
   const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
+
+  // Save footer collapse state to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('commentsPanel.collapsed', String(isFooterCollapsed))
+  }, [isFooterCollapsed])
 
   const { nodes, rootNodeId, treeStateMethods, loading, error } = useApiForState()
   const [selectedNodeId, selectNodeById] = useState<string | undefined>(rootNodeId)
