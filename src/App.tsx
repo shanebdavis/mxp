@@ -228,10 +228,28 @@ const App = () => {
 
   // Toggle a view on/off
   const toggleView = (view: keyof ActiveViews) => {
-    setActiveViews(prev => ({
-      ...prev,
-      [view]: !prev[view]
-    }))
+    setActiveViews(prev => {
+      // Calculate what the new state would be
+      const newState = {
+        ...prev,
+        [view]: !prev[view]
+      }
+
+      // Check if all sections would be turned off
+      const allOff = Object.values(newState).every(isActive => !isActive)
+
+      // If all would be off, turn on dashboard instead
+      if (allOff) {
+        return {
+          ...prev,
+          dashboard: true,
+          [view]: false // Only turn off if it's not dashboard
+        }
+      }
+
+      // Otherwise return the new state as planned
+      return newState
+    })
   }
 
   const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useState(() => {
