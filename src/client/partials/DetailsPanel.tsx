@@ -62,7 +62,7 @@ const styles = {
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column' as const,
-    overflow: 'hidden',
+    overflow: 'auto',
     color: 'var(--text-primary)',
   },
   description: {
@@ -77,11 +77,11 @@ const styles = {
     flexDirection: 'column' as const,
     flex: 1,
     minHeight: 0,
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   descriptionPreview: {
     flex: 1,
-    overflow: 'auto',
+    overflow: 'visible',
     padding: 0,
     fontSize: '13px',
   },
