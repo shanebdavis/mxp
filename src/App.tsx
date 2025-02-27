@@ -296,18 +296,36 @@ const App = () => {
   // Track selected node ID for each type
   const [selectedNodeIds, setSelectedNodeIds] = useState<Record<string, string | undefined>>({})
 
-  // Get the selected node for the specified type
-  const getSelectedNode = (type: NodeType) => {
+  // Map of node types to section names
+  const nodeTypeToSectionMap: Record<NodeType, SectionName> = {
+    map: 'map',
+    waypoint: 'waypoints',
+    user: 'users'
+  }
+
+  // Get the current selected node
+  const getSelectedNode = (type: NodeType): TreeNode | null => {
     const selectedId = selectedNodeIds[type]
     return selectedId ? nodes[selectedId] : null
   }
 
-  // Select a node by ID for a specific type
-  const selectNodeById = (nodeId: string, type: NodeType) => {
+  // Select a node and change focus to that section
+  const selectNodeAndFocus = (nodeId: string, type: NodeType) => {
     setSelectedNodeIds(prev => ({
       ...prev,
       [type]: nodeId
     }))
+    // When selecting a node, also focus that section
+    setFocusedSection(nodeTypeToSectionMap[type])
+  }
+
+  // Select a node without changing focus (for keyboard navigation)
+  const selectNodeWithoutFocus = (nodeId: string, type: NodeType) => {
+    setSelectedNodeIds(prev => ({
+      ...prev,
+      [type]: nodeId
+    }))
+    // Don't change the focused section
   }
 
   // Update selectedNodeIds when rootNodesByType changes
@@ -335,16 +353,6 @@ const App = () => {
     if (activeViews.users) return 'users'
     return 'map' // Default to map as fallback
   })
-
-  // Update selectedNodeIds with a function that also changes focus
-  const selectNodeAndFocus = (nodeId: string, type: NodeType) => {
-    setSelectedNodeIds(prev => ({
-      ...prev,
-      [type]: nodeId
-    }))
-    // When selecting a node, also focus that section
-    setFocusedSection(type as SectionName)
-  }
 
   // Add a mapping between section names and node types
   const sectionToNodeType = {
@@ -797,6 +805,7 @@ const App = () => {
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
                 selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'map')}
+                selectNodeWithoutFocus={(nodeId) => selectNodeWithoutFocus(nodeId, 'map')}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -861,6 +870,7 @@ const App = () => {
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
                 selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'waypoint')}
+                selectNodeWithoutFocus={(nodeId) => selectNodeWithoutFocus(nodeId, 'waypoint')}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -925,6 +935,7 @@ const App = () => {
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
                 selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'user')}
+                selectNodeWithoutFocus={(nodeId) => selectNodeWithoutFocus(nodeId, 'user')}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}

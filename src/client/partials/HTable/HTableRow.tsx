@@ -14,6 +14,7 @@ interface TreeNodeProps {
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
   selectNodeById: (nodeId: string) => void
+  selectNodeWithoutFocus?: (nodeId: string) => void
   selectedNode: TreeNode | null
   treeNodesApi: TreeStateMethods
   draggedNode: TreeNode | null
@@ -37,6 +38,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   expandedNodes,
   toggleNode,
   selectNodeById,
+  selectNodeWithoutFocus,
   selectedNode,
   treeNodesApi,
   draggedNode,
@@ -78,6 +80,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
     color: 'var(--text-secondary)',
   }
 
+  // Local selection function for keyboard navigation that doesn't change focus
+  const localSelectNode = (id: string) => {
+    if (isFocused) {
+      if (selectNodeWithoutFocus) {
+        // Use the selectNodeWithoutFocus prop if available
+        selectNodeWithoutFocus(id);
+      } else {
+        // Fall back to the original behavior
+        selectNodeById(id);
+      }
+    }
+  }
+
   useEffect(() => {
     if (isEditing) {
       setEditValue(node.title)  // Reset to current title when starting edit
@@ -112,6 +127,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
     // Otherwise just select the row (don't start editing)
     else {
+      // For mouse clicks, use selectNodeById which will change focus to this section
       selectNodeById(nodeId);
     }
   }
@@ -203,7 +219,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           title: '',
           setMetrics: { readinessLevel: 0 },
         }, node.parentId)
-        selectNodeById(newNodeId)
+        // Use local select to avoid changing focus
+        localSelectNode(newNodeId)
         setEditingNodeId(newNodeId)
       } else if ((e.metaKey || e.ctrlKey)) {  // Command/Ctrl + Enter - add child
         // If this is the first child, clear parent's setMetrics
@@ -217,7 +234,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
         if (!expandedNodes[nodeId]) {
           toggleNode(nodeId)
         }
-        selectNodeById(newNodeId)
+        // Use local select to avoid changing focus
+        localSelectNode(newNodeId)
         setEditingNodeId(newNodeId)
       } else {  // Normal Enter - just save and exit editing
         setIsEditing(false)
@@ -230,7 +248,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
         const nextSelectedId = displayOrder[currentIndex - 1]
         await treeNodesApi.removeNode(nodeId)
         if (nextSelectedId) {
-          selectNodeById(nextSelectedId)
+          // Use local select to avoid changing focus
+          localSelectNode(nextSelectedId)
         }
       } else {
         setEditValue(node.title)  // Restore original title
@@ -242,10 +261,12 @@ export const HTableRow: FC<TreeNodeProps> = ({
   // Add this effect for keyboard handling
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // Only handle keyboard events if this section is focused
-      if (!isFocused) return
-      if (!isSelected) return
-      if (isEditing) return  // Add this line to prevent handling keys while editing
+      // Only handle keyboard events if:
+      // 1. This section is focused
+      // 2. This row is selected
+      // 3. We're not already editing
+      // 4. No event has been handled yet
+      if (!isFocused || !isSelected || isEditing || e.defaultPrevented) return
 
       switch (e.key) {
         case '0':
@@ -285,7 +306,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             if (!expandedNodes[nodeId]) {
               toggleNode(nodeId)
             }
-            selectNodeById(newNodeId)
+            localSelectNode(newNodeId)
             setEditingNodeId(newNodeId)
           } else if (node.parentId) {  // Regular Enter - add sibling (if not root)
             const newNodeId = await treeNodesApi.addNode({
@@ -293,7 +314,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               setMetrics: { readinessLevel: 0 },
             }, node.parentId)
 
-            selectNodeById(newNodeId)
+            localSelectNode(newNodeId)
             setEditingNodeId(newNodeId)
           }
           break
@@ -321,7 +342,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           } else {
             const prevIndex = displayOrder.indexOf(nodeId) - 1
             if (prevIndex >= 0) {
-              selectNodeById(displayOrder[prevIndex])
+              localSelectNode(displayOrder[prevIndex])
             }
           }
           break
@@ -344,7 +365,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           } else {
             const nextIndex = displayOrder.indexOf(nodeId) + 1
             if (nextIndex < displayOrder.length) {
-              selectNodeById(displayOrder[nextIndex])
+              localSelectNode(displayOrder[nextIndex])
             }
           }
           break
@@ -362,7 +383,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           } else if (expanded) {
             toggleNode(nodeId)
           } else if (node.parentId) {
-            selectNodeById(node.parentId)
+            localSelectNode(node.parentId)
           }
           break
 
@@ -383,7 +404,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           } else if (!expanded && node.childrenIds.length > 0) {
             toggleNode(nodeId)
           } else if (node.childrenIds.length > 0) {
-            selectNodeById(node.childrenIds[0])
+            localSelectNode(node.childrenIds[0])
           }
           break
 
@@ -395,18 +416,20 @@ export const HTableRow: FC<TreeNodeProps> = ({
             const nextSelectedId = displayOrder[currentIndex - 1]
             await treeNodesApi.removeNode(nodeId)
             if (nextSelectedId) {
-              selectNodeById(nextSelectedId)
+              localSelectNode(nextSelectedId)
             }
           }
           break
       }
     }
 
-    // Only add event listeners if this section is focused
-    if (isFocused) {
+    // Only attach the event listener if this section is focused and this row is selected
+    if (isFocused && isSelected) {
       window.addEventListener('keydown', handleKeyDown)
       return () => window.removeEventListener('keydown', handleKeyDown)
     }
+
+    return undefined
   }, [
     isSelected,
     isEditing,
@@ -421,7 +444,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
     nodes,
     indexInParentMap,
     isRoot,
-    isFocused // Add isFocused to dependencies
+    isFocused,
+    localSelectNode
   ])
 
   return (
