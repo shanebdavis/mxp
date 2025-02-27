@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { HTable, DetailsPanel, CommentsPanel } from './client/partials'
+import { HTable, DetailsPanel, CommentsPanel, Dashboard } from './client/partials'
 import {
   Add,
   ArrowRight,
   ArrowDropDown,
   Delete,
-  Dashboard,
+  Dashboard as DashboardIcon,
   Map as MapIcon,
   LocationOn,
   People,
@@ -199,35 +199,6 @@ interface SectionWeights {
   users: number;
 }
 
-// Add a new function to find priority nodes
-const findPriorityNodes = (nodes: TreeNodeSet, rootNodeId: string): TreeNode[] => {
-  const result: TreeNode[] = []
-
-  const traverse = (nodeId: string) => {
-    const node = nodes[nodeId]
-
-    // Skip draft nodes
-    if (node.nodeState === 'draft') return
-
-    // Include nodes with explicitly set readiness level
-    if (node.setMetrics?.readinessLevel !== undefined) {
-      result.push(node)
-      return // Stop recursion at this node
-    }
-
-    // Continue recursion for other nodes (without including them)
-    node.childrenIds.forEach(childId => traverse(childId))
-  }
-
-  // Start traversal from the root map node
-  traverse(rootNodeId)
-
-  // Sort by readiness level (1, 2, 3, etc.)
-  return result.sort((a, b) =>
-    (a.calculatedMetrics.readinessLevel || 0) - (b.calculatedMetrics.readinessLevel || 0)
-  )
-}
-
 const App = () => {
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
     const savedState = localStorage.getItem('detailsPanel.collapsed')
@@ -397,22 +368,73 @@ const App = () => {
     return selectedId ? nodes[selectedId] : null
   }
 
-  // Select a node and change focus to that section
+  // Add expanded nodes state for each node type
+  const [expandedMapNodes, setExpandedMapNodes] = useState<Record<string, boolean>>({})
+  const [expandedWaypointNodes, setExpandedWaypointNodes] = useState<Record<string, boolean>>({})
+  const [expandedUserNodes, setExpandedUserNodes] = useState<Record<string, boolean>>({})
+
+  // Function to get all parent node IDs for a given node
+  const getAllParentNodeIds = (nodeId: string, nodes: TreeNodeSet): string[] => {
+    const result: string[] = []
+    let currentNode = nodes[nodeId]
+
+    while (currentNode && currentNode.parentId) {
+      result.push(currentNode.parentId)
+      currentNode = nodes[currentNode.parentId]
+    }
+
+    return result
+  }
+
+  // Function to expand all parent nodes of a selected node
+  const expandParentNodes = (nodeId: string, nodeType: NodeType) => {
+    const parentIds = getAllParentNodeIds(nodeId, nodes)
+
+    if (parentIds.length === 0) return // No parents to expand
+
+    // Create an object with all parent IDs set to true
+    const expansionUpdates = parentIds.reduce((acc, parentId) => {
+      acc[parentId] = true
+      return acc
+    }, {} as Record<string, boolean>)
+
+    // Update the appropriate expanded nodes state based on node type
+    switch (nodeType) {
+      case 'map':
+        setExpandedMapNodes(prev => ({ ...prev, ...expansionUpdates }))
+        break
+      case 'waypoint':
+        setExpandedWaypointNodes(prev => ({ ...prev, ...expansionUpdates }))
+        break
+      case 'user':
+        setExpandedUserNodes(prev => ({ ...prev, ...expansionUpdates }))
+        break
+    }
+  }
+
+  // Update select node functions to expand parent nodes
   const selectNodeAndFocus = (nodeId: string, type: NodeType) => {
     setSelectedNodeIds(prev => ({
       ...prev,
       [type]: nodeId
     }))
+
+    // Expand all parent nodes of the selected node
+    expandParentNodes(nodeId, type)
+
     // When selecting a node, also focus that section
     setFocusedSection(nodeTypeToSectionMap[type])
   }
 
-  // Select a node without changing focus (for keyboard navigation)
   const selectNodeWithoutFocus = (nodeId: string, type: NodeType) => {
     setSelectedNodeIds(prev => ({
       ...prev,
       [type]: nodeId
     }))
+
+    // Expand all parent nodes of the selected node
+    expandParentNodes(nodeId, type)
+
     // Don't change the focused section
   }
 
@@ -864,7 +886,7 @@ const App = () => {
             }}
             onClick={() => toggleView('dashboard')}
           >
-            <Dashboard />
+            <DashboardIcon />
           </button>
         </Tooltip>
 
@@ -916,7 +938,7 @@ const App = () => {
             onClick={() => setFocusedSection('dashboard')}
           >
             <div style={getSectionHeaderStyle('dashboard')}>
-              <Dashboard sx={styles.sectionHeaderIcon} />
+              <DashboardIcon sx={styles.sectionHeaderIcon} />
               Dashboard
               <div
                 style={{
@@ -936,55 +958,11 @@ const App = () => {
             </div>
             <div style={styles.sectionContent}>
               {rootNodesByType.map ? (
-                <div style={{ padding: '12px' }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                    <Explore style={{ fontSize: '18px' }} />
-                    Heading
-                  </h3>
-                  <div style={{ marginLeft: '8px' }}>
-                    {findPriorityNodes(nodes, rootNodesByType.map.id)
-                      .slice(0, 3) // Show only top 3
-                      .map((node, index) => (
-                        <div
-                          key={node.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            padding: '6px 0',
-                            cursor: 'pointer',
-                            borderBottom: index < 2 ? '1px solid var(--border-color)' : 'none'
-                          }}
-                          onClick={() => selectNodeAndFocus(node.id, 'map')}
-                        >
-                          <div style={{
-                            minWidth: '24px',
-                            textAlign: 'center',
-                            marginRight: '8px',
-                            color: 'var(--text-secondary)'
-                          }}>
-                            {index + 1}.
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 500 }}>{node.title}</div>
-                            <div style={{
-                              fontSize: '12px',
-                              color: 'var(--text-secondary)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              marginTop: '2px'
-                            }}>
-                              Readiness Level: {node.calculatedMetrics.readinessLevel}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    {findPriorityNodes(nodes, rootNodesByType.map.id).length === 0 && (
-                      <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                        No priority nodes found in the Map.
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <Dashboard
+                  nodes={nodes}
+                  rootMapId={rootNodesByType.map.id}
+                  selectNodeAndFocus={(nodeId, type) => selectNodeAndFocus(nodeId, type as NodeType)}
+                />
               ) : (
                 <div style={{ padding: '12px' }}>
                   <p>No Map data available.</p>
@@ -1066,6 +1044,8 @@ const App = () => {
                 nameColumnHeader="Problem"
                 readinessColumnHeader="Solution Readiness"
                 isFocused={focusedSection === 'map'}
+                expandedNodes={expandedMapNodes}
+                setExpandedNodes={setExpandedMapNodes}
               />
             </div>
           </div>
@@ -1143,6 +1123,8 @@ const App = () => {
                 nameColumnHeader="Waypoint"
                 readinessColumnHeader="Completion Level"
                 isFocused={focusedSection === 'waypoints'}
+                expandedNodes={expandedWaypointNodes}
+                setExpandedNodes={setExpandedWaypointNodes}
               />
             </div>
           </div>
@@ -1220,6 +1202,8 @@ const App = () => {
                 nameColumnHeader="User"
                 readinessColumnHeader="Status"
                 isFocused={focusedSection === 'users'}
+                expandedNodes={expandedUserNodes}
+                setExpandedNodes={setExpandedUserNodes}
               />
             </div>
           </div>

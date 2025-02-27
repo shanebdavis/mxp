@@ -20,6 +20,8 @@ interface HTableProps {
   readinessColumnHeader?: string
   nodeType?: NodeType
   isFocused?: boolean
+  expandedNodes?: Record<string, boolean>
+  setExpandedNodes?: (newState: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
 }
 
 const getDisplayOrder = (
@@ -67,23 +69,30 @@ export const HTable: FC<HTableProps> = ({
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
   nodeType, // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
-  isFocused = true // Default to true for backward compatibility
+  isFocused = true, // Default to true for backward compatibility
+  expandedNodes: externalExpandedNodes,
+  setExpandedNodes: externalSetExpandedNodes
 }) => {
+  // Use internal state if external state is not provided
+  const [internalExpandedNodes, setInternalExpandedNodes] = useState<Record<string, boolean>>({})
+
+  // Choose between external and internal state
+  const expandedNodes = externalExpandedNodes || internalExpandedNodes
+  const setExpandedNodes = externalSetExpandedNodes || setInternalExpandedNodes
+
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
   const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
   const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({})
-
-  const toggleNode = (id: string) => {
-    setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
-  }
-
   const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
     top: 0,
     show: false,
     isLine: false,
   })
+
+  const toggleNode = (id: string) => {
+    setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
+  }
 
   const displayOrder = useMemo(() =>
     getDisplayOrder(nodes, rootNodeId, expandedNodes),
