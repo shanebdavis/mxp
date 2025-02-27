@@ -5,9 +5,9 @@ import { Tooltip } from '@mui/material'
 import type { TreeNode, TreeNodeSet } from './TreeNode'
 import { useApiForState } from './useApiForState'
 
-const MIN_PANEL_WIDTH = 200
-const MAX_PANEL_WIDTH = 800
-const DEFAULT_PANEL_WIDTH = 300
+const MIN_PANEL_WIDTH_PERCENTAGE = 10 // Minimum percentage of window width
+const MAX_PANEL_WIDTH_PERCENTAGE = 67 // Maximum percentage of window width
+const DEFAULT_PANEL_WIDTH_PERCENTAGE = 25 // Default percentage of window width
 
 const styles = {
   layout: {
@@ -64,20 +64,55 @@ const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> => {
 }
 
 const App = () => {
-  const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(false)
+  const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
+    const savedState = localStorage.getItem('detailsPanel.collapsed')
+    return savedState !== null ? savedState === 'true' : false
+  })
+
   const [isFooterCollapsed, setFooterCollapsed] = useState(() => {
     // Try to get saved state from localStorage, default to true (closed) if not found
     const savedState = localStorage.getItem('commentsPanel.collapsed')
     return savedState !== null ? savedState === 'true' : true
   })
-  const [rightPanelWidth, setRightPanelWidth] = useState(DEFAULT_PANEL_WIDTH)
+
+  const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useState(() => {
+    // Get saved panel width percentage from localStorage
+    const savedWidth = localStorage.getItem('detailsPanel.widthPercentage')
+    // Return saved width or default if not found
+    return savedWidth !== null ? parseFloat(savedWidth) : DEFAULT_PANEL_WIDTH_PERCENTAGE
+  })
+
+  // Calculate pixel width from percentage
+  const rightPanelWidth = useMemo(() => {
+    return Math.round((window.innerWidth * rightPanelWidthPercentage) / 100)
+  }, [rightPanelWidthPercentage])
+
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
-  // Save footer collapse state to localStorage when it changes
+  // Save panel states to localStorage when they change
   useEffect(() => {
     localStorage.setItem('commentsPanel.collapsed', String(isFooterCollapsed))
   }, [isFooterCollapsed])
+
+  useEffect(() => {
+    localStorage.setItem('detailsPanel.collapsed', String(isRightPanelCollapsed))
+  }, [isRightPanelCollapsed])
+
+  useEffect(() => {
+    localStorage.setItem('detailsPanel.widthPercentage', String(rightPanelWidthPercentage))
+  }, [rightPanelWidthPercentage])
+
+  // Update panel width when window is resized
+  useEffect(() => {
+    const handleResize = () => {
+      // No need to do anything as rightPanelWidth is derived from rightPanelWidthPercentage
+      // This will cause a re-render with the correct width
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const { nodes, rootNodeId, treeStateMethods, loading, error } = useApiForState()
   const [selectedNodeId, selectNodeById] = useState<string | undefined>(rootNodeId)
@@ -98,8 +133,11 @@ const App = () => {
   const resize = useCallback((e: MouseEvent) => {
     if (isResizing) {
       const width = document.documentElement.clientWidth - e.clientX
-      if (width >= MIN_PANEL_WIDTH && width <= MAX_PANEL_WIDTH) {
-        setRightPanelWidth(width)
+      // Convert to percentage of window width
+      const percentage = (width / window.innerWidth) * 100
+
+      if (percentage >= MIN_PANEL_WIDTH_PERCENTAGE && percentage <= MAX_PANEL_WIDTH_PERCENTAGE) {
+        setRightPanelWidthPercentage(percentage)
       }
     }
   }, [isResizing])
