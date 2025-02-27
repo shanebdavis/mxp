@@ -112,6 +112,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
   useEffect(() => {
     if (isSelected && rowRef.current) {
       rowRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      // Focus the row when selected to ensure it receives keyboard events
+      rowRef.current.focus()
     }
   }, [isSelected])
 
@@ -192,261 +194,344 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      e.stopPropagation()
+    console.log(`Input keydown: ${e.key}, meta: ${e.metaKey}, shift: ${e.shiftKey}`);
 
-      // Handle blank title
-      if (editValue.trim() === '') {
-        await treeNodesApi.updateNode(nodeId, { title: 'TBD' })
-      } else if (editValue !== node.title) {
-        // Save current edits if needed
-        await treeNodesApi.updateNode(nodeId, { title: editValue })
-      }
+    switch (e.key) {
+      case 'Enter': {
+        e.preventDefault();
+        e.stopPropagation();
 
-      // Clear justCreated since we're saving changes
-      setJustCreated(false)
-
-      // For root node, just close the edit box
-      if (isRoot) {
-        setIsEditing(false)
-        return
-      }
-
-      // Handle node creation based on modifier keys
-      if (e.shiftKey && node.parentId) {  // Shift + Enter - add sibling
-        const newNodeId = await treeNodesApi.addNode({
-          title: '',
-          setMetrics: { readinessLevel: 0 },
-        }, node.parentId)
-        // Use local select to avoid changing focus
-        localSelectNode(newNodeId)
-        setEditingNodeId(newNodeId)
-      } else if ((e.metaKey || e.ctrlKey)) {  // Command/Ctrl + Enter - add child
-        // If this is the first child, clear parent's setMetrics
-        if (node.childrenIds.length === 0) {
-          await treeNodesApi.updateNode(nodeId, { setMetrics: {} })
-        }
-        const newNodeId = await treeNodesApi.addNode({
-          title: '',
-          setMetrics: { readinessLevel: 0 },
-        }, nodeId)
-        if (!expandedNodes[nodeId]) {
-          toggleNode(nodeId)
-        }
-        // Use local select to avoid changing focus
-        localSelectNode(newNodeId)
-        setEditingNodeId(newNodeId)
-      } else {  // Normal Enter - just save and exit editing
-        setIsEditing(false)
-      }
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      e.stopPropagation()
-      if (justCreated) {
-        const currentIndex = displayOrder.indexOf(nodeId)
-        const nextSelectedId = displayOrder[currentIndex - 1]
-        await treeNodesApi.removeNode(nodeId)
-        if (nextSelectedId) {
-          // Use local select to avoid changing focus
-          localSelectNode(nextSelectedId)
-        }
-      } else {
-        setEditValue(node.title)  // Restore original title
-        setIsEditing(false)
-      }
-    }
-  }
-
-  // Add this effect for keyboard handling
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      // Only handle keyboard events if:
-      // 1. This section is focused
-      // 2. This row is selected
-      // 3. We're not already editing
-      // 4. No event has been handled yet
-      if (!isFocused || !isSelected || isEditing || e.defaultPrevented) return
-
-      switch (e.key) {
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-          e.preventDefault()
-          const level = parseInt(e.key)
-          if (level !== node.calculatedMetrics.readinessLevel) {
-            await treeNodesApi.updateNode(nodeId, { setMetrics: { readinessLevel: level } })
+        // Handle special Enter key combinations even in edit mode
+        if (e.metaKey || e.ctrlKey) {
+          // First save current edits
+          const newTitle = editValue.trim() || 'TBD'
+          if (newTitle !== node.title) {
+            await treeNodesApi.updateNode(nodeId, { title: newTitle })
           }
-          break
+          setIsEditing(false)
 
-        case ' ':  // Space key - start editing current node
-          e.preventDefault()
-          setIsEditing(true)
-          break
+          // Then add child node
+          if (node.childrenIds.length === 0) {
+            await treeNodesApi.updateNode(nodeId, { setMetrics: {} })
+          }
+          const newNodeId = await treeNodesApi.addNode({
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, nodeId)
 
-        case 'Enter':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {  // Command/Ctrl + Enter - add child
-            // If this is the first child, clear parent's setMetrics
-            if (node.childrenIds.length === 0) {
-              await treeNodesApi.updateNode(nodeId, { setMetrics: {} })
-            }
-            const newNodeId = await treeNodesApi.addNode({
-              title: '',
-              setMetrics: { readinessLevel: 0 },
-            }, nodeId)
-
+          if (newNodeId) {
             if (!expandedNodes[nodeId]) {
               toggleNode(nodeId)
             }
             localSelectNode(newNodeId)
             setEditingNodeId(newNodeId)
-          } else if (node.parentId) {  // Regular Enter - add sibling (if not root)
-            const newNodeId = await treeNodesApi.addNode({
-              title: '',
-              setMetrics: { readinessLevel: 0 },
-            }, node.parentId)
+          }
+          return
+        }
 
+        if (e.shiftKey && node.parentId) {
+          // First save current edits
+          const newTitle = editValue.trim() || 'TBD'
+          if (newTitle !== node.title) {
+            await treeNodesApi.updateNode(nodeId, { title: newTitle })
+          }
+          setIsEditing(false)
+
+          // Then add sibling node
+          const newNodeId = await treeNodesApi.addNode({
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, node.parentId)
+
+          if (newNodeId) {
             localSelectNode(newNodeId)
             setEditingNodeId(newNodeId)
           }
-          break
+          return
+        }
 
-        case 'Escape':
-          setEditValue(node.title)
+        // Default behavior for Enter - save edits
+        const newTitle = editValue.trim()
+        if (newTitle) {
+          if (newTitle !== node.title) {
+            await treeNodesApi.updateNode(nodeId, { title: newTitle })
+          }
+        } else {
+          // If title is blank, set to 'TBD'
+          await treeNodesApi.updateNode(nodeId, { title: 'TBD' })
+        }
+
+        // Stop editing for root nodes
+        if (isRoot) {
           setIsEditing(false)
-          break
-
-        case 'ArrowUp':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {
-            // Move node up in current parent
-            if (node.parentId && nodes[node.parentId]) {
-              const parent = nodes[node.parentId]
-              const currentIndex = parent.childrenIds.indexOf(nodeId)
-              if (currentIndex > 0) {
-                try {
-                  const result = await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex - 1)
-                } catch (error) {
-                  console.error('Error moving node:', error)
-                }
-              }
-            }
-          } else {
-            const prevIndex = displayOrder.indexOf(nodeId) - 1
-            if (prevIndex >= 0) {
-              localSelectNode(displayOrder[prevIndex])
-            }
+        } else {
+          // For non-root nodes, find and select the next node
+          const nextIndex = displayOrder.indexOf(nodeId) + 1
+          if (nextIndex < displayOrder.length) {
+            localSelectNode(displayOrder[nextIndex])
           }
-          break
+          setIsEditing(false)
+        }
+        break
+      }
 
-        case 'ArrowDown':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {
-            // Move node down in current parent
-            if (node.parentId && nodes[node.parentId]) {
-              const parent = nodes[node.parentId]
-              const currentIndex = parent.childrenIds.indexOf(nodeId)
-              if (currentIndex < parent.childrenIds.length - 1) {
-                try {
-                  await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex + 1)
-                } catch (error) {
-                  console.error('Error moving node:', error)
-                }
-              }
-            }
-          } else {
-            const nextIndex = displayOrder.indexOf(nodeId) + 1
-            if (nextIndex < displayOrder.length) {
-              localSelectNode(displayOrder[nextIndex])
-            }
-          }
-          break
-
-        case 'ArrowLeft':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {
-            // Move node up one level to join its siblings
-            if (node.parentId && nodes[node.parentId]) {
-              const parent = nodes[node.parentId]
-              if (parent.parentId) {
-                await treeNodesApi.setNodeParent(nodeId, parent.parentId)
-              }
-            }
-          } else if (expanded) {
-            toggleNode(nodeId)
-          } else if (node.parentId) {
+      case 'Escape': {
+        e.preventDefault()
+        setEditValue(node.title)
+        setIsEditing(false)
+        // If this was a new node (empty title), remove it on cancel
+        if (!node.title && !isRoot) {
+          await treeNodesApi.removeNode(nodeId)
+          if (node.parentId) {
             localSelectNode(node.parentId)
           }
-          break
+        }
+        break
+      }
 
-        case 'ArrowRight':
-          e.preventDefault()
-          if (e.metaKey || e.ctrlKey) {
-            // Make this node a child of its previous sibling
-            if (node.parentId && nodes[node.parentId]) {
-              const currentIndex = indexInParentMap[nodeId]
-              if (currentIndex > 0) {
-                const prevSiblingId = nodes[node.parentId].childrenIds[currentIndex - 1]
-                await treeNodesApi.setNodeParent(nodeId, prevSiblingId)
-                if (!expandedNodes[prevSiblingId]) {
-                  toggleNode(prevSiblingId)
+      default:
+        // Allow all other keys to be processed normally
+        break
+    }
+  }
+
+  // Handle keyboard events for this row when focused and selected
+  useEffect(() => {
+    // Only attach the handler if the section is focused, row is selected, and not in edit mode
+    if (wasFocusedRef.current && isSelected && !isEditing) {
+      const handleKeyDown = async (e: KeyboardEvent) => {
+        // Only handle if not already handled and the event isn't from an input element
+        if (e.defaultPrevented ||
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+
+        console.log(`HTableRow keydown: ${e.key}, meta: ${e.metaKey}, shift: ${e.shiftKey}, ctrl: ${e.ctrlKey}`);
+
+        switch (e.key) {
+          case 'Enter': {
+            // Different Enter key combinations
+            if (e.metaKey || e.ctrlKey) {
+              // Command/Ctrl + Enter = Add child
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Adding child node via keyboard');
+              if (node.childrenIds.length === 0) {
+                await treeNodesApi.updateNode(nodeId, { setMetrics: {} });
+              }
+              const newNodeId = await treeNodesApi.addNode({
+                title: '',
+                setMetrics: { readinessLevel: 0 },
+              }, nodeId);
+
+              if (newNodeId) {
+                if (!expandedNodes[nodeId]) {
+                  toggleNode(nodeId);
                 }
+                localSelectNode(newNodeId);
+                setEditingNodeId(newNodeId);
               }
             }
-          } else if (!expanded && node.childrenIds.length > 0) {
-            toggleNode(nodeId)
-          } else if (node.childrenIds.length > 0) {
-            localSelectNode(node.childrenIds[0])
-          }
-          break
+            else if (e.shiftKey && node.parentId) {
+              // Shift + Enter = Add sibling (if not root)
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Adding sibling node via keyboard');
+              const newNodeId = await treeNodesApi.addNode({
+                title: '',
+                setMetrics: { readinessLevel: 0 },
+              }, node.parentId);
 
-        case 'Delete':
-        case 'Backspace':
-          e.preventDefault()
-          if (!isRoot) {  // Prevent deleting root node
-            const currentIndex = displayOrder.indexOf(nodeId)
-            const nextSelectedId = displayOrder[currentIndex - 1]
-            await treeNodesApi.removeNode(nodeId)
-            if (nextSelectedId) {
-              localSelectNode(nextSelectedId)
+              if (newNodeId) {
+                localSelectNode(newNodeId);
+                setEditingNodeId(newNodeId);
+              }
+            }
+            else {
+              // Just Enter = Edit mode
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Starting edit mode via keyboard');
+              setIsEditing(true);
+            }
+            break;
+          }
+
+          // Rest of keyboard shortcuts from original handler
+          case '0':
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9': {
+            e.preventDefault();
+            const level = parseInt(e.key);
+            if (level !== node.calculatedMetrics.readinessLevel) {
+              await treeNodesApi.updateNode(nodeId, { setMetrics: { readinessLevel: level } });
+            }
+            break;
+          }
+
+          case ' ': {  // Space key - start editing current node
+            e.preventDefault();
+            setIsEditing(true);
+            break;
+          }
+
+          case 'Escape': {
+            setEditValue(node.title);
+            setIsEditing(false);
+            break;
+          }
+
+          case 'ArrowUp': {
+            e.preventDefault();
+            if (e.metaKey || e.ctrlKey) {
+              // Move node up in current parent
+              if (node.parentId && nodes[node.parentId]) {
+                const parent = nodes[node.parentId];
+                const currentIndex = parent.childrenIds.indexOf(nodeId);
+                if (currentIndex > 0) {
+                  try {
+                    await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex - 1);
+                  } catch (error) {
+                    console.error('Error moving node:', error);
+                  }
+                }
+              }
+            } else {
+              const prevIndex = displayOrder.indexOf(nodeId) - 1;
+              if (prevIndex >= 0) {
+                localSelectNode(displayOrder[prevIndex]);
+              }
+            }
+            break;
+          }
+
+          case 'ArrowDown': {
+            e.preventDefault();
+            if (e.metaKey || e.ctrlKey) {
+              // Move node down in current parent
+              if (node.parentId && nodes[node.parentId]) {
+                const parent = nodes[node.parentId];
+                const currentIndex = parent.childrenIds.indexOf(nodeId);
+                if (currentIndex < parent.childrenIds.length - 1) {
+                  try {
+                    await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex + 1);
+                  } catch (error) {
+                    console.error('Error moving node:', error);
+                  }
+                }
+              }
+            } else {
+              const nextIndex = displayOrder.indexOf(nodeId) + 1;
+              if (nextIndex < displayOrder.length) {
+                localSelectNode(displayOrder[nextIndex]);
+              }
+            }
+            break;
+          }
+
+          case 'ArrowLeft': {
+            e.preventDefault();
+            if (e.metaKey || e.ctrlKey) {
+              // Move node up one level to join its siblings
+              if (node.parentId && nodes[node.parentId]) {
+                const parent = nodes[node.parentId];
+                if (parent.parentId) {
+                  await treeNodesApi.setNodeParent(nodeId, parent.parentId);
+                }
+              }
+            } else if (expanded) {
+              toggleNode(nodeId);
+            } else if (node.parentId) {
+              localSelectNode(node.parentId);
+            }
+            break;
+          }
+
+          case 'ArrowRight': {
+            e.preventDefault();
+            if (e.metaKey || e.ctrlKey) {
+              // Make this node a child of its previous sibling
+              if (node.parentId && nodes[node.parentId]) {
+                const currentIndex = indexInParentMap[nodeId];
+                if (currentIndex > 0) {
+                  const prevSiblingId = nodes[node.parentId].childrenIds[currentIndex - 1];
+                  await treeNodesApi.setNodeParent(nodeId, prevSiblingId);
+                  if (!expandedNodes[prevSiblingId]) {
+                    toggleNode(prevSiblingId);
+                  }
+                }
+              }
+            } else if (!expanded && node.childrenIds.length > 0) {
+              toggleNode(nodeId);
+            } else if (node.childrenIds.length > 0) {
+              localSelectNode(node.childrenIds[0]);
+            }
+            break;
+          }
+
+          case 'Delete':
+          case 'Backspace': {
+            e.preventDefault();
+            if (!isRoot) {  // Prevent deleting root node
+              const currentIndex = displayOrder.indexOf(nodeId);
+              const nextSelectedId = displayOrder[currentIndex - 1];
+              await treeNodesApi.removeNode(nodeId);
+              if (nextSelectedId) {
+                localSelectNode(nextSelectedId);
+              }
+            }
+            break;
+          }
+
+          // For all other keys, also stop propagation and log
+          default: {
+            // We're adding stopPropagation to all handled keyboard cases
+            if (e.key.startsWith('Arrow') ||
+              e.key === 'Delete' ||
+              e.key === 'Backspace' ||
+              e.key === 'Escape' ||
+              e.key === ' ' ||
+              // Only stop propagation for number keys when Alt is NOT pressed
+              // This allows Option+1-4 shortcuts to reach the global handler
+              (!e.altKey && e.key >= '0' && e.key <= '9')) {
+              e.stopPropagation();
             }
           }
-          break
-      }
-    }
+        }
+      };
 
-    // Only attach the event listener if this section is focused and this row is selected
-    if (isFocused && isSelected) {
-      window.addEventListener('keydown', handleKeyDown)
-      return () => window.removeEventListener('keydown', handleKeyDown)
-    }
+      // Use capture phase to get the event before other handlers
+      document.addEventListener('keydown', handleKeyDown, true);
 
-    return undefined
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown, true);
+      };
+    }
   }, [
+    wasFocusedRef.current,
     isSelected,
     isEditing,
     nodeId,
     node,
-    expandedNodes,
     toggleNode,
-    selectNodeById,
-    displayOrder,
+    expandedNodes,
+    localSelectNode,
     setEditingNodeId,
-    treeNodesApi,
+    expanded,
     nodes,
+    displayOrder,
     indexInParentMap,
     isRoot,
-    isFocused,
-    localSelectNode
-  ])
+    setEditValue
+  ]);
 
   return (
     <tr
@@ -463,6 +548,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      tabIndex={0} // Make row focusable for keyboard events
     >
       <td style={styles.cell}>
         <div style={{ ...styles.nameCell, paddingLeft: level * 21 }}>
@@ -487,6 +573,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               onBlur={handleInputBlur}
               onKeyDown={handleInputKeyDown}
               style={styles.input}
+              autoFocus
             />
           ) : (
             <span style={{

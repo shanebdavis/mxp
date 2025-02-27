@@ -18,8 +18,8 @@
   --text-primary: #333;
   --text-secondary: #666;
   --hover-color: #f5f5f5;
-  --selected-color: #e3f2fd;
-  --selected-color-rgb: 227, 242, 253; /* RGB values for #e3f2fd */
+  --selected-color: #BEE2FD;
+  --selected-color-rgb: 227, 242, 253; /* RGB values for #BEE2FD */
   --selected-color-light: rgba(227, 242, 253, 0.5); /* Lighter version of selected color */
 }
 
@@ -181,7 +181,7 @@ body.resizing * {
 }
 
 .drag-inside {
-  background-color: #e3f2fd;
+  background-color: #BEE2FD;
 }
 
 /* Remove any old drag-over styles */

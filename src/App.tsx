@@ -9,7 +9,8 @@ import {
   Map as MapIcon,
   LocationOn,
   People,
-  DragHandle
+  DragHandle,
+  Explore
 } from '@mui/icons-material'
 import { Tooltip } from '@mui/material'
 import type { TreeNode, TreeNodeSet, NodeType } from './TreeNode'
@@ -196,6 +197,35 @@ interface SectionWeights {
   map: number;
   waypoints: number;
   users: number;
+}
+
+// Add a new function to find priority nodes
+const findPriorityNodes = (nodes: TreeNodeSet, rootNodeId: string): TreeNode[] => {
+  const result: TreeNode[] = []
+
+  const traverse = (nodeId: string) => {
+    const node = nodes[nodeId]
+
+    // Skip draft nodes
+    if (node.nodeState === 'draft') return
+
+    // Include nodes with explicitly set readiness level
+    if (node.setMetrics?.readinessLevel !== undefined) {
+      result.push(node)
+      return // Stop recursion at this node
+    }
+
+    // Continue recursion for other nodes (without including them)
+    node.childrenIds.forEach(childId => traverse(childId))
+  }
+
+  // Start traversal from the root map node
+  traverse(rootNodeId)
+
+  // Sort by readiness level (1, 2, 3, etc.)
+  return result.sort((a, b) =>
+    (a.calculatedMetrics.readinessLevel || 0) - (b.calculatedMetrics.readinessLevel || 0)
+  )
 }
 
 const App = () => {
@@ -629,42 +659,106 @@ const App = () => {
       : 'var(--background-secondary)',
   })
 
-  // Add section keyboard shortcut handler after the useEffect for section resizing
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Only respond to Command/Ctrl + number key combinations
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
-        let sectionName: SectionName | null = null;
+  // Update the global keyboard handler to check if we should handle the event
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Debug logging for all keyboard events
+    console.log(`Global keydown event: key=${e.key}, alt=${e.altKey}, meta=${e.metaKey}, ctrl=${e.ctrlKey}, shift=${e.shiftKey}, defaultPrevented=${e.defaultPrevented}`);
 
-        // Map number keys to sections
-        switch (e.key) {
-          case '1': sectionName = 'dashboard'; break;
-          case '2': sectionName = 'map'; break;
-          case '3': sectionName = 'waypoints'; break;
-          case '4': sectionName = 'users'; break;
-          default: return; // Not a shortcut we handle
-        }
+    // Skip if defaultPrevented - this means some other handler has handled it
+    if (e.defaultPrevented) return;
 
-        e.preventDefault(); // Prevent browser's default behavior
+    // Check if we're in an input element - if so, don't handle keyboard shortcuts
+    if (e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
 
-        // Handle the section toggle logic
-        if (!activeViews[sectionName]) {
-          // Section not shown: show and focus it
-          setActiveViews(prev => ({ ...prev, [sectionName]: true }));
-          setFocusedSection(sectionName);
-        } else if (focusedSection !== sectionName) {
-          // Section shown but not focused: focus it
-          setFocusedSection(sectionName);
+    // Skip if in editing mode or if an element in the focused section is focused
+    const activeElement = document.activeElement;
+    const focusedSectionElement = document.getElementById(focusedSection);
+    if (
+      activeElement &&
+      focusedSectionElement &&
+      (focusedSectionElement === activeElement || focusedSectionElement.contains(activeElement))
+    ) {
+      // Let the focused section handle its own keyboard events
+      return;
+    }
+
+    // Changed from metaKey/ctrlKey to altKey for section toggling
+    if (e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.key >= '1' && e.key <= '4') {
+      e.preventDefault();
+      const sectionIndex = parseInt(e.key) - 1;
+      const sections = ['dashboard', 'map', 'waypoints', 'users'];
+      if (sectionIndex < sections.length) {
+        const section = sections[sectionIndex] as SectionName;
+        console.log(`Global hotkey: Option+${e.key} for section ${section}`);
+
+        if (activeViews[section]) {
+          // If the view is active, focus on it
+          setFocusedSection(section);
         } else {
-          // Section is shown and focused: hide it
-          toggleView(sectionName);
+          // If the view is not active, toggle it on
+          toggleView(section);
+        }
+      }
+    }
+  }, [activeViews, focusedSection, toggleView]);
+
+  // Add keyboard shortcut handler for add child and add sibling
+  useEffect(() => {
+    const handleNodeOperationShortcuts = async (e: KeyboardEvent) => {
+      // Only handle if an event hasn't been handled yet
+      if (e.defaultPrevented) return;
+
+      // Handle Command+Enter (add child) and Shift+Enter (add sibling)
+      if (e.key === 'Enter') {
+        const nodeType = sectionToNodeType[focusedSection] as NodeType;
+        const selectedNodeId = selectedNodeIds[nodeType];
+        const currentNode = selectedNodeId ? nodes[selectedNodeId] : null;
+
+        if (!currentNode) return;
+
+        if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+          // Command/Ctrl + Enter - Add Child
+          e.preventDefault(); // Prevent default browser behavior
+
+          // If this is the first child, clear parent's setMetrics
+          if (currentNode.childrenIds.length === 0) {
+            await treeNodesApi.updateNode(currentNode.id, { setMetrics: {} });
+          }
+
+          const newNodeId = await treeNodesApi.addNode({
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, currentNode.id);
+
+          selectNodeAndFocus(newNodeId, currentNode.type);
+          setEditingNodeId(newNodeId);
+        } else if (e.shiftKey && !e.metaKey && !e.ctrlKey && currentNode.parentId) {
+          // Shift + Enter - Add Sibling (only if not root node)
+          e.preventDefault(); // Prevent default browser behavior
+
+          const newNodeId = await treeNodesApi.addNode({
+            title: '',
+            setMetrics: { readinessLevel: 0 },
+          }, currentNode.parentId);
+
+          selectNodeAndFocus(newNodeId, currentNode.type);
+          setEditingNodeId(newNodeId);
         }
       }
     };
 
+    window.addEventListener('keydown', handleNodeOperationShortcuts);
+    return () => window.removeEventListener('keydown', handleNodeOperationShortcuts);
+  }, [nodes, selectedNodeIds, focusedSection, treeNodesApi, setEditingNodeId, sectionToNodeType, selectNodeAndFocus]);
+
+  // Add the event listener for the keyboard handler
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeViews, focusedSection, toggleView]); // Dependencies
+  }, [handleKeyDown]); // Dependency includes the memoized handler
 
   // Add loading and error states
   if (loading) {
@@ -762,7 +856,7 @@ const App = () => {
       </header>
 
       <nav style={styles.nav}>
-        <Tooltip title="Dashboard" placement="right">
+        <Tooltip title="Dashboard (Option+1)" placement="right">
           <button
             style={{
               ...styles.navButton,
@@ -774,7 +868,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Map" placement="right">
+        <Tooltip title="Map (Option+2)" placement="right">
           <button
             style={{
               ...styles.navButton,
@@ -786,7 +880,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Waypoints" placement="right">
+        <Tooltip title="Waypoints (Option+3)" placement="right">
           <button
             style={{
               ...styles.navButton,
@@ -798,7 +892,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Contributors" placement="right">
+        <Tooltip title="Contributors (Option+4)" placement="right">
           <button
             style={{
               ...styles.navButton,
@@ -841,9 +935,61 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              <div style={{ padding: '12px' }}>
-                <p>Dashboard content will go here.</p>
-              </div>
+              {rootNodesByType.map ? (
+                <div style={{ padding: '12px' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <Explore style={{ fontSize: '18px' }} />
+                    Heading
+                  </h3>
+                  <div style={{ marginLeft: '8px' }}>
+                    {findPriorityNodes(nodes, rootNodesByType.map.id)
+                      .slice(0, 3) // Show only top 3
+                      .map((node, index) => (
+                        <div
+                          key={node.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            padding: '6px 0',
+                            cursor: 'pointer',
+                            borderBottom: index < 2 ? '1px solid var(--border-color)' : 'none'
+                          }}
+                          onClick={() => selectNodeAndFocus(node.id, 'map')}
+                        >
+                          <div style={{
+                            minWidth: '24px',
+                            textAlign: 'center',
+                            marginRight: '8px',
+                            color: 'var(--text-secondary)'
+                          }}>
+                            {index + 1}.
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 500 }}>{node.title}</div>
+                            <div style={{
+                              fontSize: '12px',
+                              color: 'var(--text-secondary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              marginTop: '2px'
+                            }}>
+                              Readiness Level: {node.calculatedMetrics.readinessLevel}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    {findPriorityNodes(nodes, rootNodesByType.map.id).length === 0 && (
+                      <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                        No priority nodes found in the Map.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: '12px' }}>
+                  <p>No Map data available.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
