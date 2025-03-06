@@ -12,6 +12,7 @@ childrenIds:
   - 6a95bed8-c988-4220-9af9-e7b438961e70
 calculatedMetrics:
   readinessLevel: 0
+  workRemaining: 0
 nodeState: active
 type: map
 setMetrics: {}

@@ -1,12 +1,13 @@
 import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
-import { ArrowDropDown, ArrowRight, Map, CheckCircle } from '@mui/icons-material'
+import { ArrowDropDown, ArrowRight, Map, CheckCircle, AutoMode } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill, RlPill } from '../../widgets'
 import type { TreeNode, TreeNodeSet, TreeNodeProperties } from '../../../TreeNode/TreeNodeTypes'
 import { Tooltip } from '@mui/material'
 import { ViewStateMethods } from '../../../viewState'
+
 interface TreeNodeProps {
   nodes: TreeNodeSet
   nodeId: string
@@ -64,8 +65,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(node.title)
   const [justCreated, setJustCreated] = useState(false)
+  const [isEditingWorkRemaining, setIsEditingWorkRemaining] = useState(false)
+  const [workRemainingValue, setWorkRemainingValue] = useState('')
   const wasFocusedRef = useRef(isFocused)
   const inputRef = useRef<HTMLInputElement>(null)
+  const workRemainingInputRef = useRef<HTMLInputElement>(null)
   const rowRef = useRef<HTMLTableRowElement>(null)
   const [isMapRefHovered, setIsMapRefHovered] = useState(false)
 
@@ -359,6 +363,62 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
+  // Handle work remaining input blur
+  const handleWorkRemainingBlur = async () => {
+    console.log('Work remaining blur', { workRemainingValue });
+
+    try {
+      if (workRemainingValue === '') {
+        // If empty, clear the workRemaining property
+        await treeNodesApi.updateNode(nodeId, {
+          setMetrics: { workRemaining: null }
+        });
+      } else {
+        const parsedValue = parseInt(workRemainingValue, 10);
+        if (!isNaN(parsedValue) && parsedValue >= 0) {
+          await treeNodesApi.updateNode(nodeId, {
+            setMetrics: { workRemaining: parsedValue }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error saving work remaining:', error);
+    } finally {
+      // Always exit edit mode
+      setIsEditingWorkRemaining(false);
+    }
+  }
+
+  // Handle work remaining key down
+  const handleWorkRemainingKeyDown = (e: React.KeyboardEvent) => {
+    e.stopPropagation();
+
+    switch (e.key) {
+      case 'Enter': {
+        e.preventDefault();
+        handleWorkRemainingBlur();
+        break;
+      }
+      case 'Escape': {
+        e.preventDefault();
+        setIsEditingWorkRemaining(false);
+        break;
+      }
+    }
+  }
+
+  // Set auto work remaining (clear the setMetric)
+  const setAutoWorkRemaining = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await treeNodesApi.updateNode(nodeId, {
+        setMetrics: { workRemaining: null }
+      });
+    } catch (error) {
+      console.error('Error setting auto work remaining:', error);
+    }
+  }
+
   // Handle keyboard events for this row when focused and selected
   useEffect(() => {
     // Only attach the handler if the section is focused, row is selected, and not in edit mode
@@ -595,6 +655,16 @@ export const HTableRow: FC<TreeNodeProps> = ({
     setEditValue
   ]);
 
+  // Add effect to focus work remaining input when editing starts
+  useEffect(() => {
+    if (isEditingWorkRemaining) {
+      const currentValue = node.setMetrics?.workRemaining;
+      setWorkRemainingValue(currentValue !== undefined ? currentValue.toString() : '');
+      workRemainingInputRef.current?.focus();
+      workRemainingInputRef.current?.select();
+    }
+  }, [isEditingWorkRemaining, node.setMetrics?.workRemaining]);
+
   const isWayPoint = node.type === 'waypoint'
   const isMap = node.type === 'map'
   const hasMapReference = node.metadata?.referenceMapNodeId != null
@@ -718,7 +788,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           )}
         </td>,
         <td style={styles.cell}>
-          {node.calculatedMetrics.workRemaining != null && (
+          {(
             <div
               style={{
                 display: 'flex',
@@ -728,47 +798,75 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 borderRadius: '4px',
                 backgroundColor: 'var(--background-secondary)',
                 minWidth: '40px',
-                justifyContent: 'center'
+                justifyContent: 'space-between'
               }}
               data-has-click-handler="true"
-              onClick={async (e) => {
+              onClick={(e) => {
                 e.stopPropagation();
-
-                // Get current value
-                const currentValue = node.setMetrics?.workRemaining;
-                const displayValue = currentValue !== undefined ? currentValue.toString() : '';
-
-                // Prompt for new value
-                const newValue = prompt('Enter work remaining:', displayValue);
-
-                // Validate and update
-                if (newValue !== null) {
-                  if (newValue === '') {
-                    // If empty, remove the workRemaining property
-                    await treeNodesApi.updateNode(nodeId, {
-                      setMetrics: { workRemaining: null }
-                    });
-                  } else {
-                    const parsedValue = parseInt(newValue, 10);
-                    if (!isNaN(parsedValue) && parsedValue >= 0) {
-                      await treeNodesApi.updateNode(nodeId, {
-                        setMetrics: { workRemaining: parsedValue }
-                      });
-                    }
-                  }
+                if (!isEditingWorkRemaining) {
+                  setIsEditingWorkRemaining(true);
                 }
               }}
             >
-              {node.setMetrics?.workRemaining === 0 ? (
-                <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
+              {isEditingWorkRemaining ? (
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', width: '100%' }}>
+                  <input
+                    ref={workRemainingInputRef}
+                    value={workRemainingValue}
+                    onChange={(e) => setWorkRemainingValue(e.target.value)}
+                    onBlur={handleWorkRemainingBlur}
+                    onKeyDown={handleWorkRemainingKeyDown}
+                    style={{
+                      ...styles.input,
+                      width: '100%',
+                      textAlign: 'center',
+                      padding: '0',
+                    }}
+                    data-editing="true"
+                  />
+                  <Tooltip title="Set to auto (calculated from children)">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setWorkRemainingValue('');
+                        handleWorkRemainingBlur();
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        padding: '2px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      <AutoMode sx={{ fontSize: 16, opacity: 0.7 }} />
+                    </div>
+                  </Tooltip>
+                </div>
               ) : (
-                <span>{node.calculatedMetrics?.workRemaining !== undefined ? node.calculatedMetrics.workRemaining : ''}</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                  {node.calculatedMetrics?.workRemaining === 0
+                    ? (
+                      <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
+                    ) : (
+                      <span>{node.calculatedMetrics.workRemaining}</span>
+                    )
+                  }
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {node.setMetrics?.workRemaining == undefined && (
+                      <Tooltip title="Automatically calculated from children">
+                        <AutoMode sx={{ fontSize: 14, opacity: 0.7, marginLeft: '4px' }} />
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           )}
         </td>
       ]}
-
     </tr>
   )
 }
