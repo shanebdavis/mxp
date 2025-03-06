@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, FC } from 'react'
-import { Switch, FormControlLabel } from '@mui/material'
+import { Switch, FormControlLabel, Tooltip } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
 import { SolutionItems } from '../widgets/SolutionItems'
@@ -11,6 +11,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import type { Components } from 'react-markdown'
 import type { CSSProperties } from 'react'
+import { Map } from '@mui/icons-material'
+import { TreeStateMethods } from '../../MxpApiClient'
+import { ViewStateMethods } from '../../viewState'
 
 interface CodeProps {
   node?: unknown
@@ -165,6 +168,7 @@ export const DetailsPanel = ({
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
   nodes,
+  viewStateMethods,
 }: {
   isRightPanelCollapsed: boolean
   rightPanelWidth: number
@@ -172,10 +176,11 @@ export const DetailsPanel = ({
   setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
   selectedNode: TreeNode | null
   isResizing: boolean
-  treeNodesApi: { updateNode: (id: string, props: UpdateTreeNodeProperties) => Promise<void> }
+  treeNodesApi: TreeStateMethods
   nameColumnHeader?: string
   readinessColumnHeader?: string
   nodes: TreeNodeSet
+  viewStateMethods: ViewStateMethods
 }) => {
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')
@@ -263,7 +268,42 @@ export const DetailsPanel = ({
               />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div className="field-label">{nameColumnHeader}</div>
-                <h3 style={{ margin: 0 }}>{selectedNode.title}</h3>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <h3 style={{ margin: 0 }}>{selectedNode.title}</h3>
+                  {selectedNode.metadata?.referenceMapNodeId && (
+                    <Tooltip title="Click to navigate to the referenced map">
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          marginLeft: 8,
+                          color: '#666',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          backgroundColor: 'transparent',
+                          transition: 'all 0.2s'
+                        }}
+                        onClick={() => {
+                          const referencedNode = nodes[selectedNode.metadata?.referenceMapNodeId || ''];
+                          if (referencedNode) {
+                            viewStateMethods.selectNodeAndFocus(referencedNode);
+                          }
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#1976d2';
+                          e.currentTarget.style.backgroundColor = 'rgba(25, 118, 210, 0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#666';
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <Map sx={{ fontSize: 18 }} />
+                      </span>
+                    </Tooltip>
+                  )}
+                </div>
               </div>
               {showReadinessSection && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', margin: '8px 0' }}>

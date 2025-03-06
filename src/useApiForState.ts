@@ -5,7 +5,6 @@ export type { TreeStateMethods }
 
 interface UseApiForStateOptions {
   baseUrl?: string
-  selectNodeAndFocusCallback?: (node: TreeNode) => void
 }
 
 export const useApiForState = (options: UseApiForStateOptions = {}): {
@@ -25,8 +24,8 @@ export const useApiForState = (options: UseApiForStateOptions = {}): {
     setNodes((prevNodes: TreeNodeSet) => getTreeNodeSetWithDeltaApplied(prevNodes, delta))
   }, [setNodes])
 
-  const apiClient = useMemo(() => new MxpApiClient(baseUrl, nodes, applyDelta, options.selectNodeAndFocusCallback),
-    [baseUrl, nodes, applyDelta, options.selectNodeAndFocusCallback])
+  const apiClient = useMemo(() => new MxpApiClient(baseUrl, nodes, applyDelta),
+    [baseUrl, nodes, applyDelta])
 
   // Load initial state
   useEffect(() => {

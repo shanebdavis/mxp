@@ -17,6 +17,7 @@ import {
 import { Tooltip, Switch, FormControlLabel } from '@mui/material'
 import type { TreeNode, TreeNodeSet, NodeType } from './TreeNode'
 import { useApiForState } from './useApiForState'
+import { ViewStateMethods } from './viewState'
 
 const MIN_PANEL_WIDTH_PERCENTAGE = 10 // Minimum percentage of window width
 const MAX_PANEL_WIDTH_PERCENTAGE = 67 // Maximum percentage of window width
@@ -163,16 +164,6 @@ const styles = {
     background: 'rgba(0, 0, 0, 0.05)',
   },
 } as const
-
-const getParentMap = (nodes: TreeNodeSet): Record<string, TreeNode> => {
-  const result: Record<string, TreeNode> = {}
-  Object.values(nodes).forEach(node => {
-    node.childrenIds.forEach(childId => {
-      result[childId] = node
-    })
-  })
-  return result
-}
 
 const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> => {
   const result: Record<string, number> = {}
@@ -470,6 +461,10 @@ const App = () => {
 
     // 6. The scrolling to make the item visible will happen automatically
     // due to the useEffect in HTableRow that calls scrollIntoView when a node is selected
+  }
+
+  const viewStateMethods: ViewStateMethods = {
+    selectNodeAndFocus
   }
 
   // Update selectedNodeIds when rootNodesByType changes
@@ -1108,7 +1103,7 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
-                selectNodeAndFocus={selectNodeAndFocus}
+                viewStateMethods={viewStateMethods}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -1225,7 +1220,7 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
-                selectNodeAndFocus={selectNodeAndFocus}
+                viewStateMethods={viewStateMethods}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -1304,7 +1299,7 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
-                selectNodeAndFocus={selectNodeAndFocus}
+                viewStateMethods={viewStateMethods}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -1328,6 +1323,7 @@ const App = () => {
         setRightPanelCollapsed={setRightPanelCollapsed}
         selectedNode={selectedNode}
         isResizing={isResizing}
+        viewStateMethods={viewStateMethods}
         treeNodesApi={treeNodesApi}
         nameColumnHeader={
           focusedSection === 'map' ? "Problem" :

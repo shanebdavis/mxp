@@ -4,9 +4,9 @@ import { styles } from './styles'
 import { ArrowDropDown, ArrowRight, Map } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode, TreeNodeSet, TreeNodeProperties, NodeType } from '../../../TreeNode/TreeNodeTypes'
+import type { TreeNode, TreeNodeSet, TreeNodeProperties } from '../../../TreeNode/TreeNodeTypes'
 import { Tooltip } from '@mui/material'
-
+import { ViewStateMethods } from '../../../viewState'
 interface TreeNodeProps {
   nodes: TreeNodeSet
   nodeId: string
@@ -14,9 +14,9 @@ interface TreeNodeProps {
   itemNumber: number
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
-  selectNodeAndFocus: (node: TreeNode) => void
   selectedNode: TreeNode | null
   treeNodesApi: TreeStateMethods
+  viewStateMethods: ViewStateMethods
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
   dragTarget: DragTarget
@@ -32,27 +32,27 @@ interface TreeNodeProps {
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
-  nodes,
-  nodeId,
-  level = 0,
-  itemNumber,
-  expandedNodes,
-  toggleNode,
-  selectNodeAndFocus,
-  selectedNode,
-  treeNodesApi,
-  draggedNode,
-  setDraggedNode,
-  dragTarget,
-  handleDragOver,
-  handleDragLeave,
-  editingNodeId,
-  setEditingNodeId,
   displayOrder,
+  draggedNode,
+  dragTarget,
+  editingNodeId,
+  expandedNodes,
+  handleDragLeave,
+  handleDragOver,
   indexInParentMap,
   isDraftSubtree = false,
   isFocused = true,
+  itemNumber,
+  level = 0,
+  nodeId,
+  nodes,
+  selectedNode,
+  setDraggedNode,
+  setEditingNodeId,
   showReadinessColumn = true,
+  toggleNode,
+  treeNodesApi,
+  viewStateMethods,
 }) => {
   const node = nodes[nodeId]
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !treeNodesApi.isParentOf(nodeId, draggedNode.id)
@@ -85,7 +85,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   // Local selection function for keyboard navigation that doesn't change focus
   const localSelectNode = (id: string) => {
     if (isFocused) {
-      selectNodeAndFocus(node);
+      viewStateMethods.selectNodeAndFocus(nodes[id]);
     }
   }
 
@@ -125,7 +125,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
     // Otherwise just select the row (don't start editing)
     else {
-      selectNodeAndFocus(node);
+      viewStateMethods.selectNodeAndFocus(node);
     }
   }
 
@@ -137,7 +137,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const handleMapReferenceClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (node.metadata?.referenceMapNodeId) {
-      selectNodeAndFocus(nodes[node.metadata.referenceMapNodeId])
+      viewStateMethods.selectNodeAndFocus(nodes[node.metadata.referenceMapNodeId])
     }
   }
 
@@ -257,8 +257,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
             if (!expandedNodes[nodeId]) {
               toggleNode(nodeId)
             }
-            localSelectNode(newNodeId)
-            setEditingNodeId(newNodeId)
+            viewStateMethods.selectNodeAndFocus(newNodeId)
+            setEditingNodeId(newNodeId.id)
           }
           return
         }
@@ -277,8 +277,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
           }, node.parentId)
 
           if (newNodeId) {
-            localSelectNode(newNodeId)
-            setEditingNodeId(newNodeId)
+            viewStateMethods.selectNodeAndFocus(newNodeId)
+            setEditingNodeId(newNodeId.id)
           }
           return
         }
@@ -361,8 +361,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 if (!expandedNodes[nodeId]) {
                   toggleNode(nodeId);
                 }
-                localSelectNode(newNodeId);
-                setEditingNodeId(newNodeId);
+                viewStateMethods.selectNodeAndFocus(newNodeId);
+                setEditingNodeId(newNodeId.id);
               }
             }
             else if (e.shiftKey && node.parentId) {
@@ -375,8 +375,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
               }, node.parentId);
 
               if (newNodeId) {
-                localSelectNode(newNodeId);
-                setEditingNodeId(newNodeId);
+                viewStateMethods.selectNodeAndFocus(newNodeId);
+                setEditingNodeId(newNodeId.id);
               }
             }
             else {
