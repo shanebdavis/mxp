@@ -67,6 +67,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const [justCreated, setJustCreated] = useState(false)
   const [isEditingWorkRemaining, setIsEditingWorkRemaining] = useState(false)
   const [workRemainingValue, setWorkRemainingValue] = useState('')
+  const [isWorkRemainingHovered, setIsWorkRemainingHovered] = useState(false)
   const wasFocusedRef = useRef(isFocused)
   const inputRef = useRef<HTMLInputElement>(null)
   const workRemainingInputRef = useRef<HTMLInputElement>(null)
@@ -798,9 +799,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 borderRadius: '4px',
                 backgroundColor: 'var(--background-secondary)',
                 minWidth: '40px',
-                justifyContent: 'space-between'
+                justifyContent: 'center'
               }}
               data-has-click-handler="true"
+              onMouseEnter={() => setIsWorkRemainingHovered(true)}
+              onMouseLeave={() => setIsWorkRemainingHovered(false)}
               onClick={(e) => {
                 e.stopPropagation();
                 if (!isEditingWorkRemaining) {
@@ -845,22 +848,42 @@ export const HTableRow: FC<TreeNodeProps> = ({
                   </Tooltip>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-                  {node.calculatedMetrics?.workRemaining === 0
-                    ? (
-                      <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
-                    ) : (
-                      <span>{node.calculatedMetrics.workRemaining}</span>
-                    )
-                  }
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                    {node.calculatedMetrics?.workRemaining === 0
+                      ? (
+                        <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
+                      ) : (
+                        <span>{node.calculatedMetrics.workRemaining}</span>
+                      )
+                    }
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     {node.setMetrics?.workRemaining == undefined && (
                       <Tooltip title="Automatically calculated from children">
                         <AutoMode sx={{ fontSize: 14, opacity: 0.7, marginLeft: '4px' }} />
                       </Tooltip>
                     )}
                   </div>
+
+                  {isWorkRemainingHovered && node.setMetrics?.workRemaining !== undefined && (
+                    <Tooltip title="Reset to automatic calculation">
+                      <AutoMode
+                        sx={{
+                          fontSize: 14,
+                          opacity: 0.7,
+                          cursor: 'pointer',
+                          position: 'absolute',
+                          right: 0
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          treeNodesApi.updateNode(nodeId, {
+                            setMetrics: { workRemaining: null }
+                          });
+                        }}
+                      />
+                    </Tooltip>
+                  )}
                 </div>
               )}
             </div>
