@@ -268,7 +268,7 @@ class FileStore {
       description: description.trim(),
       childrenIds: Array.isArray(metadata.childrenIds) ? metadata.childrenIds : [],
       parentId: metadata.parentId || null,
-      calculatedMetrics: metadata.calculatedMetrics || { readinessLevel: 0 },
+      calculatedMetrics: metadata.calculatedMetrics || {},
       nodeState: metadata.nodeState ?? (metadata.draft ? "draft" : "active"),  // Convert legacy draft to nodeState
       type: metadata.type ?? "map",
       ...(metadata.setMetrics && { setMetrics: metadata.setMetrics })

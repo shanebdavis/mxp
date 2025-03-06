@@ -14,7 +14,6 @@ nodeState: active
 type: map
 setMetrics: {}
 ---
-
 # Track Status, not To-Dos
 
 1. a hierarchy

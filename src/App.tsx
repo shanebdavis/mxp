@@ -706,7 +706,6 @@ const App = () => {
   // Update the global keyboard handler to check if we should handle the event
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Debug logging for all keyboard events
-    console.log(`Global keydown event: key=${e.key}, alt=${e.altKey}, meta=${e.metaKey}, ctrl=${e.ctrlKey}, shift=${e.shiftKey}, defaultPrevented=${e.defaultPrevented}`);
 
     // Skip if defaultPrevented - this means some other handler has handled it
     if (e.defaultPrevented) return;
@@ -736,7 +735,6 @@ const App = () => {
       const sections = ['dashboard', 'map', 'waypoints', 'users'];
       if (sectionIndex < sections.length) {
         const section = sections[sectionIndex] as SectionName;
-        console.log(`Global hotkey: Option+${e.key} for section ${section}`);
 
         if (activeViews[section]) {
           // If the view is active, focus on it
@@ -774,7 +772,6 @@ const App = () => {
 
           const newNodeId = await treeNodesApi.addNode({
             title: '',
-            setMetrics: { readinessLevel: 0 },
           }, currentNode.id);
 
           selectNodeAndFocus(newNodeId, currentNode.type);
@@ -785,7 +782,6 @@ const App = () => {
 
           const newNodeId = await treeNodesApi.addNode({
             title: '',
-            setMetrics: { readinessLevel: 0 },
           }, currentNode.parentId);
 
           selectNodeAndFocus(newNodeId, currentNode.type);
@@ -831,7 +827,6 @@ const App = () => {
                     if (selectedNode) {
                       const newNodeId = await treeNodesApi.addNode({
                         title: '',
-                        setMetrics: { readinessLevel: 0 },
                       }, selectedNode.id)
                       selectNodeAndFocus(newNodeId, selectedNode.type)
                       setEditingNodeId(newNodeId)
@@ -860,7 +855,6 @@ const App = () => {
                     if (selectedNode?.parentId) {
                       const newNodeId = await treeNodesApi.addNode({
                         title: '',
-                        setMetrics: { readinessLevel: 0 },
                       }, selectedNode.parentId)
                       selectNodeAndFocus(newNodeId, selectedNode.type)
                       setEditingNodeId(newNodeId)

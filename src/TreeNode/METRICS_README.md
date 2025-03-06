@@ -44,7 +44,7 @@ node = {
 // Auto mode (leaf node)
 node = {
   setMetrics: undefined,
-  calculatedMetrics: { readinessLevel: 0 }, // Default value
+  calculatedMetrics: {}, // Default value
   childrenIds: [], // No children
 };
 ```

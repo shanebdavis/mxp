@@ -149,7 +149,6 @@ export const getTreeWithNodeAdded = (
     [nodeToAdd.id]: {
       ...nodeToAdd,
       parentId,
-      calculatedMetrics: { readinessLevel: 0 }
     }
   }
 
@@ -416,7 +415,6 @@ export const getTreeNodeSetDeltaForNodeAdded = (
       [nodeToAdd.id]: {
         ...nodeToAdd,
         parentId,
-        calculatedMetrics: { readinessLevel: 0 }
       }
     }
   }

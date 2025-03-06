@@ -23,7 +23,7 @@
     "test-coverage": "vitest run --coverage",
     "test-ui": "vitest --ui",
     "build": "vite build && tsc -p tsconfig.node.json",
-    "build-watch": "vite build --watch",
+    "build-watch": "nodemon --watch src --exec \"npm run build\"",
     "prepare": "npm run build"
   },
   "dependencies": {
@@ -64,6 +64,7 @@
     "@vitest/ui": "^3.0.5",
     "concurrently": "^8.2.2",
     "jsdom": "^26.0.0",
+    "nodemon": "^3.1.9",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "vite": "^5.1.4",

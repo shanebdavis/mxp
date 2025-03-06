@@ -219,7 +219,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
           }
           const newNodeId = await treeNodesApi.addNode({
             title: '',
-            setMetrics: { readinessLevel: 0 },
           }, nodeId)
 
           if (newNodeId) {
@@ -243,7 +242,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
           // Then add sibling node
           const newNodeId = await treeNodesApi.addNode({
             title: '',
-            setMetrics: { readinessLevel: 0 },
           }, node.parentId)
 
           if (newNodeId) {
@@ -325,7 +323,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
               }
               const newNodeId = await treeNodesApi.addNode({
                 title: '',
-                setMetrics: { readinessLevel: 0 },
               }, nodeId);
 
               if (newNodeId) {
@@ -343,7 +340,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
               console.log('Adding sibling node via keyboard');
               const newNodeId = await treeNodesApi.addNode({
                 title: '',
-                setMetrics: { readinessLevel: 0 },
               }, node.parentId);
 
               if (newNodeId) {
