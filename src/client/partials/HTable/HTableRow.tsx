@@ -28,8 +28,6 @@ interface TreeNodeProps {
   indexInParentMap: Record<string, number>
   isDraftSubtree?: boolean
   isFocused?: boolean
-  showReadinessColumn?: boolean
-  showWaypointColumns?: boolean
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -50,8 +48,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   selectedNode,
   setDraggedNode,
   setEditingNodeId,
-  showReadinessColumn = true,
-  showWaypointColumns = false,
   toggleNode,
   treeNodesApi,
   viewStateMethods,
@@ -599,6 +595,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
     setEditValue
   ]);
 
+  const isWayPoint = node.type === 'waypoint'
+  const isMap = node.type === 'map'
+  const hasMapReference = node.metadata?.referenceMapNodeId != null
+
   // Add a debugging effect to log when editing state changes
   useEffect(() => {
     console.log('Editing state changed:', { isEditing, nodeId, title: node.title });
@@ -681,7 +681,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
           )}
         </div>
       </td>
-      {showReadinessColumn && (
+      {isMap && [
         <td style={styles.cell}>
           <EditableRlPill
             readinessLevel={node.calculatedMetrics.readinessLevel}
@@ -693,21 +693,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
             }}
           />
         </td>
-      )}
-
-      {/* Current RL column - only for waypoint tables and only for nodes with a reference map node */}
-      {showWaypointColumns && (
+      ]}
+      {isWayPoint && [
         <td style={styles.cell}>
-          {node.metadata?.referenceMapNodeId && typeof node.calculatedMetrics.readinessLevel === 'number' && node.calculatedMetrics.readinessLevel >= 0 ? (
-            <RlPill level={node.calculatedMetrics.readinessLevel} />
-          ) : null}
-        </td>
-      )}
-
-      {/* Target RL column - only for waypoint tables and only editable if node has referencedMapNodeId */}
-      {showWaypointColumns && (
+          {isWayPoint && hasMapReference && <>
+            {
+              node.calculatedMetrics?.readinessLevel != null && node.calculatedMetrics.readinessLevel >= 0 ? (
+                <RlPill level={node.calculatedMetrics.readinessLevel} />
+              ) : null
+            }
+          </>}
+        </td>,
         <td style={styles.cell}>
-          {node.metadata?.referenceMapNodeId && (
+          {hasMapReference && (
             <EditableRlPill
               readinessLevel={node.calculatedMetrics.targetReadinessLevel}
               auto={node.setMetrics?.targetReadinessLevel == null}
@@ -718,13 +716,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
               }}
             />
           )}
-        </td>
-      )}
-
-      {/* Work Remaining column - only for waypoint tables and only editable if node has referencedMapNodeId */}
-      {showWaypointColumns && (
+        </td>,
         <td style={styles.cell}>
-          {node.metadata?.referenceMapNodeId && (
+          {node.calculatedMetrics.workRemaining != null && (
             <div
               style={{
                 display: 'flex',
@@ -745,7 +739,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 const displayValue = currentValue !== undefined ? currentValue.toString() : '';
 
                 // Prompt for new value
-                const newValue = prompt('Enter work remaining (0 for completed):', displayValue);
+                const newValue = prompt('Enter work remaining:', displayValue);
 
                 // Validate and update
                 if (newValue !== null) {
@@ -768,12 +762,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
               {node.setMetrics?.workRemaining === 0 ? (
                 <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
               ) : (
-                <span>{node.setMetrics?.workRemaining !== undefined ? node.setMetrics.workRemaining : ''}</span>
+                <span>{node.calculatedMetrics?.workRemaining !== undefined ? node.calculatedMetrics.workRemaining : ''}</span>
               )}
             </div>
           )}
         </td>
-      )}
+      ]}
+
     </tr>
   )
 }

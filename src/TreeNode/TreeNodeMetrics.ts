@@ -11,37 +11,28 @@ const calculatableMetrics: Record<keyof Metrics, CalculatableMetric> = {
   readinessLevel: {
     default: 0,
     calculate: (setMetrics, childValues, referencedMapMetrics) => {
-      const safeSetMetrics = setMetrics || {};
-      const safeChildValues = childValues || [];
+      const childrenReadinessLevels = compact(childValues.map(child => child?.readinessLevel))
 
-      const childrenReadinessLevels = compact(safeChildValues.map(child => child?.readinessLevel))
-
-      return safeSetMetrics.readinessLevel != null ? safeSetMetrics.readinessLevel
+      return setMetrics.readinessLevel != null ? setMetrics.readinessLevel
         : referencedMapMetrics?.readinessLevel != null ? referencedMapMetrics.readinessLevel
           : childrenReadinessLevels.length > 0 ? Math.min(...childrenReadinessLevels) : 0
     }
   },
   targetReadinessLevel: {
     calculate: (setMetrics, childValues) => {
-      // Ensure we have valid objects to work with
-      const safeSetMetrics = setMetrics || {};
-      return safeSetMetrics.targetReadinessLevel != null ? safeSetMetrics.targetReadinessLevel : undefined
+      return setMetrics.targetReadinessLevel != null ? setMetrics.targetReadinessLevel : undefined
     }
   },
   workRemaining: {
     default: 0,
     calculate: (setMetrics, childValues, referencedMapMetrics) => {
-      // Ensure we have valid arrays and objects to work with
-      const safeSetMetrics = setMetrics || {};
-      const safeChildValues = childValues || [];
-
-      const targetAchieved = referencedMapMetrics?.readinessLevel != null && safeSetMetrics.targetReadinessLevel != null
-        ? referencedMapMetrics.readinessLevel >= safeSetMetrics.targetReadinessLevel
+      const targetAchieved = referencedMapMetrics?.readinessLevel != null && setMetrics.targetReadinessLevel != null
+        ? referencedMapMetrics.readinessLevel >= setMetrics.targetReadinessLevel
         : false
 
-      const childrenWorkRemaining = compact(safeChildValues.map(child => child?.workRemaining))
-      const workRemaining = safeSetMetrics.workRemaining != null
-        ? safeSetMetrics.workRemaining
+      const childrenWorkRemaining = compact(childValues.map(child => child?.workRemaining))
+      const workRemaining = setMetrics.workRemaining != null
+        ? setMetrics.workRemaining
         : childrenWorkRemaining.length > 0 ? Math.min(...childrenWorkRemaining) : 0
 
       return targetAchieved ? 0 : workRemaining
@@ -91,16 +82,12 @@ export const calculateMetric = (metric: keyof Metrics, setValues: Metrics, child
 }
 
 export const calculateAllMetricsFromSetMetricsAndChildrenMetrics = (setMetrics: Metrics, childrenMetrics: Metrics[], referencedMapMetrics?: Metrics): Metrics => {
-  const safeSetMetrics = setMetrics || {};
-  const safeChildrenMetrics = childrenMetrics.filter(Boolean) || [];
-
   // @ts-ignore
-  const result: Metrics = Object.fromEntries(Object.keys(calculatableMetrics).map(metric => [
+  return Object.fromEntries(Object.keys(calculatableMetrics).map(metric => [
     metric,
     // @ts-ignore
-    calculateMetric(metric, safeSetMetrics, safeChildrenMetrics, referencedMapMetrics)
+    calculateMetric(metric, setMetrics, childrenMetrics, referencedMapMetrics)
   ]))
-  return result
 }
 
 export const calculateAllMetricsFromNode = (node: TreeNode, children: TreeNode[], referencedMapNode?: TreeNode): Metrics => {

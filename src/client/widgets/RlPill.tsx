@@ -14,7 +14,7 @@ export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
   <div style={{
     ...styles.readinessLevelPill,
     backgroundColor: level != null ? styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors] : 'var(--background-secondary)',
-    color: level == null ? 'var(--auto-text-color, currentColor)' : 'inherit',
+    color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
     display: 'flex',
     alignItems: 'center',
     gap: 4,
