@@ -854,17 +854,24 @@ export const HTableRow: FC<TreeNodeProps> = ({
                       ? (
                         <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
                       ) : (
-                        <span>{node.calculatedMetrics.workRemaining}</span>
+                        <span>{node.calculatedMetrics.workRemaining !== undefined ? node.calculatedMetrics.workRemaining : 'auto'}</span>
                       )
                     }
-
-                    {node.setMetrics?.workRemaining == undefined && (
-                      <Tooltip title="Automatically calculated from children">
-                        <AutoMode sx={{ fontSize: 14, opacity: 0.7, marginLeft: '4px' }} />
-                      </Tooltip>
-                    )}
                   </div>
 
+                  {/* Auto icon for auto-calculated work remaining */}
+                  {node.setMetrics?.workRemaining === undefined && (
+                    <Tooltip title="Automatically calculated from children">
+                      <AutoMode sx={{
+                        fontSize: 14,
+                        opacity: 0.7,
+                        position: 'absolute',
+                        right: 0
+                      }} />
+                    </Tooltip>
+                  )}
+
+                  {/* Reset to auto icon on hover for manually set work remaining */}
                   {isWorkRemainingHovered && node.setMetrics?.workRemaining !== undefined && (
                     <Tooltip title="Reset to automatic calculation">
                       <AutoMode
