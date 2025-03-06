@@ -16,5 +16,14 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    minify: 'terser',
+    terserOptions: {
+      mangle: {
+        keep_classnames: true,
+        keep_fnames: true
+      }
+    }
   }
 })
