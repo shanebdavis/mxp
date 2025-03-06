@@ -4,7 +4,7 @@ title: automatic milestone calculated metrics
 parentId: c4422753-d361-4c1c-833e-1c7b236a39bd
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 2
   targetReadinessLevel: 3
   workRemaining: 1
 nodeState: active

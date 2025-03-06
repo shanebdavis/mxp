@@ -4,10 +4,10 @@ title: each milestone can link to a Status node
 parentId: 9774420a-b526-45f7-bafc-35424a7c80ef
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 2
+  readinessLevel: 3
   workRemaining: 0
 nodeState: active
 type: map
 setMetrics:
-  readinessLevel: 2
+  readinessLevel: 3
 ---

@@ -510,8 +510,17 @@ export const HTableRow: FC<TreeNodeProps> = ({
           case '9': {
             e.preventDefault();
             const level = parseInt(e.key);
-            if (level !== node.calculatedMetrics.readinessLevel) {
-              await treeNodesApi.updateNode(nodeId, { setMetrics: { readinessLevel: level } });
+
+            if (node.type === 'waypoint') {
+              // For waypoints, set targetReadinessLevel
+              if (level !== node.calculatedMetrics.targetReadinessLevel) {
+                await treeNodesApi.updateNode(nodeId, { setMetrics: { targetReadinessLevel: level } });
+              }
+            } else {
+              // For maps, set readinessLevel
+              if (level !== node.calculatedMetrics.readinessLevel) {
+                await treeNodesApi.updateNode(nodeId, { setMetrics: { readinessLevel: level } });
+              }
             }
             break;
           }
