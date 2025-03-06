@@ -1,8 +1,9 @@
 import React from 'react'
 import type { TreeNodeSet, NodeType } from '../../TreeNode'
+import { version } from '../../../package.json'
 
 // Import version from package.json
-const APP_VERSION = '0.3.0' // Hardcoded from package.json
+const APP_VERSION = version
 
 const styles = {
   footer: {
