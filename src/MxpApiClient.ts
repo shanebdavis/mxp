@@ -9,11 +9,12 @@ import {
 } from './TreeNode'
 
 export interface TreeStateMethods {
-  addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => Promise<string>
+  addNode: (node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null) => Promise<TreeNode>
   updateNode: (nodeId: string, properties: UpdateTreeNodeProperties) => Promise<void>
   setNodeParent: (nodeId: string, newParentId: string, insertAtIndex?: number | null) => Promise<void>
   removeNode: (nodeId: string) => Promise<void>
   isParentOf: (nodeId: string, potentialChildId: string) => boolean
+  selectNodeAndFocus: (node: TreeNode) => void
 }
 
 interface CreateNodeResponse {
@@ -39,13 +40,28 @@ const apiFetch = async (baseUrl: string, path: string, method: string, body?: an
 }
 
 export class MxpApiClient implements TreeStateMethods {
-  constructor(private baseUrl: string, private nodes: TreeNodeSet, private applyDelta: (delta: TreeNodeSetDelta) => void) { }
+  private baseUrl: string
+  private nodes: TreeNodeSet
+  private applyDelta: (delta: TreeNodeSetDelta) => void
+  private _selectNodeAndFocusCallback?: (node: TreeNode) => void
+
+  constructor(
+    baseUrl: string,
+    nodes: TreeNodeSet,
+    applyDelta: (delta: TreeNodeSetDelta) => void,
+    selectNodeAndFocusCallback?: (node: TreeNode) => void
+  ) {
+    this.baseUrl = baseUrl
+    this.nodes = nodes
+    this.applyDelta = applyDelta
+    this._selectNodeAndFocusCallback = selectNodeAndFocusCallback
+  }
 
   getNodes(): Promise<TreeNodeSet> {
     return apiFetch(this.baseUrl, '/nodes', 'GET') as Promise<TreeNodeSet>
   }
 
-  async addNode(node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null): Promise<string> {
+  async addNode(node: TreeNodeProperties, parentNodeId: string, insertAtIndex?: number | null): Promise<TreeNode> {
     const parentNode = this.nodes[parentNodeId];
     if (!parentNode) {
       throw new Error(`Parent node ${parentNodeId} not found`);
@@ -60,7 +76,7 @@ export class MxpApiClient implements TreeStateMethods {
       insertAtIndex
     })) as CreateNodeResponse
     this.applyDelta(response.delta)
-    return response.node.id
+    return response.node
   }
 
   async updateNode(nodeId: string, properties: UpdateTreeNodeProperties): Promise<void> {
@@ -83,5 +99,13 @@ export class MxpApiClient implements TreeStateMethods {
 
   isParentOf(nodeId: string, potentialChildId: string): boolean {
     return isParentOfInTree(this.nodes, nodeId, potentialChildId)
+  }
+
+  selectNodeAndFocus(node: TreeNode): void {
+    if (this._selectNodeAndFocusCallback) {
+      this._selectNodeAndFocusCallback(node)
+    } else {
+      console.warn('selectNodeAndFocus callback not provided to MxpApiClient')
+    }
   }
 }

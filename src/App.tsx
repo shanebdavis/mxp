@@ -434,30 +434,42 @@ const App = () => {
     }
   }
 
-  // Update select node functions to expand parent nodes
-  const selectNodeAndFocus = (nodeId: string, type: NodeType) => {
+  /**
+   * Select the specified node, make sure it is visible on screen and focused
+   * @param nodeId
+   * @param nodeTypeOverride
+   * @returns
+   */
+  const selectNodeAndFocus = (node: TreeNode) => {
+    if (!node) return;
+
+    // 1. Determine the node type
+    const nodeType = node.type
+    const nodeId = node.id
+
+    // 2. Set the selected node to that node-id
     setSelectedNodeIds(prev => ({
       ...prev,
-      [type]: nodeId
+      [nodeType]: nodeId
     }))
 
-    // Expand all parent nodes of the selected node
-    expandParentNodes(nodeId, type)
+    // 3. Make sure appropriate section is shown
+    const sectionName = nodeTypeToSectionMap[nodeType]
+    if (!activeViews[sectionName]) {
+      setActiveViews(prev => ({
+        ...prev,
+        [sectionName]: true
+      }))
+    }
 
-    // When selecting a node, also focus that section
-    setFocusedSection(nodeTypeToSectionMap[type])
-  }
+    // 4. Focus the appropriate section
+    setFocusedSection(sectionName)
 
-  const selectNodeWithoutFocus = (nodeId: string, type: NodeType) => {
-    setSelectedNodeIds(prev => ({
-      ...prev,
-      [type]: nodeId
-    }))
+    // 5. Expand the tree if needed so the item is visible
+    expandParentNodes(nodeId, nodeType)
 
-    // Expand all parent nodes of the selected node
-    expandParentNodes(nodeId, type)
-
-    // Don't change the focused section
+    // 6. The scrolling to make the item visible will happen automatically
+    // due to the useEffect in HTableRow that calls scrollIntoView when a node is selected
   }
 
   // Update selectedNodeIds when rootNodesByType changes
@@ -770,22 +782,22 @@ const App = () => {
             await treeNodesApi.updateNode(currentNode.id, { setMetrics: {} });
           }
 
-          const newNodeId = await treeNodesApi.addNode({
+          const newNode = await treeNodesApi.addNode({
             title: '',
           }, currentNode.id);
 
-          selectNodeAndFocus(newNodeId, currentNode.type);
-          setEditingNodeId(newNodeId);
+          selectNodeAndFocus(newNode);
+          setEditingNodeId(newNode.id);
         } else if (e.shiftKey && !e.metaKey && !e.ctrlKey && currentNode.parentId) {
           // Shift + Enter - Add Sibling (only if not root node)
           e.preventDefault(); // Prevent default browser behavior
 
-          const newNodeId = await treeNodesApi.addNode({
+          const newNode = await treeNodesApi.addNode({
             title: '',
           }, currentNode.parentId);
 
-          selectNodeAndFocus(newNodeId, currentNode.type);
-          setEditingNodeId(newNodeId);
+          selectNodeAndFocus(newNode);
+          setEditingNodeId(newNode.id);
         }
       }
     };
@@ -825,11 +837,11 @@ const App = () => {
                 <button
                   onClick={async () => {
                     if (selectedNode) {
-                      const newNodeId = await treeNodesApi.addNode({
+                      const newNode = await treeNodesApi.addNode({
                         title: '',
                       }, selectedNode.id)
-                      selectNodeAndFocus(newNodeId, selectedNode.type)
-                      setEditingNodeId(newNodeId)
+                      selectNodeAndFocus(newNode)
+                      setEditingNodeId(newNode.id)
                     }
                   }}
                   disabled={!selectedNode}
@@ -853,11 +865,11 @@ const App = () => {
                 <button
                   onClick={async () => {
                     if (selectedNode?.parentId) {
-                      const newNodeId = await treeNodesApi.addNode({
+                      const newNode = await treeNodesApi.addNode({
                         title: '',
                       }, selectedNode.parentId)
-                      selectNodeAndFocus(newNodeId, selectedNode.type)
-                      setEditingNodeId(newNodeId)
+                      selectNodeAndFocus(newNode)
+                      setEditingNodeId(newNode.id)
                     }
                   }}
                   disabled={!selectedNode?.parentId}
@@ -982,7 +994,7 @@ const App = () => {
                 <Dashboard
                   nodes={nodes}
                   rootMapId={rootNodesByType.map.id}
-                  selectNodeAndFocus={(nodeId, type) => selectNodeAndFocus(nodeId, type as NodeType)}
+                  selectNodeAndFocus={selectNodeAndFocus}
                 />
               ) : (
                 <div style={{ padding: '12px' }}>
@@ -1096,8 +1108,7 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
-                selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'map')}
-                selectNodeWithoutFocus={(nodeId) => selectNodeWithoutFocus(nodeId, 'map')}
+                selectNodeAndFocus={selectNodeAndFocus}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -1214,8 +1225,7 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
-                selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'waypoint')}
-                selectNodeWithoutFocus={(nodeId) => selectNodeWithoutFocus(nodeId, 'waypoint')}
+                selectNodeAndFocus={selectNodeAndFocus}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}
@@ -1294,8 +1304,7 @@ const App = () => {
                 nodes={nodes}
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
-                selectNodeById={(nodeId) => selectNodeAndFocus(nodeId, 'user')}
-                selectNodeWithoutFocus={(nodeId) => selectNodeWithoutFocus(nodeId, 'user')}
+                selectNodeAndFocus={selectNodeAndFocus}
                 treeNodesApi={treeNodesApi}
                 editingNodeId={editingNodeId}
                 setEditingNodeId={setEditingNodeId}

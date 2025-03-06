@@ -10,8 +10,7 @@ interface HTableProps {
   nodes: TreeNodeSet
   rootNodeId: string
   selectedNode: TreeNode | null
-  selectNodeById: (nodeId: string) => void
-  selectNodeWithoutFocus?: (nodeId: string) => void
+  selectNodeAndFocus: (node: TreeNode) => void
   treeNodesApi: TreeStateMethods
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
@@ -116,9 +115,8 @@ const getDisplayOrder = (
 export const HTable: FC<HTableProps> = ({
   nodes,
   rootNodeId,
-  selectNodeById,
-  selectNodeWithoutFocus,
   selectedNode,
+  selectNodeAndFocus,
   treeNodesApi,
   editingNodeId,
   setEditingNodeId,
@@ -285,8 +283,7 @@ export const HTable: FC<HTableProps> = ({
                   itemNumber,
                   expandedNodes,
                   toggleNode,
-                  selectNodeById,
-                  selectNodeWithoutFocus,
+                  selectNodeAndFocus,
                   selectedNode,
                   treeNodesApi,
                   draggedNode,

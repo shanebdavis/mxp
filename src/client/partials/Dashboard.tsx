@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { Explore } from '@mui/icons-material'
-import { TreeNodeSet, findPriorityNodes } from '../../TreeNode'
+import { TreeNodeSet, findPriorityNodes, TreeNode } from '../../TreeNode'
 import { RlPill } from '../widgets/RlPill'
 
 interface DashboardProps {
   nodes: TreeNodeSet
   rootMapId: string
-  selectNodeAndFocus: (nodeId: string, type: string) => void
+  selectNodeAndFocus: (node: TreeNode) => void
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -41,7 +41,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               cursor: 'pointer',
               borderBottom: index < displayNodes.length - 1 ? '1px solid var(--border-color)' : 'none'
             }}
-            onClick={() => selectNodeAndFocus(node.id, 'map')}
+            onClick={() => selectNodeAndFocus(node)}
           >
             <div style={{
               minWidth: '24px',

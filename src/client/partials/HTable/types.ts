@@ -1,5 +1,7 @@
 export interface DragItem {
   id: string
+  parentId?: string | null
+  type?: string
 }
 
 export type DropPosition = 'before' | 'after' | 'inside' | null

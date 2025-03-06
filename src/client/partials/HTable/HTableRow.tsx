@@ -1,10 +1,11 @@
 import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
-import { ArrowDropDown, ArrowRight } from '@mui/icons-material'
+import { ArrowDropDown, ArrowRight, Map } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill } from '../../widgets'
-import type { TreeNode, TreeNodeSet } from '../../../TreeNode'
+import type { TreeNode, TreeNodeSet, TreeNodeProperties, NodeType } from '../../../TreeNode/TreeNodeTypes'
+import { Tooltip } from '@mui/material'
 
 interface TreeNodeProps {
   nodes: TreeNodeSet
@@ -13,8 +14,7 @@ interface TreeNodeProps {
   itemNumber: number
   expandedNodes: Record<string, boolean>
   toggleNode: (id: string) => void
-  selectNodeById: (nodeId: string) => void
-  selectNodeWithoutFocus?: (nodeId: string) => void
+  selectNodeAndFocus: (node: TreeNode) => void
   selectedNode: TreeNode | null
   treeNodesApi: TreeStateMethods
   draggedNode: TreeNode | null
@@ -38,8 +38,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   itemNumber,
   expandedNodes,
   toggleNode,
-  selectNodeById,
-  selectNodeWithoutFocus,
+  selectNodeAndFocus,
   selectedNode,
   treeNodesApi,
   draggedNode,
@@ -70,6 +69,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const wasFocusedRef = useRef(isFocused)
   const inputRef = useRef<HTMLInputElement>(null)
   const rowRef = useRef<HTMLTableRowElement>(null)
+  const [isMapRefHovered, setIsMapRefHovered] = useState(false)
 
   // Update the wasFocused ref after each render
   useEffect(() => {
@@ -85,13 +85,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   // Local selection function for keyboard navigation that doesn't change focus
   const localSelectNode = (id: string) => {
     if (isFocused) {
-      if (selectNodeWithoutFocus) {
-        // Use the selectNodeWithoutFocus prop if available
-        selectNodeWithoutFocus(id);
-      } else {
-        // Fall back to the original behavior
-        selectNodeById(id);
-      }
+      selectNodeAndFocus(node);
     }
   }
 
@@ -131,8 +125,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
     // Otherwise just select the row (don't start editing)
     else {
-      // For mouse clicks, use selectNodeById which will change focus to this section
-      selectNodeById(nodeId);
+      selectNodeAndFocus(node);
     }
   }
 
@@ -141,11 +134,19 @@ export const HTableRow: FC<TreeNodeProps> = ({
     toggleNode(nodeId)
   }
 
+  const handleMapReferenceClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (node.metadata?.referenceMapNodeId) {
+      selectNodeAndFocus(nodes[node.metadata.referenceMapNodeId])
+    }
+  }
+
   const handleDragStart = (e: React.DragEvent) => {
     setDraggedNode(node)
     e.dataTransfer.setData('application/json', JSON.stringify({
       id: nodeId,
       parentId: null,
+      type: node.type
     }))
   }
 
@@ -160,19 +161,50 @@ export const HTableRow: FC<TreeNodeProps> = ({
     if (dragItem.id !== nodeId && !treeNodesApi.isParentOf(dragItem.id, nodeId)) {
       const rect = e.currentTarget.getBoundingClientRect()
 
-      if (dragTarget.position === 'inside') {
-        if (node.childrenIds.length > 0 && !expanded) {
-          toggleNode(nodeId)
+      // Check if we're dropping a map node onto a waypoint node
+      const draggedNode = nodes[dragItem.id]
+      if (draggedNode && (dragItem.type === "map" || draggedNode.type === "map") && node.type === "waypoint") {
+        // Create a new waypoint node with reference to the map node
+        const newWaypointProperties: TreeNodeProperties = {
+          title: draggedNode.title,
+          metadata: {
+            referenceMapNodeId: draggedNode.id
+          }
         }
-        await treeNodesApi.setNodeParent(dragItem.id, nodeId, 0)
-      } else if (!isRoot && node.parentId) {
-        const parent = nodes[node.parentId]
-        const indexInParent = parent.childrenIds.indexOf(nodeId)
-        await treeNodesApi.setNodeParent(
-          dragItem.id,
-          node.parentId,
-          dragTarget.position === 'before' ? indexInParent : indexInParent + 1
-        )
+
+        // Determine where to add the new waypoint based on drop position
+        if (dragTarget.position === 'inside') {
+          // Add as a child of the target waypoint
+          if (node.childrenIds.length > 0 && !expanded) {
+            toggleNode(nodeId)
+          }
+          await treeNodesApi.addNode(newWaypointProperties, nodeId, 0)
+        } else if (!isRoot && node.parentId) {
+          // Add as a sibling before or after the target waypoint
+          const parent = nodes[node.parentId]
+          const indexInParent = parent.childrenIds.indexOf(nodeId)
+          await treeNodesApi.addNode(
+            newWaypointProperties,
+            node.parentId,
+            dragTarget.position === 'before' ? indexInParent : indexInParent + 1
+          )
+        }
+      } else {
+        // Original behavior for same-type drag and drop
+        if (dragTarget.position === 'inside') {
+          if (node.childrenIds.length > 0 && !expanded) {
+            toggleNode(nodeId)
+          }
+          await treeNodesApi.setNodeParent(dragItem.id, nodeId, 0)
+        } else if (!isRoot && node.parentId) {
+          const parent = nodes[node.parentId]
+          const indexInParent = parent.childrenIds.indexOf(nodeId)
+          await treeNodesApi.setNodeParent(
+            dragItem.id,
+            node.parentId,
+            dragTarget.position === 'before' ? indexInParent : indexInParent + 1
+          )
+        }
       }
       handleDragLeave()
     }
@@ -575,10 +607,34 @@ export const HTableRow: FC<TreeNodeProps> = ({
               autoFocus
             />
           ) : (
-            <span style={{
-              color: showAsDraft ? '#777' : 'var(--text-primary)',
-              fontStyle: showAsDraft ? 'italic' : 'normal'
-            }}>{node.title || '(blank)'}</span>
+            <>
+              {node.metadata?.referenceMapNodeId && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    marginRight: 6,
+                    color: isMapRefHovered ? '#1976d2' : '#666',
+                    cursor: 'pointer',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    backgroundColor: isMapRefHovered ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                    transition: 'all 0.2s'
+                  }}
+                  onClick={handleMapReferenceClick}
+                  onMouseEnter={() => setIsMapRefHovered(true)}
+                  onMouseLeave={() => setIsMapRefHovered(false)}
+                >
+                  <Tooltip title="Click to navigate to the referenced map">
+                    <Map sx={{ fontSize: 18 }} />
+                  </Tooltip>
+                </span>
+              )}
+              <span style={{
+                color: showAsDraft ? '#777' : 'var(--text-primary)',
+                fontStyle: showAsDraft ? 'italic' : 'normal'
+              }}>{node.title || '(blank)'}</span>
+            </>
           )}
         </div>
       </td>

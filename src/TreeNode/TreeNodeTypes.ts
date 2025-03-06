@@ -15,10 +15,14 @@ export type UpdateMetrics = {
   [Property in keyof Metrics]?: Metrics[Property] | null;
 }
 
+export type Metadata = {
+  referenceMapNodeId?: string
+}
+
 export interface TreeNodeProperties {
   title: string
   description?: string
-  metadata?: Record<string, string | number | boolean | Date>
+  metadata?: Metadata
   setMetrics?: PartialMetrics
   nodeState?: NodeState  // Replacing draft with nodeState
 }
