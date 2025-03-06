@@ -197,7 +197,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
             referenceMapNodeId: draggedNode.id
           },
           setMetrics: {
-            targetReadinessLevel
+            targetReadinessLevel,
+            workRemaining: 1 // Default to 1 unit of work remaining
           }
         }
 
