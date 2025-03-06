@@ -1,7 +1,7 @@
 import { FC, useState, useRef, useEffect } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
-import { ArrowDropDown, ArrowRight, Map } from '@mui/icons-material'
+import { ArrowDropDown, ArrowRight, Map, CheckCircle } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill, RlPill } from '../../widgets'
 import type { TreeNode, TreeNodeSet, TreeNodeProperties } from '../../../TreeNode/TreeNodeTypes'
@@ -86,8 +86,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   // Local selection function for keyboard navigation that doesn't change focus
   const localSelectNode = (id: string) => {
-    if (isFocused) {
+    console.log('localSelectNode called for id:', id);
+    // Only call selectNodeAndFocus if the node is not already selected
+    if (isFocused && (!selectedNode || selectedNode.id !== id)) {
+      console.log('Calling selectNodeAndFocus');
       viewStateMethods.selectNodeAndFocus(nodes[id]);
+    } else {
+      console.log('Node already selected, not calling selectNodeAndFocus');
     }
   }
 
@@ -116,17 +121,31 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }, [isSelected])
 
   const handleRowClick = (e: React.MouseEvent) => {
-    // Ignore clicks on the toggle button
-    if ((e.target as HTMLElement).closest('.toggle-button')) {
+    console.log('Row click', { isSelected, wasFocusedRef: wasFocusedRef.current, hasRefNode: !!node.metadata?.referenceMapNodeId });
+
+    // Ignore clicks on the toggle button or any cell with a click handler
+    if ((e.target as HTMLElement).closest('.toggle-button') ||
+      (e.target as HTMLElement).closest('[data-has-click-handler="true"]')) {
+      console.log('Ignoring click on toggle button or element with click handler');
       return;
     }
 
-    // Only enter edit mode if the row was already selected AND the section was already focused
+    // Already selected node, and suitable for editing (focused and no reference node)
     if (isSelected && wasFocusedRef.current && !node.metadata?.referenceMapNodeId) {
-      setIsEditing(true);
+      console.log('Entering edit mode, already selected');
+      e.stopPropagation(); // Prevent event from bubbling up
+      e.preventDefault(); // Prevent default behavior
+      setTimeout(() => {
+        setIsEditing(true);
+      }, 0);
+      return;
     }
-    // Otherwise just select the row (don't start editing)
-    localSelectNode(nodeId);
+
+    // Not selected yet, select the node first
+    if (!isSelected) {
+      console.log('Selecting node');
+      localSelectNode(nodeId);
+    }
   }
 
   const handleToggleClick = (e: React.MouseEvent) => {
@@ -220,20 +239,27 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputBlur = async () => {
-    if (editValue.trim() === '') {
-      // If empty, use 'TBD' as a placeholder
-      await treeNodesApi.updateNode(nodeId, { title: 'TBD' })
-    } else if (editValue !== node.title) {
-      // Save changes if the title has been modified
-      await treeNodesApi.updateNode(nodeId, { title: editValue })
-    }
+    console.log('Input blur', { editValue, nodeTitle: node.title });
 
-    // Clear justCreated flag since we're saving changes
-    if (justCreated) {
-      setJustCreated(false)
-    }
+    try {
+      if (editValue.trim() === '') {
+        // If empty, use 'TBD' as a placeholder
+        await treeNodesApi.updateNode(nodeId, { title: 'TBD' });
+      } else if (editValue !== node.title) {
+        // Save changes if the title has been modified
+        await treeNodesApi.updateNode(nodeId, { title: editValue });
+      }
 
-    setIsEditing(false)
+      // Clear justCreated flag since we're saving changes
+      if (justCreated) {
+        setJustCreated(false);
+      }
+    } catch (error) {
+      console.error('Error saving title:', error);
+    } finally {
+      // Always exit edit mode
+      setIsEditing(false);
+    }
   }
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
@@ -573,6 +599,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
     setEditValue
   ]);
 
+  // Add a debugging effect to log when editing state changes
+  useEffect(() => {
+    console.log('Editing state changed:', { isEditing, nodeId, title: node.title });
+  }, [isEditing, nodeId, node.title]);
+
   return (
     <tr
       ref={rowRef}
@@ -614,6 +645,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               onKeyDown={handleInputKeyDown}
               style={styles.input}
               autoFocus
+              data-editing="true"
             />
           ) : (
             <>
@@ -685,6 +717,60 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 })
               }}
             />
+          )}
+        </td>
+      )}
+
+      {/* Work Remaining column - only for waypoint tables and only editable if node has referencedMapNodeId */}
+      {showWaypointColumns && (
+        <td style={styles.cell}>
+          {node.metadata?.referenceMapNodeId && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                backgroundColor: 'var(--background-secondary)',
+                minWidth: '40px',
+                justifyContent: 'center'
+              }}
+              data-has-click-handler="true"
+              onClick={async (e) => {
+                e.stopPropagation();
+
+                // Get current value
+                const currentValue = node.setMetrics?.workRemaining;
+                const displayValue = currentValue !== undefined ? currentValue.toString() : '';
+
+                // Prompt for new value
+                const newValue = prompt('Enter work remaining (0 for completed):', displayValue);
+
+                // Validate and update
+                if (newValue !== null) {
+                  if (newValue === '') {
+                    // If empty, remove the workRemaining property
+                    await treeNodesApi.updateNode(nodeId, {
+                      setMetrics: { workRemaining: null }
+                    });
+                  } else {
+                    const parsedValue = parseInt(newValue, 10);
+                    if (!isNaN(parsedValue) && parsedValue >= 0) {
+                      await treeNodesApi.updateNode(nodeId, {
+                        setMetrics: { workRemaining: parsedValue }
+                      });
+                    }
+                  }
+                }
+              }}
+            >
+              {node.setMetrics?.workRemaining === 0 ? (
+                <CheckCircle sx={{ color: 'green', fontSize: 20 }} />
+              ) : (
+                <span>{node.setMetrics?.workRemaining !== undefined ? node.setMetrics.workRemaining : ''}</span>
+              )}
+            </div>
           )}
         </td>
       )}

@@ -115,6 +115,7 @@ export const EditableRlPill: React.FC<EditableRlPillProps> = ({ readinessLevel, 
       ...styles.readinessLevel,
       cursor: 'pointer',
     }}
+    data-has-click-handler="true"
   >
     <div style={{ position: 'relative' }} ref={rlRef}>
       <RlPill level={readinessLevel} auto={auto} />

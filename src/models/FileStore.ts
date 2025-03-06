@@ -36,6 +36,7 @@ interface NodeMetadata {
   filename?: string  // The name of the file storing this node
   nodeState?: NodeState  // Replacing draft with nodeState
   type?: NodeType
+  metadata?: any
 }
 
 const FILESTORE_SUB_DIRS_BY_TYPE: Record<NodeType, string> = {
@@ -271,7 +272,8 @@ class FileStore {
       calculatedMetrics: metadata.calculatedMetrics || {},
       nodeState: metadata.nodeState ?? (metadata.draft ? "draft" : "active"),  // Convert legacy draft to nodeState
       type: metadata.type ?? "map",
-      ...(metadata.setMetrics && { setMetrics: metadata.setMetrics })
+      ...(metadata.setMetrics && { setMetrics: metadata.setMetrics }),
+      ...(metadata.metadata && { metadata: metadata.metadata })
     }
 
     // If any data was missing, heal the file by writing it back
@@ -324,7 +326,8 @@ class FileStore {
       calculatedMetrics: node.calculatedMetrics,
       nodeState: node.nodeState,
       type: node.type,
-      ...(node.setMetrics && { setMetrics: node.setMetrics })
+      ...(node.setMetrics && { setMetrics: node.setMetrics }),
+      ...(node.metadata && { metadata: cleanObject(node.metadata) })
     }
 
     // Format the content with frontmatter and description

@@ -265,6 +265,7 @@ export const HTable: FC<HTableProps> = ({
           {showReadinessColumn && <col style={styles.levelColumn} />}
           {showWaypointColumns && <col style={styles.levelColumn} />}
           {showWaypointColumns && <col style={styles.levelColumn} />}
+          {showWaypointColumns && <col style={styles.levelColumn} />}
         </colgroup>
         <thead>
           <tr>
@@ -272,6 +273,7 @@ export const HTable: FC<HTableProps> = ({
             {showReadinessColumn && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">{readinessColumnHeader}</th>}
             {showWaypointColumns && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">Current RL</th>}
             {showWaypointColumns && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">Target RL</th>}
+            {showWaypointColumns && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">Work Remaining</th>}
           </tr>
         </thead>
         <tbody>

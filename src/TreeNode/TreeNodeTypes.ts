@@ -9,6 +9,7 @@ export type NodeState = "draft" | "active"
 type MetricsBase = {
   readinessLevel: number
   targetReadinessLevel: number
+  workRemaining: number
 }
 
 export type Metrics = Partial<MetricsBase>
