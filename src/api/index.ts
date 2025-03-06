@@ -76,7 +76,6 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
       const delta = await fileStore.setNodeParent(req.params.nodeId, newParentId, insertAtIndex)
       res.status(200).json(delta)
     } catch (error: any) {
-      console.error('Error changing node parent:', error)
       if (error.message?.includes('not found')) {
         res.status(404).json({ error: `Node ${req.params.nodeId} not found` })
       } else if (error.message?.includes('descendants') || error.message?.includes('root node')) {

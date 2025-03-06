@@ -4,7 +4,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 import { createFileStore, FileStore } from '../../models'
-import { getTreeWithNodeParentChanged } from '../../TreeNode'
+import { getTreeNodeSetDeltaForNodeParentChanged } from '../../TreeNode'
 import { getActiveChildren } from '../../TreeNode'
 import { useTempDir } from '../helpers/tempDir'
 import { v4 as uuid } from 'uuid'
@@ -616,8 +616,6 @@ calculatedMetrics:
     expect(fileStore.getNode(parent.id).childrenIds).toEqual([
       child1.id, child2.id, child3.id, child4.id
     ])
-
-    getTreeWithNodeParentChanged(fileStore.allNodes, child4.id, parent.id, 2)
 
     // Move child4 to position 2 (before child3)
     await fileStore.setNodeParent(child4.id, parent.id, 2)

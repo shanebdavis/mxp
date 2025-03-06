@@ -10,8 +10,10 @@ import {
   type TreeNodeSet,
   getTreeNodeSetDeltaWithUpdatedNodeMetrics,
   vivifyRootNodesByType,
+  inspectTree,
 } from '../../TreeNode'
 import { getActiveChildren } from '../../TreeNode'
+import { log } from '../../ArtStandardLib'
 
 describe('TreeNode using Deltas', () => {
   let testNodes: TreeNodeSet

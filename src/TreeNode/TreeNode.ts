@@ -50,44 +50,6 @@ const getActiveChildNodesWithOptionalDelta = (nodes: TreeNodeSet, nodeId: string
 //*******************************************
 
 /**
- * Update the metrics for a node and all its parents
- * @param nodes - The nodes to update
- * @param startNodeId - The node to start the update from
- * @returns A new nodes object with the all nodes, updated and old
- */
-const getTreeWithUpdatedNodeMetrics = (nodes: TreeNodeSet, startNodeId: string): TreeNodeSet => {
-  // create map of only the nodes we're going to modify
-  const updatedNodes: TreeNodeSet = { ...nodes }
-  let changes = 0
-
-  const updateNode = (nodeId: string) => {
-    const node = updatedNodes[nodeId]
-    if (!node) return
-
-    // Use getActiveChildren to filter out non-active nodes for metrics calculations
-    const children = getActiveChildren(updatedNodes, nodeId)
-    const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
-
-    if (!metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
-      changes++
-      updatedNodes[nodeId] = {
-        ...node,
-        calculatedMetrics: newCalculatedMetrics
-      }
-      // if this node changed and has a parent, that parent might need updating too
-      if (node.parentId) updateNode(node.parentId)
-    }
-  }
-
-  updateNode(startNodeId)
-
-  // only create a new nodes object if we actually made changes
-  return changes > 0
-    ? updatedNodes
-    : nodes
-}
-
-/**
  * Update the metrics for a node and all its parents, returning a delta
  * @param nodes - The original nodes set
  * @param delta - The delta to apply before updating metrics
@@ -98,6 +60,7 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
   nodes: TreeNodeSet,
   delta: TreeNodeSetDelta,
   startNodeId: string,
+  forceCheckParent: boolean = true
 ): TreeNodeSetDelta => {
   // Create a working copy of the delta
   const updatedDelta: TreeNodeSetDelta = {
@@ -113,7 +76,8 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
     const children = getActiveChildNodesWithOptionalDelta(nodes, nodeId, updatedDelta)
     const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
 
-    if (!metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
+    if (forceCheckParent || !metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
+      forceCheckParent = false
       // Update the node in the delta
       updatedDelta.updated[nodeId] = {
         ...node,
@@ -129,150 +93,6 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
 
   // Only return a new delta if we actually made changes
   return updatedDelta
-}
-
-export const getTreeWithNodeAdded = (
-  nodes: TreeNodeSet,
-  nodeToAdd: TreeNode,
-  parentId: string,
-  insertAtIndex?: number | null
-): TreeNodeSet => {
-  if (!nodes[parentId]) throw new Error(`Parent node ${parentId} not found`)
-
-  // First add the node to the tree, ensuring it starts with readinessLevel 0
-  const updatedNodes = {
-    ...nodes,
-    [parentId]: {
-      ...nodes[parentId],
-      childrenIds: getChildrenIdsWithInsertion(nodes[parentId].childrenIds, nodeToAdd.id, insertAtIndex)
-    },
-    [nodeToAdd.id]: {
-      ...nodeToAdd,
-      parentId,
-    }
-  }
-
-  // Update the nodes object and recalculate parent metrics
-  return getTreeWithUpdatedNodeMetrics(updatedNodes, nodeToAdd.id)
-}
-
-export const getTreeWithNodeUpdated = (
-  nodes: TreeNodeSet,
-  nodeId: string,
-  updates: UpdateTreeNodeProperties
-): TreeNodeSet => {
-  const node = nodes[nodeId]
-  if (!node) throw new Error(`Node ${nodeId} not found`)
-
-  // Create updated node
-  const updatedNode = getUpdatedNode(node, updates)
-
-  // Update the nodes object and recalculate metrics
-  const updatedNodes = {
-    ...nodes,
-    [nodeId]: updatedNode
-  }
-
-  // Recalculate metrics for this node and its ancestors
-  return getTreeWithUpdatedNodeMetrics(updatedNodes, nodeId)
-}
-
-/**
- * Move a node to a new parent
- *
- * TODO: I'd rather have this, or a helper function like this, only return the nodes that changed
- *
- * @param nodes - The nodes to update
- * @param nodeId - The node to move
- * @param newParentId - The new parent of the node
- * @param insertAtIndex - The index to insert the node at, if null, the node will be added to the end
- * @returns A new nodes object with the node moved
- */
-export const getTreeWithNodeParentChanged = (
-  nodes: TreeNodeSet,
-  nodeId: string,
-  newParentId: string,
-  insertAtIndex?: number | null
-): TreeNodeSet => {
-  const node = nodes[nodeId]
-  if (!node) throw new Error(`Node ${nodeId} not found`)
-  if (!nodes[newParentId]) throw new Error(`New parent node ${newParentId} not found`)
-  if (isParentOfInTree(nodes, nodeId, newParentId)) {
-    throw new Error('Cannot move a node to one of its descendants')
-  }
-
-  // If moving within the same parent, handle differently
-  if (node.parentId === newParentId) {
-    const parent = nodes[newParentId];
-    const currentIndex = parent.childrenIds.indexOf(nodeId);
-    if (currentIndex === -1) throw new Error(`Node ${nodeId} not found in parent's children`);
-
-    // If no insertAtIndex is provided, move to the end
-    const targetIndex = insertAtIndex ?? parent.childrenIds.length - 1;
-    // If moving to a later position, we need to account for the removal of the current item
-    const adjustedTargetIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
-
-    return getTreeWithUpdatedNodeMetrics(
-      {
-        ...nodes,
-        [newParentId]: {
-          ...parent,
-          childrenIds: moveElementInArray(
-            parent.childrenIds,
-            currentIndex,
-            adjustedTargetIndex
-          )
-        }
-      },
-      newParentId
-    );
-  }
-
-  // Otherwise, handle moving to a new parent
-  const oldParent = node.parentId ? nodes[node.parentId] : null
-
-  let updatedNodes = {
-    ...nodes,
-    [nodeId]: { ...node, parentId: newParentId },
-    [newParentId]: { ...nodes[newParentId], childrenIds: getChildrenIdsWithInsertion(nodes[newParentId].childrenIds, nodeId, insertAtIndex) }
-  }
-  if (oldParent) {
-    updatedNodes[oldParent.id] = { ...oldParent, childrenIds: getChildrenIdsWithRemoval(oldParent.childrenIds, nodeId) }
-    updatedNodes = getTreeWithUpdatedNodeMetrics(updatedNodes, oldParent.id)
-  }
-  return getTreeWithUpdatedNodeMetrics(updatedNodes, newParentId)
-}
-
-export const getTreeWithNodeRemoved = (
-  nodes: TreeNodeSet,
-  nodeId: string
-): TreeNodeSet => {
-  const node = nodes[nodeId]
-  if (!node) throw new Error(`Node ${nodeId} not found`)
-
-  // Get all descendant nodes to remove
-  const nodesToRemove = new Set<string>()
-  const addDescendants = (id: string) => {
-    nodesToRemove.add(id)
-    getChildIds(nodes, id).forEach(addDescendants)
-  }
-  addDescendants(nodeId)
-
-  // Create new nodes object without the removed nodes
-  const updatedNodes = { ...nodes }
-  nodesToRemove.forEach(id => delete updatedNodes[id])
-
-  // Remove the node from its parent's childrenIds
-  if (node.parentId) {
-    updatedNodes[node.parentId] = {
-      ...updatedNodes[node.parentId],
-      childrenIds: getChildrenIdsWithRemoval(updatedNodes[node.parentId].childrenIds, nodeId)
-    }
-  }
-
-  return node.parentId
-    ? getTreeWithUpdatedNodeMetrics(updatedNodes, node.parentId)
-    : updatedNodes
 }
 
 //*******************************************
@@ -420,7 +240,7 @@ export const getTreeNodeSetDeltaForNodeAdded = (
   }
 
   // Update metrics for the node and its ancestors
-  return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, nodeToAdd.id)
+  return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, nodeToAdd.id, true)
 }
 
 export const getTreeNodeSetDeltaForNodeUpdated = (
