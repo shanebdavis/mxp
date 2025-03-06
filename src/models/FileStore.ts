@@ -261,16 +261,10 @@ class FileStore {
     const { data: metadata = {}, content: description = '' } = matter(content)
 
     // Only use filename as fallback if title field is not present in yaml
-    const fallbackTitle = path.basename(filePath, '.md')
-    const hasTitle = 'title' in metadata
-    const title = hasTitle ? (metadata.title ?? '') : fallbackTitle
-
-    const id = metadata.id || uuid() // generate a new id if missing
-    const filename = metadata.filename || (title.trim() || 'untitled') + '.md'
     const node = {
-      id,
-      title,
-      filename,
+      id: metadata.id || uuid(),
+      title: metadata.title || path.basename(filePath, '.md'),
+      filename: path.basename(filePath),
       description: description.trim(),
       childrenIds: Array.isArray(metadata.childrenIds) ? metadata.childrenIds : [],
       parentId: metadata.parentId || null,
@@ -281,7 +275,7 @@ class FileStore {
     }
 
     // If any data was missing, heal the file by writing it back
-    if (!metadata.id || !hasTitle || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics || !metadata.type) {
+    if (!metadata.id || !metadata.title || !metadata.childrenIds || metadata.parentId === undefined || !metadata.calculatedMetrics || !metadata.type) {
       // If we're healing a file without an ID, rename it to use the ID
       if (!metadata.id) {
         await fs.rename(filePath, this.getFilePath(node))
@@ -343,7 +337,7 @@ class FileStore {
 
   private async vivifyAllSubDirs() {
     await Promise.all(
-      array(FILESTORE_SUB_DIRS_BY_TYPE, vivifyDirectory)
+      array(Object.values(this._baseDirsByType), vivifyDirectory)
     )
   }
 

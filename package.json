@@ -23,6 +23,7 @@
     "test-coverage": "vitest run --coverage",
     "test-ui": "vitest --ui",
     "build": "vite build && tsc -p tsconfig.node.json",
+    "build-watch": "vite build --watch",
     "prepare": "npm run build"
   },
   "dependencies": {

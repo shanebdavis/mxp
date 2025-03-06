@@ -1,5 +1,5 @@
 ---
-id: e2476128-7dd4-47ff-af1e-723428479aa8
+id: 8b126b1d-879f-4aba-ba53-63e7c4e65fc2
 title: Waypoints
 parentId: null
 childrenIds: []
