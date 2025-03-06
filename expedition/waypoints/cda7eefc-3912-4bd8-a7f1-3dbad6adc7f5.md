@@ -1,17 +1,17 @@
 ---
-id: 261c41b3-138d-41a4-bb76-df1ca2c718bf
-title: can add milestones -- toot
+id: cda7eefc-3912-4bd8-a7f1-3dbad6adc7f5
+title: automatic milestone calculated metrics
 parentId: c4422753-d361-4c1c-833e-1c7b236a39bd
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 4
+  readinessLevel: 0
   targetReadinessLevel: 4
-  workRemaining: 0
+  workRemaining: 4
 nodeState: active
 type: waypoint
 setMetrics:
   targetReadinessLevel: 4
   workRemaining: 4
 metadata:
-  referenceMapNodeId: 6e513861-44dc-452e-b93e-73814072ce8a
+  referenceMapNodeId: 98707783-4e59-4a50-8c8b-93d45272175b
 ---

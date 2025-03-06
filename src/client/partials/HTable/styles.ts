@@ -44,6 +44,7 @@ export const styles = {
   row: {
     cursor: 'pointer',
     position: 'relative' as const,
+    outline: 'none',
   },
   selectedRow: {
     backgroundColor: 'var(--selected-color)',

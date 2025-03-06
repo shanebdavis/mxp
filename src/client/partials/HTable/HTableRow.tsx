@@ -682,6 +682,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
         ...styles.row,
         ...(isSelected ? (isFocused ? styles.selectedRow : unfocusedSelectedStyle) : {}),
         ...(isDragTarget ? styles.dragTargetRow : {}),
+        outline: 'none',
       }}
       onClick={handleRowClick}
       draggable

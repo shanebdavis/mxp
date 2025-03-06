@@ -382,9 +382,40 @@ const App = () => {
   }
 
   // Add expanded nodes state for each node type
-  const [expandedMapNodes, setExpandedMapNodes] = useState<Record<string, boolean>>({})
-  const [expandedWaypointNodes, setExpandedWaypointNodes] = useState<Record<string, boolean>>({})
-  const [expandedUserNodes, setExpandedUserNodes] = useState<Record<string, boolean>>({})
+  const [expandedMapNodes, setExpandedMapNodes] = useState<Record<string, boolean>>(() => {
+    // Initialize with saved state from localStorage if available
+    return JSON.parse(localStorage.getItem('expandedMapNodes') || '{}');
+  });
+
+  const [expandedWaypointNodes, setExpandedWaypointNodes] = useState<Record<string, boolean>>(() => {
+    // Initialize with saved state from localStorage if available
+    return JSON.parse(localStorage.getItem('expandedWaypointNodes') || '{}');
+  });
+
+  const [expandedUserNodes, setExpandedUserNodes] = useState<Record<string, boolean>>(() => {
+    // Initialize with saved state from localStorage if available
+    return JSON.parse(localStorage.getItem('expandedUserNodes') || '{}');
+  });
+
+  // Ensure root nodes are expanded by default once they're available
+  useEffect(() => {
+    if (Object.keys(rootNodesByType).length > 0) {
+      // Expand map root node if it exists
+      if (rootNodesByType.map && !expandedMapNodes[rootNodesByType.map.id]) {
+        setExpandedMapNodes(prev => ({ ...prev, [rootNodesByType.map.id]: true }));
+      }
+
+      // Expand waypoint root node if it exists
+      if (rootNodesByType.waypoint && !expandedWaypointNodes[rootNodesByType.waypoint.id]) {
+        setExpandedWaypointNodes(prev => ({ ...prev, [rootNodesByType.waypoint.id]: true }));
+      }
+
+      // Expand user root node if it exists
+      if (rootNodesByType.user && !expandedUserNodes[rootNodesByType.user.id]) {
+        setExpandedUserNodes(prev => ({ ...prev, [rootNodesByType.user.id]: true }));
+      }
+    }
+  }, [rootNodesByType, expandedMapNodes, expandedWaypointNodes, expandedUserNodes]);
 
   // Function to get all parent node IDs for a given node
   const getAllParentNodeIds = (nodeId: string, nodes: TreeNodeSet): string[] => {

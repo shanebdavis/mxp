@@ -4,9 +4,10 @@ title: each milestone can have an estimate
 parentId: 9774420a-b526-45f7-bafc-35424a7c80ef
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
+  workRemaining: 0
 nodeState: active
 type: map
 setMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
 ---
