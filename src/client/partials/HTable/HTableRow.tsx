@@ -120,13 +120,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
 
     // Only enter edit mode if the row was already selected AND the section was already focused
-    if (isSelected && wasFocusedRef.current) {
+    if (isSelected && wasFocusedRef.current && !node.metadata?.referenceMapNodeId) {
       setIsEditing(true);
     }
     // Otherwise just select the row (don't start editing)
-    else {
-      viewStateMethods.selectNodeAndFocus(node);
-    }
+    localSelectNode(nodeId);
   }
 
   const handleToggleClick = (e: React.MouseEvent) => {
@@ -633,7 +631,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
               <span style={{
                 color: showAsDraft ? '#777' : 'var(--text-primary)',
                 fontStyle: showAsDraft ? 'italic' : 'normal'
-              }}>{node.title || '(blank)'}</span>
+              }}>{node.metadata?.referenceMapNodeId ?
+                (nodes[node.metadata.referenceMapNodeId]?.title || '(referenced map not found)') :
+                (node.title || '(blank)')}</span>
             </>
           )}
         </div>

@@ -185,22 +185,29 @@ export const DetailsPanel = ({
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')
 
-  const handleDescriptionClick = () => {
-    if (!isEditingDescription && selectedNode) {
-      setDescriptionDraft(selectedNode.description || '')
-      setIsEditingDescription(true)
-    }
-  }
-
+  // Handle description blur event
   const handleDescriptionBlur = async () => {
+    setIsEditingDescription(false)
     if (selectedNode && descriptionDraft !== selectedNode.description) {
       await treeNodesApi.updateNode(selectedNode.id, { description: descriptionDraft })
     }
-    setIsEditingDescription(false)
   }
 
+  // Handle description keydown event
   const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
-    e.stopPropagation()
+    if (e.key === 'Escape') {
+      setIsEditingDescription(false)
+      e.stopPropagation()
+    }
+  }
+
+  // Handle double-click on description to start editing
+  const handleDescriptionDoubleClick = () => {
+    // Don't allow editing for nodes that reference a map node
+    if (!isEditingDescription && selectedNode && !selectedNode.metadata?.referenceMapNodeId) {
+      setDescriptionDraft(selectedNode.description || '')
+      setIsEditingDescription(true)
+    }
   }
 
   const markdownComponents: Components = {
@@ -269,7 +276,11 @@ export const DetailsPanel = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div className="field-label">{nameColumnHeader}</div>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <h3 style={{ margin: 0 }}>{selectedNode.title}</h3>
+                  <h3 style={{ margin: 0 }}>
+                    {selectedNode.metadata?.referenceMapNodeId ?
+                      (nodes[selectedNode.metadata.referenceMapNodeId]?.title || '(referenced map not found)') :
+                      selectedNode.title}
+                  </h3>
                   {selectedNode.metadata?.referenceMapNodeId && (
                     <Tooltip title="Click to navigate to the referenced map">
                       <span
@@ -340,20 +351,18 @@ export const DetailsPanel = ({
                   />
                 ) : (
                   <div
-                    onClick={handleDescriptionClick}
+                    onClick={handleDescriptionDoubleClick}
                     className="markdown-content"
                     style={styles.descriptionPreview}
                   >
-                    {selectedNode.description ? (
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={markdownComponents}
-                      >
-                        {selectedNode.description}
-                      </ReactMarkdown>
-                    ) : (
-                      <span>Add a description... (Markdown supported)</span>
-                    )}
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={markdownComponents}
+                    >
+                      {selectedNode.metadata?.referenceMapNodeId ?
+                        (nodes[selectedNode.metadata.referenceMapNodeId]?.description || '*No description for referenced map*') :
+                        (selectedNode.description || '*No description*')}
+                    </ReactMarkdown>
                   </div>
                 )}
               </div>
