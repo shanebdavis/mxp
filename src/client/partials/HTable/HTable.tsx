@@ -13,7 +13,7 @@ interface HTableProps {
   viewStateMethods: ViewStateMethods
   treeNodesApi: TreeStateMethods
   editingNodeId?: string | null
-  setEditingNodeId: (id: string | null) => void
+  setEditingNodeId?: (id: string | null) => void
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
@@ -22,6 +22,15 @@ interface HTableProps {
   expandedNodes?: Record<string, boolean>
   setExpandedNodes?: (newState: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
   showDraft?: boolean
+  dropPreview?: {
+    dropParentId: string | null;
+    insertAtIndex: number | null;
+  }
+  setDropPreview?: (preview: {
+    dropParentId: string | null;
+    insertAtIndex: number | null;
+  }) => void
+  clearDropPreview?: () => void
 }
 
 const getDisplayOrder = (
@@ -119,7 +128,7 @@ export const HTable: FC<HTableProps> = ({
   viewStateMethods,
   treeNodesApi,
   editingNodeId,
-  setEditingNodeId,
+  setEditingNodeId = () => { },
   indexInParentMap,
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
@@ -127,7 +136,10 @@ export const HTable: FC<HTableProps> = ({
   isFocused = true, // Default to true for backward compatibility
   expandedNodes: externalExpandedNodes,
   setExpandedNodes: externalSetExpandedNodes,
-  showDraft = true // Default to showing drafts
+  showDraft = true, // Default to showing drafts
+  dropPreview = { dropParentId: null, insertAtIndex: null },
+  setDropPreview = () => { },
+  clearDropPreview = () => { }
 }) => {
   // Use internal state if external state is not provided
   const [internalExpandedNodes, setInternalExpandedNodes] = useState<Record<string, boolean>>({})
@@ -171,8 +183,21 @@ export const HTable: FC<HTableProps> = ({
     const height = rect.height
 
     let position: DropPosition
+    let parentId: string | null = null
+    let insertIndex: number | null = null
+
+    const node = nodes[nodeId]
+
     if (y < height * 0.25) {
       position = 'before'
+      // For 'before', use the node's parent and the node's index in its parent
+      if (node.parentId) {
+        parentId = node.parentId
+        const parent = nodes[node.parentId]
+        if (parent && parent.childrenIds) {
+          insertIndex = parent.childrenIds.indexOf(nodeId)
+        }
+      }
       setDropIndicator({
         top: rect.top - tableRect.top,
         show: true,
@@ -182,6 +207,14 @@ export const HTable: FC<HTableProps> = ({
       })
     } else if (y > height * 0.75) {
       position = 'after'
+      // For 'after', use the node's parent and the index after the node
+      if (node.parentId) {
+        parentId = node.parentId
+        const parent = nodes[node.parentId]
+        if (parent && parent.childrenIds) {
+          insertIndex = parent.childrenIds.indexOf(nodeId) + 1
+        }
+      }
       setDropIndicator({
         top: rect.bottom - tableRect.top,
         show: true,
@@ -191,10 +224,22 @@ export const HTable: FC<HTableProps> = ({
       })
     } else {
       position = 'inside'
+      // For 'inside', the parent is the current node
+      parentId = nodeId
+      // If the node has children and is expanded, set insertIndex to 0 (before first child)
+      insertIndex = 0
       setDropIndicator({
         top: rect.top - tableRect.top,
         show: true,
         isLine: false
+      })
+    }
+
+    // Update the drop preview state if we have valid parent and insert index
+    if (parentId !== null) {
+      setDropPreview({
+        dropParentId: parentId,
+        insertAtIndex: insertIndex
       })
     }
 
@@ -207,6 +252,7 @@ export const HTable: FC<HTableProps> = ({
   const handleDragLeave = () => {
     setDragTarget({ nodeId: null, position: null, indexInParent: null })
     setDropIndicator(prev => ({ ...prev, show: false }))
+    clearDropPreview()
   }
 
   const shouldShowDropIndicator = (x: DragTarget) => {
@@ -224,6 +270,13 @@ export const HTable: FC<HTableProps> = ({
 
   // Flag to determine if we should show the waypoint-specific columns
   const showWaypointColumns = rootNodeType === 'waypoint'
+
+  // Clear drop preview when dragging ends
+  const handleDragEnd = () => {
+    setDraggedNode(null);
+    handleDragLeave();
+    clearDropPreview();
+  }
 
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
@@ -300,6 +353,7 @@ export const HTable: FC<HTableProps> = ({
                   dragTarget,
                   handleDragOver: handleDragOver(nodeId, index, level),
                   handleDragLeave,
+                  handleDragEnd,
                   editingNodeId,
                   setEditingNodeId,
                   displayOrder: displayOrder.map(x => x.nodeId),
@@ -308,6 +362,7 @@ export const HTable: FC<HTableProps> = ({
                   isFocused,
                   showReadinessColumn,
                   showWaypointColumns,
+                  dropPreview,
                 }}
               />
             )

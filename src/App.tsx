@@ -192,6 +192,12 @@ interface SectionWeights {
   users: number;
 }
 
+// State for drop preview
+interface DropPreview {
+  dropParentId: string | null;
+  insertAtIndex: number | null;
+}
+
 const App = () => {
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
     const savedState = localStorage.getItem('detailsPanel.collapsed')
@@ -850,6 +856,20 @@ const App = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]); // Dependency includes the memoized handler
 
+  // Add state for drop preview
+  const [dropPreview, setDropPreview] = useState<DropPreview>({
+    dropParentId: null,
+    insertAtIndex: null
+  });
+
+  // Function to clear drop preview
+  const clearDropPreview = () => {
+    setDropPreview({
+      dropParentId: null,
+      insertAtIndex: null
+    });
+  };
+
   // Add loading and error states
   if (loading) {
     return <div style={{ padding: 20 }}>Loading...</div>
@@ -1143,20 +1163,20 @@ const App = () => {
             </div>
             <div style={styles.sectionContent}>
               <HTable
+                key="mapTable"
                 nodes={nodes}
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
                 viewStateMethods={viewStateMethods}
                 treeNodesApi={treeNodesApi}
-                editingNodeId={editingNodeId}
-                setEditingNodeId={setEditingNodeId}
                 indexInParentMap={indexInParentMap}
-                nameColumnHeader="Problem"
-                readinessColumnHeader="Solution Readiness"
                 isFocused={focusedSection === 'map'}
                 expandedNodes={expandedMapNodes}
                 setExpandedNodes={setExpandedMapNodes}
                 showDraft={showDraftMap}
+                dropPreview={dropPreview}
+                setDropPreview={setDropPreview}
+                clearDropPreview={clearDropPreview}
               />
             </div>
           </div>
@@ -1260,13 +1280,12 @@ const App = () => {
             </div>
             <div style={styles.sectionContent}>
               <HTable
+                key="waypointTable"
                 nodes={nodes}
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
                 viewStateMethods={viewStateMethods}
                 treeNodesApi={treeNodesApi}
-                editingNodeId={editingNodeId}
-                setEditingNodeId={setEditingNodeId}
                 indexInParentMap={indexInParentMap}
                 nameColumnHeader="Waypoint"
                 readinessColumnHeader="Completion Level"
@@ -1274,6 +1293,9 @@ const App = () => {
                 expandedNodes={expandedWaypointNodes}
                 setExpandedNodes={setExpandedWaypointNodes}
                 showDraft={showDraftWaypoints}
+                dropPreview={dropPreview}
+                setDropPreview={setDropPreview}
+                clearDropPreview={clearDropPreview}
               />
             </div>
           </div>
@@ -1339,19 +1361,21 @@ const App = () => {
             </div>
             <div style={styles.sectionContent}>
               <HTable
+                key="userTable"
                 nodes={nodes}
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
                 viewStateMethods={viewStateMethods}
                 treeNodesApi={treeNodesApi}
-                editingNodeId={editingNodeId}
-                setEditingNodeId={setEditingNodeId}
                 indexInParentMap={indexInParentMap}
                 nameColumnHeader="User"
-                readinessColumnHeader="Status"
                 isFocused={focusedSection === 'users'}
                 expandedNodes={expandedUserNodes}
                 setExpandedNodes={setExpandedUserNodes}
+                showDraft={showDraftWaypoints}
+                dropPreview={dropPreview}
+                setDropPreview={setDropPreview}
+                clearDropPreview={clearDropPreview}
               />
             </div>
           </div>

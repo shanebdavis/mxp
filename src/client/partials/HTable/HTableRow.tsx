@@ -23,12 +23,19 @@ interface TreeNodeProps {
   dragTarget: DragTarget
   handleDragOver: (e: React.DragEvent) => void
   handleDragLeave: () => void
+  handleDragEnd?: () => void
   editingNodeId?: string | null
   setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
   indexInParentMap: Record<string, number>
   isDraftSubtree?: boolean
   isFocused?: boolean
+  showReadinessColumn?: boolean
+  showWaypointColumns?: boolean
+  dropPreview?: {
+    dropParentId: string | null;
+    insertAtIndex: number | null;
+  }
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -49,9 +56,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
   selectedNode,
   setDraggedNode,
   setEditingNodeId,
+  showReadinessColumn = true,
+  showWaypointColumns = false,
   toggleNode,
   treeNodesApi,
   viewStateMethods,
+  dropPreview = { dropParentId: null, insertAtIndex: null },
+  handleDragEnd: externalHandleDragEnd
 }) => {
   const node = nodes[nodeId]
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !treeNodesApi.isParentOf(nodeId, draggedNode.id)
@@ -173,6 +184,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const handleDragEnd = () => {
     setDraggedNode(null)
     handleDragLeave()
+    // Call external handler if provided
+    if (externalHandleDragEnd) {
+      externalHandleDragEnd()
+    }
   }
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -676,6 +691,44 @@ export const HTableRow: FC<TreeNodeProps> = ({
     console.log('Editing state changed:', { isEditing, nodeId, title: node.title });
   }, [isEditing, nodeId, node.title]);
 
+  // Get child nodes if this is the drop parent
+  const isDropParent = dropPreview.dropParentId === nodeId;
+
+  // These checks only make sense if this node is a child of the drop parent
+  const isChildOfDropParent = node.parentId === dropPreview.dropParentId;
+
+  // Determine if this node is the child that will be before or after the insertion point
+  const isInsertBefore = isChildOfDropParent &&
+    dropPreview.insertAtIndex !== null &&
+    // This node's index in parent must exactly match the insert index
+    node.parentId && nodes[node.parentId]?.childrenIds.indexOf(nodeId) === dropPreview.insertAtIndex;
+
+  const isInsertAfter = isChildOfDropParent &&
+    dropPreview.insertAtIndex !== null &&
+    // This node's index in parent must be exactly one before the insert index
+    node.parentId && nodes[node.parentId]?.childrenIds.indexOf(nodeId) === (dropPreview.insertAtIndex - 1);
+
+  // Create gradient styles for insertion indicator
+  const insertBeforeGradientStyle = {
+    background: 'linear-gradient(to top, transparent 90%, rgba(25, 118, 210, 0.4) 100%)'
+  };
+
+  const insertAfterGradientStyle = {
+    background: 'linear-gradient(to bottom, transparent 90%, rgba(25, 118, 210, 0.4) 100%)'
+  };
+
+  // Get the appropriate style based on the node's relationship to the insert position
+  const getDropHighlightStyle = () => {
+    if (isDropParent) {
+      return { backgroundColor: 'rgba(25, 118, 210, 0.1)' };
+    } else if (isInsertBefore) {
+      return insertBeforeGradientStyle;
+    } else if (isInsertAfter) {
+      return insertAfterGradientStyle;
+    }
+    return {};
+  };
+
   return (
     <tr
       ref={rowRef}
@@ -684,6 +737,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
         ...(isSelected ? (isFocused ? styles.selectedRow : unfocusedSelectedStyle) : {}),
         ...(isDragTarget ? styles.dragTargetRow : {}),
         outline: 'none',
+        ...getDropHighlightStyle()
       }}
       onClick={handleRowClick}
       draggable
