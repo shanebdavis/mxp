@@ -1,7 +1,6 @@
 ---
 id: 2232152c-04b3-4250-857f-244cbaf176bb
 title: navigate the tree with the keybaord
-filename: untitled.md
 parentId: 9005c387-0c83-4f4b-9815-46589dd317fb
 childrenIds: []
 calculatedMetrics:

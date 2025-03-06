@@ -1,7 +1,6 @@
 ---
 id: f5958119-9841-4b17-8c52-c731bd49159f
 title: Stay focused on the big picture
-filename: untitled.md
 parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 childrenIds:
   - 6e1216a9-533d-4d9e-819f-d60719ad6e9e
@@ -15,6 +14,7 @@ nodeState: active
 type: map
 setMetrics: {}
 ---
+
 # Track Status, not To-Dos
 
 1. a hierarchy
