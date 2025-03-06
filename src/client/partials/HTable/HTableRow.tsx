@@ -3,7 +3,7 @@ import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight, Map } from '@mui/icons-material'
 import { TreeStateMethods } from '../../../useApiForState'
-import { EditableRlPill } from '../../widgets'
+import { EditableRlPill, RlPill } from '../../widgets'
 import type { TreeNode, TreeNodeSet, TreeNodeProperties } from '../../../TreeNode/TreeNodeTypes'
 import { Tooltip } from '@mui/material'
 import { ViewStateMethods } from '../../../viewState'
@@ -29,6 +29,7 @@ interface TreeNodeProps {
   isDraftSubtree?: boolean
   isFocused?: boolean
   showReadinessColumn?: boolean
+  showWaypointColumns?: boolean
 }
 
 export const HTableRow: FC<TreeNodeProps> = ({
@@ -50,6 +51,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   setDraggedNode,
   setEditingNodeId,
   showReadinessColumn = true,
+  showWaypointColumns = false,
   toggleNode,
   treeNodesApi,
   viewStateMethods,
@@ -162,11 +164,20 @@ export const HTableRow: FC<TreeNodeProps> = ({
       // Check if we're dropping a map node onto a waypoint node
       const draggedNode = nodes[dragItem.id]
       if (draggedNode && (dragItem.type === "map" || draggedNode.type === "map") && node.type === "waypoint") {
+        // Calculate target readiness level: source map node's readiness level + 1 (max of 9)
+        const sourceReadinessLevel = draggedNode.calculatedMetrics.readinessLevel;
+        const targetReadinessLevel = typeof sourceReadinessLevel === 'number' && sourceReadinessLevel >= 0
+          ? Math.min(sourceReadinessLevel + 1, 9)
+          : undefined;
+
         // Create a new waypoint node with reference to the map node
         const newWaypointProperties: TreeNodeProperties = {
           title: draggedNode.title,
           metadata: {
             referenceMapNodeId: draggedNode.id
+          },
+          setMetrics: {
+            targetReadinessLevel
           }
         }
 
@@ -649,6 +660,32 @@ export const HTableRow: FC<TreeNodeProps> = ({
               })
             }}
           />
+        </td>
+      )}
+
+      {/* Current RL column - only for waypoint tables and only for nodes with a reference map node */}
+      {showWaypointColumns && (
+        <td style={styles.cell}>
+          {node.metadata?.referenceMapNodeId && typeof node.calculatedMetrics.readinessLevel === 'number' && node.calculatedMetrics.readinessLevel >= 0 ? (
+            <RlPill level={node.calculatedMetrics.readinessLevel} />
+          ) : null}
+        </td>
+      )}
+
+      {/* Target RL column - only for waypoint tables and only editable if node has referencedMapNodeId */}
+      {showWaypointColumns && (
+        <td style={styles.cell}>
+          {node.metadata?.referenceMapNodeId && (
+            <EditableRlPill
+              readinessLevel={node.calculatedMetrics.targetReadinessLevel}
+              auto={node.setMetrics?.targetReadinessLevel == null}
+              onChange={async level => {
+                await treeNodesApi.updateNode(nodeId, {
+                  setMetrics: { targetReadinessLevel: level ?? null }
+                })
+              }}
+            />
+          )}
         </td>
       )}
     </tr>

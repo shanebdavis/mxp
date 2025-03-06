@@ -222,6 +222,9 @@ export const HTable: FC<HTableProps> = ({
   // Only show readiness column for 'map' type, hide for 'user' and 'waypoint'
   const showReadinessColumn = rootNodeType === 'map'
 
+  // Flag to determine if we should show the waypoint-specific columns
+  const showWaypointColumns = rootNodeType === 'waypoint'
+
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
       {dropIndicator.show && (
@@ -260,11 +263,15 @@ export const HTable: FC<HTableProps> = ({
         <colgroup>
           <col style={styles.nameColumn} />
           {showReadinessColumn && <col style={styles.levelColumn} />}
+          {showWaypointColumns && <col style={styles.levelColumn} />}
+          {showWaypointColumns && <col style={styles.levelColumn} />}
         </colgroup>
         <thead>
           <tr>
             <th style={{ ...styles.headerCell, ...styles.nameColumn }} className="field-label">{nameColumnHeader === 'User' ? 'Group/Contributor' : nameColumnHeader}</th>
             {showReadinessColumn && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">{readinessColumnHeader}</th>}
+            {showWaypointColumns && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">Current RL</th>}
+            {showWaypointColumns && <th style={{ ...styles.headerCell, ...styles.levelColumn }} className="field-label">Target RL</th>}
           </tr>
         </thead>
         <tbody>
@@ -298,6 +305,7 @@ export const HTable: FC<HTableProps> = ({
                   isDraftSubtree,
                   isFocused,
                   showReadinessColumn,
+                  showWaypointColumns,
                 }}
               />
             )
