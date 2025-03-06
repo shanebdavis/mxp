@@ -8,9 +8,10 @@ childrenIds:
   - 98707783-4e59-4a50-8c8b-93d45272175b
   - 1e2e34c6-bfc5-4989-abff-cfabd63fc5a4
   - 42ba4f99-3758-485a-b6a8-f20b2ba8e432
+  - 573db48a-ef8f-4a35-9c63-8bda55462075
 calculatedMetrics:
   readinessLevel: 0
-draft: true
+nodeState: draft
 type: map
 setMetrics:
   readinessLevel: 0

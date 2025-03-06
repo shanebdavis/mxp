@@ -325,7 +325,6 @@ class FileStore {
     const metadata = {
       id: node.id,
       title: node.title === '' ? '' : node.title,
-      filename: node.filename,
       parentId: node.parentId,
       childrenIds: node.childrenIds,
       calculatedMetrics: node.calculatedMetrics,
