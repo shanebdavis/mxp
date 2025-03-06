@@ -4,9 +4,10 @@ title: each milestone can have a target RL
 parentId: 9774420a-b526-45f7-bafc-35424a7c80ef
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 2
+  workRemaining: 0
 nodeState: active
 type: map
 setMetrics:
-  readinessLevel: 0
+  readinessLevel: 2
 ---

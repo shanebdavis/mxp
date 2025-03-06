@@ -33,7 +33,7 @@ const calculatableMetrics: Record<keyof Metrics, CalculatableMetric> = {
       const childrenWorkRemaining = compact(childValues.map(child => child?.workRemaining))
       const workRemaining = setMetrics.workRemaining != null
         ? setMetrics.workRemaining
-        : childrenWorkRemaining.length > 0 ? Math.min(...childrenWorkRemaining) : 0
+        : childrenWorkRemaining.length > 0 ? childrenWorkRemaining.reduce((sum, value) => sum + value, 0) : 0
 
       return targetAchieved ? 0 : workRemaining
     }
