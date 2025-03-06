@@ -563,7 +563,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               </button>
             )}
           </div>
-          <span style={{ marginRight: 8, opacity: 0.5 }}>{itemNumber}</span>
+          {itemNumber > 0 ? <span style={{ marginRight: 8, opacity: 0.5 }}>{itemNumber}</span> : null}
           {isEditing ? (
             <input
               ref={inputRef}

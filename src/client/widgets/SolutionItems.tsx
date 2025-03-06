@@ -104,10 +104,11 @@ export const SolutionItems = ({ node, children }: SolutionItemsProps) => {
             }}>
               {!isDraft && <>
                 <span style={{
-                  ...styles.readinessCircle,
+                  ...styles.priorityPill,
+                  color: 'black',
                   background: styles.readinessLevelColors[child.calculatedMetrics.readinessLevel as keyof typeof styles.readinessLevelColors],
                 }}>
-                  {child.calculatedMetrics.readinessLevel}
+                  RL{child.calculatedMetrics.readinessLevel}
                 </span>
                 &nbsp;
               </>}
