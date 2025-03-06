@@ -6,11 +6,13 @@ export type NodeType = "map" | "waypoint" | "user"
  */
 export type NodeState = "draft" | "active"
 
-export type Metrics = {
+type MetricsBase = {
   readinessLevel: number
+  targetReadinessLevel: number
 }
 
-export type PartialMetrics = Partial<Metrics>
+export type Metrics = Partial<MetricsBase>
+
 export type UpdateMetrics = {
   [Property in keyof Metrics]?: Metrics[Property] | null;
 }
@@ -23,7 +25,7 @@ export interface TreeNodeProperties {
   title: string
   description?: string
   metadata?: Metadata
-  setMetrics?: PartialMetrics
+  setMetrics?: Metrics
   nodeState?: NodeState  // Replacing draft with nodeState
 }
 

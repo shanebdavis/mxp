@@ -18,7 +18,7 @@ export const createNode = (
   id: uuid(),
   parentId,
   childrenIds: [],
-  calculatedMetrics: calculateAllMetricsFromSetMetricsAndChildrenMetrics(properties.setMetrics ?? {}, []),
+  calculatedMetrics: calculateAllMetricsFromSetMetricsAndChildrenMetrics(properties.setMetrics ?? {}, [], undefined),
   filename: getDefaultFilename(properties),
   nodeState: properties.nodeState ?? "active"
 })
@@ -74,7 +74,7 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
 
     // Use getActiveChildNodesWithOptionalDelta to filter out non-active nodes for metrics calculations
     const children = getActiveChildNodesWithOptionalDelta(nodes, nodeId, updatedDelta)
-    const newCalculatedMetrics = calculateAllMetricsFromNode(node, children)
+    const newCalculatedMetrics = calculateAllMetricsFromNode(node, children, node.metadata?.referenceMapNodeId != null ? nodes[node.metadata?.referenceMapNodeId] : undefined)
 
     if (forceCheckParent || !metricsAreSame(newCalculatedMetrics, node.calculatedMetrics)) {
       forceCheckParent = false
