@@ -217,38 +217,71 @@ export const HTableRow: FC<TreeNodeProps> = ({
           }
         }
 
-        // Determine where to add the new waypoint based on drop position
-        if (dragTarget.position === 'inside') {
-          // Add as a child of the target waypoint
-          if (node.childrenIds.length > 0 && !expanded) {
-            toggleNode(nodeId)
-          }
-          await treeNodesApi.addNode(newWaypointProperties, nodeId, 0)
-        } else if (!isRoot && node.parentId) {
-          // Add as a sibling before or after the target waypoint
-          const parent = nodes[node.parentId]
-          const indexInParent = parent.childrenIds.indexOf(nodeId)
+        // Use dropPreview to determine target parent and position
+        if (dropPreview.dropParentId !== null) {
+          // Add node based on the dropPreview state
           await treeNodesApi.addNode(
             newWaypointProperties,
-            node.parentId,
-            dragTarget.position === 'before' ? indexInParent : indexInParent + 1
-          )
+            dropPreview.dropParentId,
+            dropPreview.insertAtIndex ?? undefined
+          );
+
+          // Ensure parent node is expanded if needed
+          if (!expandedNodes[dropPreview.dropParentId] &&
+            nodes[dropPreview.dropParentId].childrenIds?.length > 0) {
+            toggleNode(dropPreview.dropParentId);
+          }
+        } else {
+          // Fallback to old behavior
+          if (dragTarget.position === 'inside') {
+            // Add as a child of the target waypoint
+            if (node.childrenIds.length > 0 && !expanded) {
+              toggleNode(nodeId)
+            }
+            await treeNodesApi.addNode(newWaypointProperties, nodeId, 0)
+          } else if (!isRoot && node.parentId) {
+            // Add as a sibling before or after the target waypoint
+            const parent = nodes[node.parentId]
+            const indexInParent = parent.childrenIds.indexOf(nodeId)
+            await treeNodesApi.addNode(
+              newWaypointProperties,
+              node.parentId,
+              dragTarget.position === 'before' ? indexInParent : indexInParent + 1
+            )
+          }
         }
       } else {
-        // Original behavior for same-type drag and drop
-        if (dragTarget.position === 'inside') {
-          if (node.childrenIds.length > 0 && !expanded) {
-            toggleNode(nodeId)
-          }
-          await treeNodesApi.setNodeParent(dragItem.id, nodeId, 0)
-        } else if (!isRoot && node.parentId) {
-          const parent = nodes[node.parentId]
-          const indexInParent = parent.childrenIds.indexOf(nodeId)
+        // Regular node movement (not map-to-waypoint)
+        // Use dropPreview to determine target parent and position
+        if (dropPreview.dropParentId !== null) {
+          // Move node based on the dropPreview state
           await treeNodesApi.setNodeParent(
             dragItem.id,
-            node.parentId,
-            dragTarget.position === 'before' ? indexInParent : indexInParent + 1
-          )
+            dropPreview.dropParentId,
+            dropPreview.insertAtIndex ?? undefined
+          );
+
+          // Ensure parent node is expanded if needed
+          if (!expandedNodes[dropPreview.dropParentId] &&
+            nodes[dropPreview.dropParentId].childrenIds?.length > 0) {
+            toggleNode(dropPreview.dropParentId);
+          }
+        } else {
+          // Fallback to old behavior
+          if (dragTarget.position === 'inside') {
+            if (node.childrenIds.length > 0 && !expanded) {
+              toggleNode(nodeId)
+            }
+            await treeNodesApi.setNodeParent(dragItem.id, nodeId, 0)
+          } else if (!isRoot && node.parentId) {
+            const parent = nodes[node.parentId]
+            const indexInParent = parent.childrenIds.indexOf(nodeId)
+            await treeNodesApi.setNodeParent(
+              dragItem.id,
+              node.parentId,
+              dragTarget.position === 'before' ? indexInParent : indexInParent + 1
+            )
+          }
         }
       }
       handleDragLeave()

@@ -207,21 +207,34 @@ export const HTable: FC<HTableProps> = ({
       })
     } else if (y > height * 0.75) {
       position = 'after'
-      // For 'after', use the node's parent and the index after the node
-      if (node.parentId) {
+
+      // Special case: if node is expanded and has children, insert as first child
+      if (expandedNodes[nodeId] && node.childrenIds && node.childrenIds.length > 0) {
+        parentId = nodeId
+        insertIndex = 0 // First child
+        setDropIndicator({
+          top: rect.bottom - tableRect.top,
+          show: true,
+          isLine: true,
+          parentTop: rect.top - tableRect.top,
+          indentLevel: level + 1 // Indent one more level as it will be a child
+        })
+      }
+      // Regular case: insert after the current node
+      else if (node.parentId) {
         parentId = node.parentId
         const parent = nodes[node.parentId]
         if (parent && parent.childrenIds) {
           insertIndex = parent.childrenIds.indexOf(nodeId) + 1
         }
+        setDropIndicator({
+          top: rect.bottom - tableRect.top,
+          show: true,
+          isLine: true,
+          parentTop: rect.top - tableRect.top,
+          indentLevel: level
+        })
       }
-      setDropIndicator({
-        top: rect.bottom - tableRect.top,
-        show: true,
-        isLine: true,
-        parentTop: rect.top - tableRect.top,
-        indentLevel: level
-      })
     } else {
       position = 'inside'
       // For 'inside', the parent is the current node
