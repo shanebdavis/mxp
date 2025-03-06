@@ -431,20 +431,34 @@ const App = () => {
    * @param nodeTypeOverride
    * @returns
    */
-  const selectNodeAndFocus = (node: TreeNode) => {
+  const selectNodeAndFocus = (node: TreeNode | null | undefined) => {
     if (!node) return;
+    const nodeId = node.id;
+    const nodeType = node.type;
 
-    // 1. Determine the node type
-    const nodeType = node.type
-    const nodeId = node.id
+    // 1. Set the selected node to that node-id
+    setSelectedNodeIds(prev => {
+      if (prev[nodeType] !== nodeId) {
+        return {
+          ...prev,
+          [nodeType]: nodeId
+        }
+      }
 
-    // 2. Set the selected node to that node-id
-    setSelectedNodeIds(prev => ({
-      ...prev,
-      [nodeType]: nodeId
-    }))
+      // else we need to force scrolling to the node by temporarily deselecting it
+      setTimeout(() => {
+        // restore the selected node
+        setSelectedNodeIds(prevState => ({
+          ...prevState,
+          [nodeType]: nodeId
+        }));
+      }, 10);
 
-    // 3. Make sure appropriate section is shown
+      // temporarily deselect the node
+      return { ...prev, [nodeType]: '' }
+    })
+
+    // 2. Make sure appropriate section is shown
     const sectionName = nodeTypeToSectionMap[nodeType]
     if (!activeViews[sectionName]) {
       setActiveViews(prev => ({
@@ -453,14 +467,12 @@ const App = () => {
       }))
     }
 
-    // 4. Focus the appropriate section
+    // 3. Focus the appropriate section
     setFocusedSection(sectionName)
 
-    // 5. Expand the tree if needed so the item is visible
+    // 4. Expand the tree if needed so the item is visible
     expandParentNodes(nodeId, nodeType)
 
-    // 6. The scrolling to make the item visible will happen automatically
-    // due to the useEffect in HTableRow that calls scrollIntoView when a node is selected
   }
 
   const viewStateMethods: ViewStateMethods = {
