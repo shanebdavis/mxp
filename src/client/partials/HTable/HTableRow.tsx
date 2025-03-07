@@ -300,7 +300,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
       console.error('Error saving title:', error);
     } finally {
       // Always exit edit mode
-      clearEditing()
+      if (editingNodeId !== nodeId) {
+        clearEditing()
+      }
     }
   }
 

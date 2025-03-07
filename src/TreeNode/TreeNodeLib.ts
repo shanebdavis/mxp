@@ -37,3 +37,25 @@ export const nodesAreEqual = (a: TreeNode, b: TreeNode): boolean => {
   return eq(a, b)
 }
 
+// Function to get all parent node IDs for a given node
+export const getAllParentNodeIds = (nodeId: string, nodes: TreeNodeSet): string[] => {
+  const result: string[] = []
+  let currentNode = nodes[nodeId]
+
+  while (currentNode && currentNode.parentId) {
+    result.push(currentNode.parentId)
+    currentNode = nodes[currentNode.parentId]
+  }
+
+  return result
+}
+
+export const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> => {
+  const result: Record<string, number> = {}
+  Object.values(nodes).forEach(node => {
+    node.childrenIds.forEach((childId, index) => {
+      result[childId] = index
+    })
+  })
+  return result
+}

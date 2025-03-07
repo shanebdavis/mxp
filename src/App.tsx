@@ -15,7 +15,7 @@ import {
   VisibilityOffOutlined
 } from '@mui/icons-material'
 import { Tooltip, Switch, FormControlLabel } from '@mui/material'
-import type { TreeNode, TreeNodeSet, NodeType, TreeNodeProperties } from './TreeNode'
+import { TreeNode, TreeNodeSet, NodeType, TreeNodeProperties, getAllParentNodeIds, getIndexInParentMap } from './TreeNode'
 import { useApiForState } from './useApiForState'
 import { ViewStateMethods } from './ViewStateMethods'
 import { timeout } from './ArtStandardLib'
@@ -166,16 +166,6 @@ const styles = {
   },
 } as const
 
-const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> => {
-  const result: Record<string, number> = {}
-  Object.values(nodes).forEach(node => {
-    node.childrenIds.forEach((childId, index) => {
-      result[childId] = index
-    })
-  })
-  return result
-}
-
 // Add a type for the active views state
 interface ActiveViews {
   dashboard: boolean;
@@ -186,6 +176,14 @@ interface ActiveViews {
 
 // Add types for section names and focused section
 type SectionName = 'dashboard' | 'map' | 'waypoints' | 'users'
+
+// Map of node types to section names
+const nodeTypeToSectionMap: Record<NodeType, SectionName> = {
+  map: 'map',
+  waypoint: 'waypoints',
+  user: 'users'
+}
+
 interface SectionWeights {
   dashboard: number;
   map: number;
@@ -372,15 +370,16 @@ const App = () => {
 
   const { nodes, rootNodesByType, treeNodesApi, loading, error } = useApiForState()
 
+  // Add this near your other state declarations
+  const latestNodesRef = useRef<TreeNodeSet>(nodes);
+
+  // Update the ref whenever nodes changes
+  useEffect(() => {
+    latestNodesRef.current = nodes;
+  }, [nodes]);
+
   // Track selected node ID for each type
   const [selectedNodeIds, setSelectedNodeIds] = useState<Record<string, string | undefined>>({})
-
-  // Map of node types to section names
-  const nodeTypeToSectionMap: Record<NodeType, SectionName> = {
-    map: 'map',
-    waypoint: 'waypoints',
-    user: 'users'
-  }
 
   // Get the current selected node
   const getSelectedNode = (type: NodeType): TreeNode | null => {
@@ -424,23 +423,10 @@ const App = () => {
     }
   }, [rootNodesByType, expandedMapNodes, expandedWaypointNodes, expandedUserNodes]);
 
-  // Function to get all parent node IDs for a given node
-  const getAllParentNodeIds = (nodeId: string, nodes: TreeNodeSet): string[] => {
-    const result: string[] = []
-    let currentNode = nodes[nodeId]
-
-    while (currentNode && currentNode.parentId) {
-      result.push(currentNode.parentId)
-      currentNode = nodes[currentNode.parentId]
-    }
-
-    return result
-  }
 
   // Function to expand all parent nodes of a selected node
   const expandParentNodes = (nodeId: string, nodeType: NodeType) => {
-    const parentIds = getAllParentNodeIds(nodeId, nodes)
-    console.log('expandParentNodes1', { nodeId, nodeType, parentIds })
+    const parentIds = getAllParentNodeIds(nodeId, latestNodesRef.current)
 
     if (parentIds.length === 0) return // No parents to expand
 
@@ -449,8 +435,6 @@ const App = () => {
       acc[parentId] = true
       return acc
     }, {} as Record<string, boolean>)
-
-    console.log('expandParentNodes2', { nodeId, nodeType, expansionUpdates })
 
     // Update the appropriate expanded nodes state based on node type
     switch (nodeType) {
