@@ -1,5 +1,5 @@
 import { TreeNodeSet, TreeNodeSetDelta, TreeNode } from "./TreeNodeTypes"
-import { getAllDescendantNodes } from "./TreeNodeLib"
+import { getAllDescendantNodes, getNodesByReferencedMapId } from "./TreeNodeLib"
 import { createNode } from "./TreeNode"
 
 const getWaypointSubTreeBasedOnMapNode = (
