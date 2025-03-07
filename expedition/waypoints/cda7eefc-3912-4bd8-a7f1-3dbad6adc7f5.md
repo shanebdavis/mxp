@@ -1,10 +1,10 @@
 ---
 id: cda7eefc-3912-4bd8-a7f1-3dbad6adc7f5
 title: automatic milestone calculated metrics
-parentId: c4422753-d361-4c1c-833e-1c7b236a39bd
+parentId: 8ea0db99-35b7-4716-b019-fab8c9191375
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 2
+  readinessLevel: 0
   targetReadinessLevel: 3
   workRemaining: 1
 nodeState: active

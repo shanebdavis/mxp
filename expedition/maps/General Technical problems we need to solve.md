@@ -4,9 +4,11 @@ title: General Technical problems we need to solve
 parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 childrenIds:
   - 8fbb770c-6cff-404b-ad0b-082f28d715a2
+  - 46824477-cc8f-41bf-8db5-d2f3e2cbcf48
   - d809165d-3206-47a7-9179-7232e5c09030
+  - d8301e97-f45d-418e-9c82-8fcbb7e945a5
 calculatedMetrics:
-  readinessLevel: 3
+  readinessLevel: 0
   workRemaining: 0
 nodeState: active
 type: map

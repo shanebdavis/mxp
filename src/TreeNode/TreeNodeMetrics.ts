@@ -24,7 +24,7 @@ const calculatableMetrics: Record<keyof Metrics, CalculatableMetric> = {
     }
   },
   workRemaining: {
-    default: 0,
+    default: 1,
     calculate: (setMetrics, childValues, referencedMapMetrics) => {
       const targetAchieved = referencedMapMetrics?.readinessLevel != null && setMetrics.targetReadinessLevel != null
         ? referencedMapMetrics.readinessLevel >= setMetrics.targetReadinessLevel
@@ -33,7 +33,7 @@ const calculatableMetrics: Record<keyof Metrics, CalculatableMetric> = {
       const childrenWorkRemaining = compact(childValues.map(child => child?.workRemaining))
       const workRemaining = setMetrics.workRemaining != null
         ? setMetrics.workRemaining
-        : childrenWorkRemaining.length > 0 ? childrenWorkRemaining.reduce((sum, value) => sum + value, 0) : 0
+        : childrenWorkRemaining.length > 0 ? Math.max(1, childrenWorkRemaining.reduce((sum, value) => sum + value, 0)) : 1
 
       return targetAchieved ? 0 : workRemaining
     }

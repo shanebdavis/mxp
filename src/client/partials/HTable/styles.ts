@@ -71,13 +71,13 @@ export const styles = {
     fontFamily: 'inherit',
   },
   nameColumn: {
-    width: '70%',
+    width: 'auto',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
   },
   levelColumn: {
-    width: '30%',
+    width: '175px',
   },
   dropIndicator: {
     position: 'absolute' as const,
@@ -112,7 +112,7 @@ export const styles = {
     fontWeight: 600,
   },
   readinessLevelColors: {
-    0: '#aaa',  // grey
+    0: '#eee',  // grey
     1: '#FF878F',  // red
     2: '#ffbd3b',  // orange
     3: '#ffeb3b',  // yellow

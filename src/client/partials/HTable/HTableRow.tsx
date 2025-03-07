@@ -668,7 +668,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }, [isEditingWorkRemaining, node.setMetrics?.workRemaining]);
 
   const isWayPoint = node.type === 'waypoint'
-  const isMap = node.type === 'map'
+  const showReadinessLevel = node.type === 'map' || (node.type === 'waypoint' && node.parentId != null)
   const hasMapReference = node.metadata?.referenceMapNodeId != null
 
   // Add a debugging effect to log when editing state changes
@@ -793,29 +793,21 @@ export const HTableRow: FC<TreeNodeProps> = ({
           )}
         </div>
       </td>
-      {isMap && [
+      {showReadinessLevel && [
         <td style={styles.cell}>
           <EditableRlPill
             readinessLevel={node.calculatedMetrics.readinessLevel}
             auto={node.setMetrics?.readinessLevel == null}
             onChange={async level => {
-              await treeNodesApi.updateNode(nodeId, {
-                setMetrics: { readinessLevel: level ?? null }
-              })
+              await treeNodesApi.updateNode(
+                isWayPoint && node.metadata?.referenceMapNodeId || nodeId,
+                { setMetrics: { readinessLevel: level ?? null } })
             }}
           />
         </td>
       ]}
       {isWayPoint && [
-        <td style={styles.cell}>
-          {isWayPoint && hasMapReference && <>
-            {
-              node.calculatedMetrics?.readinessLevel != null && node.calculatedMetrics.readinessLevel >= 0 ? (
-                <RlPill level={node.calculatedMetrics.readinessLevel} />
-              ) : null
-            }
-          </>}
-        </td>,
+        !showReadinessLevel && <td style={styles.cell}></td>,
         <td style={styles.cell}>
           {hasMapReference && (
             <EditableRlPill
