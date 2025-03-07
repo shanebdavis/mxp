@@ -794,6 +794,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
         </div>
       </td>
       {showReadinessLevel && [
+        /* Readiness Level Cell */
         <td style={styles.cell}>
           <EditableRlPill
             readinessLevel={node.calculatedMetrics.readinessLevel}
@@ -807,19 +808,18 @@ export const HTableRow: FC<TreeNodeProps> = ({
         </td>
       ]}
       {isWayPoint && [
+        /* Target Readiness Level Cell */
         !showReadinessLevel && <td style={styles.cell}></td>,
         <td style={styles.cell}>
-          {hasMapReference && (
-            <EditableRlPill
-              readinessLevel={node.calculatedMetrics.targetReadinessLevel}
-              auto={node.setMetrics?.targetReadinessLevel == null}
-              onChange={async level => {
-                await treeNodesApi.updateNode(nodeId, {
-                  setMetrics: { targetReadinessLevel: level ?? null }
-                })
-              }}
-            />
-          )}
+          <EditableRlPill
+            readinessLevel={node.calculatedMetrics.targetReadinessLevel}
+            auto={node.setMetrics?.targetReadinessLevel == null}
+            onChange={async level => {
+              await treeNodesApi.updateNode(nodeId, {
+                setMetrics: { targetReadinessLevel: level ?? null }
+              })
+            }}
+          />
         </td>,
         <td style={styles.cell}>
           {(
