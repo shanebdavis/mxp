@@ -92,13 +92,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   // Local selection function for keyboard navigation that doesn't change focus
   const localSelectNode = (id: string) => {
-    console.log('localSelectNode called for id:', id);
     // Only call selectNodeAndFocus if the node is not already selected
     if (isFocused && (!selectedNode || selectedNode.id !== id)) {
-      console.log('Calling selectNodeAndFocus');
       viewStateMethods.selectNodeAndFocus(nodes[id]);
-    } else {
-      console.log('Node already selected, not calling selectNodeAndFocus');
     }
   }
 
@@ -125,18 +121,15 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }, [isSelected])
 
   const handleRowClick = (e: React.MouseEvent) => {
-    console.log('Row click', { isSelected, wasFocusedRef: wasFocusedRef.current, hasRefNode: !!node.metadata?.referenceMapNodeId });
 
     // Ignore clicks on the toggle button or any cell with a click handler
     if ((e.target as HTMLElement).closest('.toggle-button') ||
       (e.target as HTMLElement).closest('[data-has-click-handler="true"]')) {
-      console.log('Ignoring click on toggle button or element with click handler');
       return;
     }
 
     // Already selected node, and suitable for editing (focused and no reference node)
     if (isSelected && wasFocusedRef.current && !node.metadata?.referenceMapNodeId) {
-      console.log('Entering edit mode, already selected');
       e.stopPropagation(); // Prevent event from bubbling up
       e.preventDefault(); // Prevent default behavior
       viewStateMethods.setEditingNodeId(nodeId)
@@ -145,7 +138,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
     // Not selected yet, select the node first
     if (!isSelected) {
-      console.log('Selecting node');
       localSelectNode(nodeId);
     }
   }
@@ -245,7 +237,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputBlur = async () => {
-    console.log('Input blur', { editValue, nodeTitle: node.title });
 
     try {
       if (editValue.trim() === '') {
@@ -274,7 +265,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
     e.stopPropagation();
-    console.log(`Input keydown: ${e.key}, meta: ${e.metaKey}, shift: ${e.shiftKey}`);
 
     switch (e.key) {
       case 'Enter': {
@@ -355,7 +345,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   // Handle work remaining input blur
   const handleWorkRemainingBlur = async () => {
-    console.log('Work remaining blur', { workRemainingValue });
 
     try {
       if (workRemainingValue === '') {
@@ -408,8 +397,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
           e.target instanceof HTMLTextAreaElement) {
           return;
         }
-
-        console.log(`HTableRow keydown: ${e.key}, meta: ${e.metaKey}, shift: ${e.shiftKey}, ctrl: ${e.ctrlKey}`);
 
         switch (e.key) {
           case 'Enter': {
@@ -635,11 +622,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const showReadinessLevel = node.type === 'map' || (node.type === 'waypoint' && node.parentId != null)
   const hasMapReference = node.metadata?.referenceMapNodeId != null
 
-  // Add a debugging effect to log when editing state changes
-  useEffect(() => {
-    console.log('Editing state changed:', { isEditing, nodeId, title: node.title });
-  }, [isEditing, nodeId, node.title]);
-
   // Get child nodes if this is the drop parent
   const isDropParent = dropPreview.dropParentId === nodeId;
 
@@ -759,7 +741,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       </td>
       {showReadinessLevel && [
         /* Readiness Level Cell */
-        <td style={styles.cell}>
+        <td key="readiness" style={styles.cell}>
           <EditableRlPill
             readinessLevel={node.calculatedMetrics.readinessLevel}
             auto={node.setMetrics?.readinessLevel == null}
@@ -773,8 +755,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
       ]}
       {isWayPoint && [
         /* Target Readiness Level Cell */
-        !showReadinessLevel && <td style={styles.cell}></td>,
-        <td style={styles.cell}>
+        !showReadinessLevel && <td key="empty" style={styles.cell}></td>,
+        <td key="target" style={styles.cell}>
           <EditableRlPill
             readinessLevel={node.calculatedMetrics.targetReadinessLevel}
             auto={node.setMetrics?.targetReadinessLevel == null}
@@ -785,7 +767,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             }}
           />
         </td>,
-        <td style={styles.cell}>
+        <td key="work-remaining" style={styles.cell}>
           {(
             <div
               style={{
@@ -809,7 +791,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
               }}
             >
               {isEditingWorkRemaining ? (
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                   <input
                     ref={workRemainingInputRef}
                     value={workRemainingValue}
@@ -835,12 +817,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
                         cursor: 'pointer',
                         padding: '2px',
                         borderRadius: '4px',
-                        display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}
                     >
-                      <AutoMode sx={{ fontSize: 16, opacity: 0.7 }} />
                     </div>
                   </Tooltip>
                 </div>

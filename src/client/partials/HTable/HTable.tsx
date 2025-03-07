@@ -1,8 +1,7 @@
 import { FC, useState, useRef, useMemo } from 'react'
 import React from 'react'
-import type { TreeNode, TreeNodeSet, NodeType } from '../../../TreeNode'
+import type { TreeNode, TreeNodeSet } from '../../../TreeNode'
 import { styles } from './styles'
-import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
 import { TreeStateMethods } from '../../../useApiForState'
 import { ViewStateMethods } from '../../../ViewStateMethods'
@@ -16,7 +15,6 @@ interface HTableProps {
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
-  nodeType?: NodeType
   isFocused?: boolean
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
@@ -134,7 +132,6 @@ export const HTable: FC<HTableProps> = ({
   draggedNode,
   setDraggedNode,
   readinessColumnHeader = "Readiness Level",
-  nodeType, // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
   isFocused = true, // Default to true for backward compatibility
   expandedNodes: externalExpandedNodes,
   setExpandedNodes: externalSetExpandedNodes,

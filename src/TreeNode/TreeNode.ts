@@ -95,6 +95,20 @@ export const getTreeNodeSetDeltaWithUpdatedNodeMetrics = (
   return updatedDelta
 }
 
+export const getTreeNodeSetDeltaWithManyUpdatedNodeMetrics = (
+  nodes: TreeNodeSet,
+  delta: TreeNodeSetDelta,
+  startNodeIds: string[]
+): TreeNodeSetDelta => {
+  let updatedDelta: TreeNodeSetDelta = delta
+
+  for (const startNodeId of startNodeIds) {
+    updatedDelta = getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, updatedDelta, startNodeId)
+  }
+
+  return updatedDelta
+}
+
 //*******************************************
 // Readonly Tree Inspectors
 //*******************************************
