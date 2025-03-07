@@ -18,6 +18,8 @@ interface HTableProps {
   readinessColumnHeader?: string
   nodeType?: NodeType
   isFocused?: boolean
+  draggedNode: TreeNode | null
+  setDraggedNode: (node: TreeNode | null) => void
   expandedNodes?: Record<string, boolean>
   setExpandedNodes?: (newState: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void
   showDraft?: boolean
@@ -129,6 +131,8 @@ export const HTable: FC<HTableProps> = ({
   editingNodeId,
   indexInParentMap,
   nameColumnHeader = "Name",
+  draggedNode,
+  setDraggedNode,
   readinessColumnHeader = "Readiness Level",
   nodeType, // Now optional and not used for filtering. Each tree is controlled by its own rootNodeId.
   isFocused = true, // Default to true for backward compatibility
@@ -146,8 +150,6 @@ export const HTable: FC<HTableProps> = ({
   const expandedNodes = externalExpandedNodes || internalExpandedNodes
   const setExpandedNodes = externalSetExpandedNodes || setInternalExpandedNodes
 
-  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
-  // const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
 
   const toggleNode = (id: string) => {
@@ -163,8 +165,7 @@ export const HTable: FC<HTableProps> = ({
   ])
 
   const handleDragOver = (nodeId: string) => (dragEvent: React.DragEvent) => {
-    dragEvent.preventDefault()
-    if (!draggedNode || !tableRef.current) return
+    if (!draggedNode) return
 
     const rect = dragEvent.currentTarget.getBoundingClientRect()
     const y = dragEvent.clientY - rect.top
@@ -176,9 +177,12 @@ export const HTable: FC<HTableProps> = ({
     const nodeIndex = parent?.childrenIds.indexOf(nodeId) ?? -1
 
     if (draggedNode.type === 'map' && node.type === 'waypoint') {
-      console.log("map to waypoint drag", { dropParentId: nodeId, insertAtIndex: node.childrenIds.length })
+      dragEvent.preventDefault()
       setDropPreview({ dropParentId: nodeId, insertAtIndex: node.childrenIds.length })
     } else {
+      if (draggedNode.type !== node.type) return // ignore drag if type mismatch
+      dragEvent.preventDefault()
+
       if (percentage < 0.25 && node.parentId) { // drop as peer before node
         setDropPreview({
           dropParentId: node.parentId,

@@ -221,7 +221,7 @@ const App = () => {
   })
 
   // State for "show draft" toggles
-  const [showDraftMap, setShowDraftMap] = useState(() => {
+  const [showDraftMaps, setShowDraftMaps] = useState(() => {
     const savedValue = localStorage.getItem('showDraftMap')
     return savedValue === null ? true : savedValue === 'true'
   })
@@ -231,6 +231,9 @@ const App = () => {
     return savedValue === null ? true : savedValue === 'true'
   })
 
+  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
+
+
   // Save active views to localStorage
   useEffect(() => {
     localStorage.setItem('activeViews', JSON.stringify(activeViews))
@@ -238,8 +241,8 @@ const App = () => {
 
   // Save toggle states to localStorage
   useEffect(() => {
-    localStorage.setItem('showDraftMap', showDraftMap.toString())
-  }, [showDraftMap])
+    localStorage.setItem('showDraftMap', showDraftMaps.toString())
+  }, [showDraftMaps])
 
   useEffect(() => {
     localStorage.setItem('showDraftWaypoints', showDraftWaypoints.toString())
@@ -388,44 +391,25 @@ const App = () => {
   }
 
   // Add expanded nodes state for each node type
-  const [expandedMapNodes, setExpandedMapNodes] = useState<Record<string, boolean>>(() => {
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(() => {
     // Initialize with saved state from localStorage if available
     return JSON.parse(localStorage.getItem('expandedMapNodes') || '{}');
-  });
-
-  const [expandedWaypointNodes, setExpandedWaypointNodes] = useState<Record<string, boolean>>(() => {
-    // Initialize with saved state from localStorage if available
-    return JSON.parse(localStorage.getItem('expandedWaypointNodes') || '{}');
-  });
-
-  const [expandedUserNodes, setExpandedUserNodes] = useState<Record<string, boolean>>(() => {
-    // Initialize with saved state from localStorage if available
-    return JSON.parse(localStorage.getItem('expandedUserNodes') || '{}');
   });
 
   // Ensure root nodes are expanded by default once they're available
   useEffect(() => {
     if (Object.keys(rootNodesByType).length > 0) {
-      // Expand map root node if it exists
-      if (rootNodesByType.map && !expandedMapNodes[rootNodesByType.map.id]) {
-        setExpandedMapNodes(prev => ({ ...prev, [rootNodesByType.map.id]: true }));
-      }
-
-      // Expand waypoint root node if it exists
-      if (rootNodesByType.waypoint && !expandedWaypointNodes[rootNodesByType.waypoint.id]) {
-        setExpandedWaypointNodes(prev => ({ ...prev, [rootNodesByType.waypoint.id]: true }));
-      }
-
-      // Expand user root node if it exists
-      if (rootNodesByType.user && !expandedUserNodes[rootNodesByType.user.id]) {
-        setExpandedUserNodes(prev => ({ ...prev, [rootNodesByType.user.id]: true }));
-      }
+      setExpandedNodes(prev => {
+        const newExpandedNodes = { ...prev }
+        Object.values(rootNodesByType).forEach(node => newExpandedNodes[node.id] = true)
+        return newExpandedNodes
+      })
     }
-  }, [rootNodesByType, expandedMapNodes, expandedWaypointNodes, expandedUserNodes]);
+  }, [rootNodesByType]);
 
 
   // Function to expand all parent nodes of a selected node
-  const expandParentNodes = (nodeId: string, nodeType: NodeType) => {
+  const expandParentNodes = (nodeId: string) => {
     const parentIds = getAllParentNodeIds(nodeId, latestNodesRef.current)
 
     if (parentIds.length === 0) return // No parents to expand
@@ -437,17 +421,7 @@ const App = () => {
     }, {} as Record<string, boolean>)
 
     // Update the appropriate expanded nodes state based on node type
-    switch (nodeType) {
-      case 'map':
-        setExpandedMapNodes(prev => ({ ...prev, ...expansionUpdates }))
-        break
-      case 'waypoint':
-        setExpandedWaypointNodes(prev => ({ ...prev, ...expansionUpdates }))
-        break
-      case 'user':
-        setExpandedUserNodes(prev => ({ ...prev, ...expansionUpdates }))
-        break
-    }
+    setExpandedNodes(prev => ({ ...prev, ...expansionUpdates }))
   }
 
   /**
@@ -496,7 +470,7 @@ const App = () => {
     setFocusedSection(sectionName)
 
     // 4. Expand the tree if needed so the item is visible
-    expandParentNodes(nodeId, nodeType)
+    expandParentNodes(nodeId)
   }
 
   const addAndFocusNode = async (nodeProperties: TreeNodeProperties, parentId: string) => {
@@ -867,6 +841,21 @@ const App = () => {
     return <div style={{ padding: 20, color: 'red' }}>Error: {error.message}</div>
   }
 
+  const commonProps = {
+    clearDropPreview,
+    dropPreview,
+    editingNodeId,
+    expandedNodes,
+    indexInParentMap,
+    nodes,
+    setDropPreview,
+    setExpandedNodes,
+    treeNodesApi,
+    viewStateMethods,
+    draggedNode,
+    setDraggedNode
+  }
+
   return (
     <div style={styles.layout}>
       <header style={styles.header}>
@@ -1089,21 +1078,21 @@ const App = () => {
 
 
               {/* Add toggle for show/hide drafts */}
-              <Tooltip title={showDraftMap ? "Hide draft problems" : "Show draft problems"}>
+              <Tooltip title={showDraftMaps ? "Hide draft problems" : "Show draft problems"}>
                 <FormControlLabel
                   control={
                     <Switch
                       size="small"
-                      checked={showDraftMap}
+                      checked={showDraftMaps}
                       onChange={(e) => {
                         e.stopPropagation(); // Prevent event from reaching drag handlers
-                        setShowDraftMap(e.target.checked);
+                        setShowDraftMaps(e.target.checked);
                       }}
                     />
                   }
                   label={
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      {showDraftMap ?
+                      {showDraftMaps ?
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
                         </span> :
@@ -1144,20 +1133,11 @@ const App = () => {
             <div style={styles.sectionContent}>
               <HTable
                 key="mapTable"
-                clearDropPreview={clearDropPreview}
-                dropPreview={dropPreview}
-                editingNodeId={editingNodeId}
-                expandedNodes={expandedMapNodes}
-                indexInParentMap={indexInParentMap}
                 isFocused={focusedSection === 'map'}
-                nodes={nodes}
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
-                setDropPreview={setDropPreview}
-                setExpandedNodes={setExpandedMapNodes}
-                showDraft={showDraftMap}
-                treeNodesApi={treeNodesApi}
-                viewStateMethods={viewStateMethods}
+                showDraft={showDraftMaps}
+                {...commonProps}
               />
             </div>
           </div>
@@ -1262,22 +1242,13 @@ const App = () => {
             <div style={styles.sectionContent}>
               <HTable
                 key="waypointTable"
-                nodes={nodes}
-                editingNodeId={editingNodeId}
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
-                viewStateMethods={viewStateMethods}
-                treeNodesApi={treeNodesApi}
-                indexInParentMap={indexInParentMap}
                 nameColumnHeader="Waypoint"
                 readinessColumnHeader="Completion Level"
                 isFocused={focusedSection === 'waypoints'}
-                expandedNodes={expandedWaypointNodes}
-                setExpandedNodes={setExpandedWaypointNodes}
                 showDraft={showDraftWaypoints}
-                dropPreview={dropPreview}
-                setDropPreview={setDropPreview}
-                clearDropPreview={clearDropPreview}
+                {...commonProps}
               />
             </div>
           </div>
@@ -1344,21 +1315,12 @@ const App = () => {
             <div style={styles.sectionContent}>
               <HTable
                 key="userTable"
-                nodes={nodes}
-                editingNodeId={editingNodeId}
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
-                viewStateMethods={viewStateMethods}
-                treeNodesApi={treeNodesApi}
-                indexInParentMap={indexInParentMap}
                 nameColumnHeader="User"
                 isFocused={focusedSection === 'users'}
-                expandedNodes={expandedUserNodes}
-                setExpandedNodes={setExpandedUserNodes}
                 showDraft={showDraftWaypoints}
-                dropPreview={dropPreview}
-                setDropPreview={setDropPreview}
-                clearDropPreview={clearDropPreview}
+                {...commonProps}
               />
             </div>
           </div>
