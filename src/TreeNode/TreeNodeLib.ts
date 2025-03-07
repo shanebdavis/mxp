@@ -1,4 +1,4 @@
-import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties, NodeState } from './TreeNodeTypes'
+import { NodeType, TreeNode, TreeNodeSet, TreeNodeProperties } from './TreeNodeTypes'
 import { eq } from '../ArtStandardLib'
 
 export const ROOT_NODE_DEFAULT_PROPERTIES: Record<NodeType, TreeNodeProperties> = {
@@ -58,4 +58,37 @@ export const getIndexInParentMap = (nodes: TreeNodeSet): Record<string, number> 
     })
   })
   return result
+}
+
+/**
+ * Gets all descendant nodes recursively from a starting node
+ */
+export const getAllDescendantNodes = (nodes: TreeNodeSet, nodeId: string): TreeNode[] => {
+  const result: TreeNode[] = []
+
+  const addChildrenRecursively = (id: string) => {
+    const childIds = getChildIds(nodes, id)
+    childIds.forEach(childId => {
+      const child = nodes[childId]
+      if (child) {
+        result.push(child)
+        addChildrenRecursively(childId)
+      }
+    })
+  }
+
+  addChildrenRecursively(nodeId)
+  return result
+}
+
+/**
+ * Gets all nodes by their referenced map ID
+ */
+export const getNodesByReferencedMapId = (nodes: TreeNode[]): Record<string, TreeNode> => {
+  return nodes.reduce<Record<string, TreeNode>>((acc, node) => {
+    if (node.metadata?.referenceMapNodeId) {
+      acc[node.metadata.referenceMapNodeId] = node
+    }
+    return acc
+  }, {})
 }
