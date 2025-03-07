@@ -21,7 +21,6 @@ interface TreeNodeProps {
   viewStateMethods: ViewStateMethods
   draggedNode: TreeNode | null
   setDraggedNode: (node: TreeNode | null) => void
-  dragTarget: DragTarget
   handleDragOver: (e: React.DragEvent) => void
   handleDragLeave: () => void
   handleDragEnd?: () => void
@@ -41,7 +40,6 @@ interface TreeNodeProps {
 export const HTableRow: FC<TreeNodeProps> = ({
   displayOrder,
   draggedNode,
-  dragTarget,
   editingNodeId,
   expandedNodes,
   handleDragLeave,
@@ -63,7 +61,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 }) => {
   const node = nodes[nodeId]
   const isValidTarget = draggedNode && draggedNode.id !== nodeId && !treeNodesApi.isParentOf(nodeId, draggedNode.id)
-  const isDragTarget = dragTarget.nodeId === nodeId && isValidTarget
+  const isDragTarget = dropPreview.dropParentId === nodeId && isValidTarget
   const showAsDraft = isDraftSubtree || node.nodeState === "draft"
 
   const expanded = expandedNodes[nodeId]
@@ -223,24 +221,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
             nodes[dropPreview.dropParentId].childrenIds?.length > 0) {
             toggleNode(dropPreview.dropParentId);
           }
-        } else {
-          // Fallback to old behavior
-          if (dragTarget.position === 'inside') {
-            // Add as a child of the target waypoint
-            if (node.childrenIds.length > 0 && !expanded) {
-              toggleNode(nodeId)
-            }
-            await treeNodesApi.addNode(newWaypointProperties, nodeId, 0)
-          } else if (!isRoot && node.parentId) {
-            // Add as a sibling before or after the target waypoint
-            const parent = nodes[node.parentId]
-            const indexInParent = parent.childrenIds.indexOf(nodeId)
-            await treeNodesApi.addNode(
-              newWaypointProperties,
-              node.parentId,
-              dragTarget.position === 'before' ? indexInParent : indexInParent + 1
-            )
-          }
         }
       } else {
         // Regular node movement (not map-to-waypoint)
@@ -257,22 +237,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (!expandedNodes[dropPreview.dropParentId] &&
             nodes[dropPreview.dropParentId].childrenIds?.length > 0) {
             toggleNode(dropPreview.dropParentId);
-          }
-        } else {
-          // Fallback to old behavior
-          if (dragTarget.position === 'inside') {
-            if (node.childrenIds.length > 0 && !expanded) {
-              toggleNode(nodeId)
-            }
-            await treeNodesApi.setNodeParent(dragItem.id, nodeId, 0)
-          } else if (!isRoot && node.parentId) {
-            const parent = nodes[node.parentId]
-            const indexInParent = parent.childrenIds.indexOf(nodeId)
-            await treeNodesApi.setNodeParent(
-              dragItem.id,
-              node.parentId,
-              dragTarget.position === 'before' ? indexInParent : indexInParent + 1
-            )
           }
         }
       }

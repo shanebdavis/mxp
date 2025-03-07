@@ -147,14 +147,8 @@ export const HTable: FC<HTableProps> = ({
   const setExpandedNodes = externalSetExpandedNodes || setInternalExpandedNodes
 
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
-  const [dragTarget, setDragTarget] = useState<DragTarget>({ nodeId: null, position: null, indexInParent: null })
-  const lastDragUpdate = useRef({ timestamp: 0 })
+  // const lastDragUpdate = useRef({ timestamp: 0 })
   const tableRef = useRef<HTMLDivElement>(null)
-  const [dropIndicator, setDropIndicator] = useState<DropIndicatorState>({
-    top: 0,
-    show: false,
-    isLine: false,
-  })
 
   const toggleNode = (id: string) => {
     setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }))
@@ -168,106 +162,43 @@ export const HTable: FC<HTableProps> = ({
     showDraft
   ])
 
-  const handleDragOver = (nodeId: string, indexInParent: number, level: number) => (e: React.DragEvent) => {
-    e.preventDefault()
+  const handleDragOver = (nodeId: string) => (dragEvent: React.DragEvent) => {
+    dragEvent.preventDefault()
     if (!draggedNode || !tableRef.current) return
 
-    const now = Date.now()
-    if (now - lastDragUpdate.current.timestamp < 50) return
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const tableRect = tableRef.current.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    const height = rect.height
-
-    let position: DropPosition
-    let parentId: string | null = null
-    let insertIndex: number | null = null
+    const rect = dragEvent.currentTarget.getBoundingClientRect()
+    const y = dragEvent.clientY - rect.top
+    const percentage = y / rect.height
 
     const node = nodes[nodeId]
 
-    if (y < height * 0.25) {
-      position = 'before'
-      // For 'before', use the node's parent and the node's index in its parent
-      if (node.parentId) {
-        parentId = node.parentId
-        const parent = nodes[node.parentId]
-        if (parent && parent.childrenIds) {
-          insertIndex = parent.childrenIds.indexOf(nodeId)
-        }
-      }
-      setDropIndicator({
-        top: rect.top - tableRect.top,
-        show: true,
-        isLine: true,
-        parentTop: rect.top - tableRect.top,
-        indentLevel: level
-      })
-    } else if (y > height * 0.75) {
-      position = 'after'
+    const parent = node?.parentId ? nodes[node.parentId] : null
+    const nodeIndex = parent?.childrenIds.indexOf(nodeId) ?? -1
 
-      // Special case: if node is expanded and has children, insert as first child
-      if (expandedNodes[nodeId] && node.childrenIds && node.childrenIds.length > 0) {
-        parentId = nodeId
-        insertIndex = 0 // First child
-        setDropIndicator({
-          top: rect.bottom - tableRect.top,
-          show: true,
-          isLine: true,
-          parentTop: rect.top - tableRect.top,
-          indentLevel: level + 1 // Indent one more level as it will be a child
-        })
-      }
-      // Regular case: insert after the current node
-      else if (node.parentId) {
-        parentId = node.parentId
-        const parent = nodes[node.parentId]
-        if (parent && parent.childrenIds) {
-          insertIndex = parent.childrenIds.indexOf(nodeId) + 1
-        }
-        setDropIndicator({
-          top: rect.bottom - tableRect.top,
-          show: true,
-          isLine: true,
-          parentTop: rect.top - tableRect.top,
-          indentLevel: level
-        })
-      }
+    if (draggedNode.type === 'map' && node.type === 'waypoint') {
+      console.log("map to waypoint drag", { dropParentId: nodeId, insertAtIndex: node.childrenIds.length })
+      setDropPreview({ dropParentId: nodeId, insertAtIndex: node.childrenIds.length })
     } else {
-      position = 'inside'
-      // For 'inside', the parent is the current node
-      parentId = nodeId
-      // If the node has children and is expanded, set insertIndex to 0 (before first child)
-      insertIndex = 0
-      setDropIndicator({
-        top: rect.top - tableRect.top,
-        show: true,
-        isLine: false
-      })
-    }
-
-    // Update the drop preview state if we have valid parent and insert index
-    if (parentId !== null) {
-      setDropPreview({
-        dropParentId: parentId,
-        insertAtIndex: insertIndex
-      })
-    }
-
-    if (dragTarget.nodeId !== nodeId || dragTarget.position !== position) {
-      lastDragUpdate.current.timestamp = now
-      setDragTarget({ nodeId, position, indexInParent })
+      if (percentage < 0.25 && node.parentId) { // drop as peer before node
+        setDropPreview({
+          dropParentId: node.parentId,
+          insertAtIndex: nodeIndex
+        })
+      } else if (percentage > 0.75 && node.parentId) { // drop as peer after node
+        // Special case: if node is expanded and has children, insert as first child
+        if (expandedNodes[nodeId] && node.childrenIds?.length > 0)
+          setDropPreview({ dropParentId: nodeId, insertAtIndex: 0 })
+        else {
+          setDropPreview({ dropParentId: node.parentId, insertAtIndex: nodeIndex + 1 })
+        }
+      }
+      else
+        setDropPreview({ dropParentId: nodeId, insertAtIndex: node.childrenIds.length })
     }
   }
 
   const handleDragLeave = () => {
-    setDragTarget({ nodeId: null, position: null, indexInParent: null })
-    setDropIndicator(prev => ({ ...prev, show: false }))
     clearDropPreview()
-  }
-
-  const shouldShowDropIndicator = (x: DragTarget) => {
-    // ... existing code ...
   }
 
   let draftNodesVisited: Record<string, boolean> = {}
@@ -291,38 +222,6 @@ export const HTable: FC<HTableProps> = ({
 
   return (
     <div ref={tableRef} style={{ ...styles.container, position: 'relative' }}>
-      {dropIndicator.show && (
-        <>
-          {dropIndicator.isLine ? (
-            <>
-              <div
-                style={{
-                  ...styles.dropIndicator,
-                  ...styles.dropParent,
-                  top: dropIndicator.parentTop,
-                  opacity: 0.5,
-                }}
-              />
-              <div
-                style={{
-                  ...styles.dropIndicator,
-                  ...styles.dropLine,
-                  top: dropIndicator.top,
-                  left: (dropIndicator.indentLevel || 0) * 16 + 40,
-                }}
-              />
-            </>
-          ) : (
-            <div
-              style={{
-                ...styles.dropIndicator,
-                ...styles.dropParent,
-                top: dropIndicator.top,
-              }}
-            />
-          )}
-        </>
-      )}
       <table style={styles.table}>
         <colgroup>
           <col style={styles.nameColumn} />
@@ -361,8 +260,7 @@ export const HTable: FC<HTableProps> = ({
                   treeNodesApi,
                   draggedNode,
                   setDraggedNode,
-                  dragTarget,
-                  handleDragOver: handleDragOver(nodeId, index, level),
+                  handleDragOver: handleDragOver(nodeId),
                   handleDragLeave,
                   handleDragEnd,
                   editingNodeId,
