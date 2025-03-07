@@ -233,6 +233,28 @@ const App = () => {
 
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
 
+  const [config, setConfig] = useState<{ projectTitle?: string, workUnits?: string }>({})
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        return res.json()
+      })
+      .then(setConfig)
+      .catch(error => {
+        console.error('Error fetching config:', error)
+      })
+  }, [])
+
+  useEffect(() => {
+    const baseTitle = "Expedition"
+    document.title = config.projectTitle
+      ? `${config.projectTitle} - ${baseTitle}`
+      : baseTitle
+  }, [config.projectTitle])
 
   // Save active views to localStorage
   useEffect(() => {
@@ -864,7 +886,9 @@ const App = () => {
           alt="Expedition Logo"
           style={{ height: '24px', marginRight: '16px' }}
         />
-        <h1 style={styles.title}>MXP: Method Expedition</h1>
+        <h1 style={styles.title}>
+          {config.projectTitle || "MXP: Method Expedition"}
+        </h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <div style={{ display: 'flex', gap: 4 }}>
             <Tooltip title="Add Child">

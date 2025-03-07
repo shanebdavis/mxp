@@ -39,6 +39,11 @@ interface NodeMetadata {
   metadata?: any
 }
 
+interface ExpeditionConfig {
+  projectTitle?: string
+  workUnits?: string
+}
+
 const FILESTORE_SUB_DIRS_BY_TYPE: Record<NodeType, string> = {
   map: "maps",
   waypoint: "waypoints",
@@ -60,7 +65,7 @@ class FileStore {
   private _allNodes: TreeNodeSet
   private isInitialized = false
   private _rootNodesByType: RootNodesByType
-
+  private _config: ExpeditionConfig = {} // Default empty config
 
   get baseDirsByType() {
     this.ensureInitialized()
@@ -75,6 +80,11 @@ class FileStore {
   get rootNodesByType() {
     this.ensureInitialized()
     return this._rootNodesByType
+  }
+
+  get config() {
+    this.ensureInitialized()
+    return this._config
   }
 
   private set allNodes(nodes: TreeNodeSet) {
@@ -95,9 +105,15 @@ class FileStore {
     if (this.isInitialized) {
       throw new Error('FileStore already initialized')
     }
+
+    // Get base directory from first type's directory by removing the type-specific part
+    const baseDir = path.dirname(this._baseDirsByType[Object.keys(this._baseDirsByType)[0]])
+
+    await this.loadConfig(baseDir)
     await this.ensureBaseDirs()
     await this.vivifyAllSubDirs()
     await this.loadAllNodes()
+
     const { delta, rootNodesByType } = vivifyRootNodesByType(this._allNodes)
     await this.setAllNodesAndSaveAnyChanges(delta)
     this._rootNodesByType = rootNodesByType
@@ -346,6 +362,41 @@ class FileStore {
 
   getFilenameFromId(id: string): string {
     return `${id}.md`
+  }
+
+  /**
+   * Load config file if it exists, return empty config if it doesn't
+   */
+  private async loadConfig(baseDir: string) {
+    const configPath = path.join(baseDir, 'mxp-config.yml')
+
+    try {
+      const content = await fs.readFile(configPath, 'utf-8')
+      const config = yaml.load(content) as unknown
+
+      // Validate config structure
+      if (typeof config === 'object' && config !== null) {
+        const validatedConfig: ExpeditionConfig = {}
+
+        const { projectTitle, workUnits } = config as Record<string, unknown>
+
+        if (projectTitle !== undefined && typeof projectTitle === 'string') {
+          validatedConfig.projectTitle = projectTitle
+        }
+
+        if (workUnits !== undefined && typeof workUnits === 'string') {
+          validatedConfig.workUnits = workUnits
+        }
+
+        this._config = validatedConfig
+      }
+    } catch (error) {
+      // If file doesn't exist, just use empty config
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        console.warn('Error loading config file:', error)
+      }
+      // Continue with empty config in all error cases
+    }
   }
 }
 

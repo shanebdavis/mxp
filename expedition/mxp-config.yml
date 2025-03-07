@@ -1,0 +1,8 @@
+# Expedition Configuration
+# All fields are optional
+
+# Project title - displayed in the UI header
+projectTitle: MXP - Expedition Method Facilitation Tool
+
+# Work units - used when displaying effort estimates (e.g. hours, days, points)
+workUnits: hours
