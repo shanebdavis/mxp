@@ -5,15 +5,14 @@ import { styles } from './styles'
 import { DragTarget, DropIndicatorState, DropPosition } from './types'
 import { HTableRow } from './HTableRow'
 import { TreeStateMethods } from '../../../useApiForState'
-import { ViewStateMethods } from '../../../viewState'
+import { ViewStateMethods } from '../../../ViewStateMethods'
 interface HTableProps {
   nodes: TreeNodeSet
   rootNodeId: string
   selectedNode: TreeNode | null
   viewStateMethods: ViewStateMethods
   treeNodesApi: TreeStateMethods
-  editingNodeId?: string | null
-  setEditingNodeId?: (id: string | null) => void
+  editingNodeId: string | null
   indexInParentMap: Record<string, number>
   nameColumnHeader?: string
   readinessColumnHeader?: string
@@ -128,7 +127,6 @@ export const HTable: FC<HTableProps> = ({
   viewStateMethods,
   treeNodesApi,
   editingNodeId,
-  setEditingNodeId = () => { },
   indexInParentMap,
   nameColumnHeader = "Name",
   readinessColumnHeader = "Readiness Level",
@@ -368,7 +366,6 @@ export const HTable: FC<HTableProps> = ({
                   handleDragLeave,
                   handleDragEnd,
                   editingNodeId,
-                  setEditingNodeId,
                   displayOrder: displayOrder.map(x => x.nodeId),
                   indexInParentMap,
                   isDraftSubtree,

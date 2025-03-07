@@ -15,9 +15,10 @@ import {
   VisibilityOffOutlined
 } from '@mui/icons-material'
 import { Tooltip, Switch, FormControlLabel } from '@mui/material'
-import type { TreeNode, TreeNodeSet, NodeType } from './TreeNode'
+import type { TreeNode, TreeNodeSet, NodeType, TreeNodeProperties } from './TreeNode'
 import { useApiForState } from './useApiForState'
-import { ViewStateMethods } from './viewState'
+import { ViewStateMethods } from './ViewStateMethods'
+import { timeout } from './ArtStandardLib'
 
 const MIN_PANEL_WIDTH_PERCENTAGE = 10 // Minimum percentage of window width
 const MAX_PANEL_WIDTH_PERCENTAGE = 67 // Maximum percentage of window width
@@ -439,6 +440,7 @@ const App = () => {
   // Function to expand all parent nodes of a selected node
   const expandParentNodes = (nodeId: string, nodeType: NodeType) => {
     const parentIds = getAllParentNodeIds(nodeId, nodes)
+    console.log('expandParentNodes1', { nodeId, nodeType, parentIds })
 
     if (parentIds.length === 0) return // No parents to expand
 
@@ -447,6 +449,8 @@ const App = () => {
       acc[parentId] = true
       return acc
     }, {} as Record<string, boolean>)
+
+    console.log('expandParentNodes2', { nodeId, nodeType, expansionUpdates })
 
     // Update the appropriate expanded nodes state based on node type
     switch (nodeType) {
@@ -483,13 +487,13 @@ const App = () => {
       }
 
       // else we need to force scrolling to the node by temporarily deselecting it
-      setTimeout(() => {
+      timeout(10).then(() => {
         // restore the selected node
         setSelectedNodeIds(prevState => ({
           ...prevState,
           [nodeType]: nodeId
         }));
-      }, 10);
+      });
 
       // temporarily deselect the node
       return { ...prev, [nodeType]: '' }
@@ -509,11 +513,21 @@ const App = () => {
 
     // 4. Expand the tree if needed so the item is visible
     expandParentNodes(nodeId, nodeType)
+  }
 
+  const addAndFocusNode = async (nodeProperties: TreeNodeProperties, parentId: string) => {
+    const newNode = await treeNodesApi.addNode(nodeProperties, parentId);
+    await timeout(10)
+    selectNodeAndFocus(newNode);
+    setEditingNodeId(newNode.id);
+
+    return newNode;
   }
 
   const viewStateMethods: ViewStateMethods = {
-    selectNodeAndFocus
+    selectNodeAndFocus,
+    addAndFocusNode,
+    setEditingNodeId
   }
 
   // Update selectedNodeIds when rootNodesByType changes
@@ -821,27 +835,17 @@ const App = () => {
           // Command/Ctrl + Enter - Add Child
           e.preventDefault(); // Prevent default browser behavior
 
-          // If this is the first child, clear parent's setMetrics
+          // If this is the first child, clear parent's setMetrics (default to auto metrics when there are children)
           if (currentNode.childrenIds.length === 0) {
             await treeNodesApi.updateNode(currentNode.id, { setMetrics: {} });
           }
 
-          const newNode = await treeNodesApi.addNode({
-            title: '',
-          }, currentNode.id);
-
-          selectNodeAndFocus(newNode);
-          setEditingNodeId(newNode.id);
+          await addAndFocusNode({ title: '' }, currentNode.id)
         } else if (e.shiftKey && !e.metaKey && !e.ctrlKey && currentNode.parentId) {
           // Shift + Enter - Add Sibling (only if not root node)
           e.preventDefault(); // Prevent default browser behavior
 
-          const newNode = await treeNodesApi.addNode({
-            title: '',
-          }, currentNode.parentId);
-
-          selectNodeAndFocus(newNode);
-          setEditingNodeId(newNode.id);
+          await addAndFocusNode({ title: '' }, currentNode.parentId)
         }
       }
     };
@@ -895,11 +899,7 @@ const App = () => {
                 <button
                   onClick={async () => {
                     if (selectedNode) {
-                      const newNode = await treeNodesApi.addNode({
-                        title: '',
-                      }, selectedNode.id)
-                      selectNodeAndFocus(newNode)
-                      setEditingNodeId(newNode.id)
+                      await addAndFocusNode({ title: '' }, selectedNode.id)
                     }
                   }}
                   disabled={!selectedNode}
@@ -923,11 +923,7 @@ const App = () => {
                 <button
                   onClick={async () => {
                     if (selectedNode?.parentId) {
-                      const newNode = await treeNodesApi.addNode({
-                        title: '',
-                      }, selectedNode.parentId)
-                      selectNodeAndFocus(newNode)
-                      setEditingNodeId(newNode.id)
+                      await addAndFocusNode({ title: '' }, selectedNode.parentId)
                     }
                   }}
                   disabled={!selectedNode?.parentId}
@@ -1164,19 +1160,20 @@ const App = () => {
             <div style={styles.sectionContent}>
               <HTable
                 key="mapTable"
+                clearDropPreview={clearDropPreview}
+                dropPreview={dropPreview}
+                editingNodeId={editingNodeId}
+                expandedNodes={expandedMapNodes}
+                indexInParentMap={indexInParentMap}
+                isFocused={focusedSection === 'map'}
                 nodes={nodes}
                 rootNodeId={rootNodesByType.map.id}
                 selectedNode={getSelectedNode('map')}
-                viewStateMethods={viewStateMethods}
-                treeNodesApi={treeNodesApi}
-                indexInParentMap={indexInParentMap}
-                isFocused={focusedSection === 'map'}
-                expandedNodes={expandedMapNodes}
+                setDropPreview={setDropPreview}
                 setExpandedNodes={setExpandedMapNodes}
                 showDraft={showDraftMap}
-                dropPreview={dropPreview}
-                setDropPreview={setDropPreview}
-                clearDropPreview={clearDropPreview}
+                treeNodesApi={treeNodesApi}
+                viewStateMethods={viewStateMethods}
               />
             </div>
           </div>
@@ -1282,6 +1279,7 @@ const App = () => {
               <HTable
                 key="waypointTable"
                 nodes={nodes}
+                editingNodeId={editingNodeId}
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
                 viewStateMethods={viewStateMethods}
@@ -1363,6 +1361,7 @@ const App = () => {
               <HTable
                 key="userTable"
                 nodes={nodes}
+                editingNodeId={editingNodeId}
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}
                 viewStateMethods={viewStateMethods}

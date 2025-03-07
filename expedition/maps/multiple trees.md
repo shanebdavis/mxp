@@ -4,9 +4,10 @@ title: multiple trees
 parentId: 6a95bed8-c988-4220-9af9-e7b438961e70
 childrenIds: []
 calculatedMetrics:
-  readinessLevel: 0
-draft: false
+  readinessLevel: 3
+  workRemaining: 0
+nodeState: active
 type: map
 setMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
 ---

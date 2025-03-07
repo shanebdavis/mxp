@@ -6,8 +6,9 @@ childrenIds:
   - 8fbb770c-6cff-404b-ad0b-082f28d715a2
   - d809165d-3206-47a7-9179-7232e5c09030
 calculatedMetrics:
-  readinessLevel: 0
-draft: true
+  readinessLevel: 3
+  workRemaining: 0
+nodeState: active
 type: map
 setMetrics: {}
 ---

@@ -13,7 +13,7 @@ import type { Components } from 'react-markdown'
 import type { CSSProperties } from 'react'
 import { Map } from '@mui/icons-material'
 import { TreeStateMethods } from '../../MxpApiClient'
-import { ViewStateMethods } from '../../viewState'
+import { ViewStateMethods } from '../../ViewStateMethods'
 
 interface CodeProps {
   node?: unknown

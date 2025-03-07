@@ -6,7 +6,8 @@ import { TreeStateMethods } from '../../../useApiForState'
 import { EditableRlPill, RlPill } from '../../widgets'
 import type { TreeNode, TreeNodeSet, TreeNodeProperties } from '../../../TreeNode/TreeNodeTypes'
 import { Tooltip } from '@mui/material'
-import { ViewStateMethods } from '../../../viewState'
+import { ViewStateMethods } from '../../../ViewStateMethods'
+import { timeout } from '../../../ArtStandardLib'
 
 interface TreeNodeProps {
   nodes: TreeNodeSet
@@ -25,7 +26,6 @@ interface TreeNodeProps {
   handleDragLeave: () => void
   handleDragEnd?: () => void
   editingNodeId?: string | null
-  setEditingNodeId: (id: string | null) => void
   displayOrder: string[]
   indexInParentMap: Record<string, number>
   isDraftSubtree?: boolean
@@ -55,9 +55,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   nodes,
   selectedNode,
   setDraggedNode,
-  setEditingNodeId,
-  showReadinessColumn = true,
-  showWaypointColumns = false,
   toggleNode,
   treeNodesApi,
   viewStateMethods,
@@ -72,8 +69,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const expanded = expandedNodes[nodeId]
   const isRoot = !node.parentId
   const isSelected = selectedNode?.id === nodeId
-
-  const [isEditing, setIsEditing] = useState(false)
+  const isEditing = editingNodeId === nodeId
   const [editValue, setEditValue] = useState(node.title)
   const [justCreated, setJustCreated] = useState(false)
   const [isEditingWorkRemaining, setIsEditingWorkRemaining] = useState(false)
@@ -118,11 +114,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   useEffect(() => {
     if (editingNodeId === nodeId) {
-      setIsEditing(true)
       setJustCreated(true)
-      setEditingNodeId(null)
     }
-  }, [editingNodeId, nodeId, setEditingNodeId])
+  }, [editingNodeId, nodeId, viewStateMethods])
 
   useEffect(() => {
     if (isSelected && rowRef.current) {
@@ -147,9 +141,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
       console.log('Entering edit mode, already selected');
       e.stopPropagation(); // Prevent event from bubbling up
       e.preventDefault(); // Prevent default behavior
-      setTimeout(() => {
-        setIsEditing(true);
-      }, 0);
+      viewStateMethods.setEditingNodeId(nodeId)
       return;
     }
 
@@ -308,9 +300,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
       console.error('Error saving title:', error);
     } finally {
       // Always exit edit mode
-      setIsEditing(false);
+      clearEditing()
     }
   }
+
+  const clearEditing = () => viewStateMethods.setEditingNodeId(null)
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
     e.stopPropagation();
@@ -328,23 +322,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (newTitle !== node.title) {
             await treeNodesApi.updateNode(nodeId, { title: newTitle })
           }
-          setIsEditing(false)
+          clearEditing()
 
-          // Then add child node
-          if (node.childrenIds.length === 0) {
-            await treeNodesApi.updateNode(nodeId, { setMetrics: {} })
-          }
-          const newNodeId = await treeNodesApi.addNode({
-            title: '',
-          }, nodeId)
+          await timeout(10)
 
-          if (newNodeId) {
-            if (!expandedNodes[nodeId]) {
-              toggleNode(nodeId)
-            }
-            viewStateMethods.selectNodeAndFocus(newNodeId)
-            setEditingNodeId(newNodeId.id)
-          }
+          await viewStateMethods.addAndFocusNode({ title: '' }, nodeId)
           return
         }
 
@@ -354,17 +336,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (newTitle !== node.title) {
             await treeNodesApi.updateNode(nodeId, { title: newTitle })
           }
-          setIsEditing(false)
+          clearEditing()
 
-          // Then add sibling node
-          const newNodeId = await treeNodesApi.addNode({
-            title: '',
-          }, node.parentId)
+          await timeout(10)
 
-          if (newNodeId) {
-            viewStateMethods.selectNodeAndFocus(newNodeId)
-            setEditingNodeId(newNodeId.id)
-          }
+          await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId)
           return
         }
 
@@ -380,23 +356,21 @@ export const HTableRow: FC<TreeNodeProps> = ({
         }
 
         // Stop editing for root nodes
-        if (isRoot) {
-          setIsEditing(false)
-        } else {
+        if (!isRoot) {
           // For non-root nodes, find and select the next node
           const nextIndex = displayOrder.indexOf(nodeId) + 1
           if (nextIndex < displayOrder.length) {
             localSelectNode(displayOrder[nextIndex])
           }
-          setIsEditing(false)
         }
+        clearEditing()
         break
       }
 
       case 'Escape': {
         e.preventDefault();
         setEditValue(node.title);
-        setIsEditing(false);
+        clearEditing()
         // If this was a new node (empty title), remove it on cancel
         if (!node.title && !isRoot) {
           await treeNodesApi.removeNode(nodeId)
@@ -457,18 +431,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }
 
-  // Set auto work remaining (clear the setMetric)
-  const setAutoWorkRemaining = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      await treeNodesApi.updateNode(nodeId, {
-        setMetrics: { workRemaining: null }
-      });
-    } catch (error) {
-      console.error('Error setting auto work remaining:', error);
-    }
-  }
-
   // Handle keyboard events for this row when focused and selected
   useEffect(() => {
     // Only attach the handler if the section is focused, row is selected, and not in edit mode
@@ -490,42 +452,22 @@ export const HTableRow: FC<TreeNodeProps> = ({
               // Command/Ctrl + Enter = Add child
               e.preventDefault();
               e.stopPropagation();
-              console.log('Adding child node via keyboard');
               if (node.childrenIds.length === 0) {
                 await treeNodesApi.updateNode(nodeId, { setMetrics: {} });
               }
-              const newNodeId = await treeNodesApi.addNode({
-                title: '',
-              }, nodeId);
-
-              if (newNodeId) {
-                if (!expandedNodes[nodeId]) {
-                  toggleNode(nodeId);
-                }
-                viewStateMethods.selectNodeAndFocus(newNodeId);
-                setEditingNodeId(newNodeId.id);
-              }
+              await viewStateMethods.addAndFocusNode({ title: '' }, nodeId)
             }
             else if (e.shiftKey && node.parentId) {
               // Shift + Enter = Add sibling (if not root)
               e.preventDefault();
               e.stopPropagation();
-              console.log('Adding sibling node via keyboard');
-              const newNodeId = await treeNodesApi.addNode({
-                title: '',
-              }, node.parentId);
-
-              if (newNodeId) {
-                viewStateMethods.selectNodeAndFocus(newNodeId);
-                setEditingNodeId(newNodeId.id);
-              }
+              await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId)
             }
             else {
               // Just Enter = Edit mode
               e.preventDefault();
               e.stopPropagation();
-              console.log('Starting edit mode via keyboard');
-              setIsEditing(true);
+              viewStateMethods.setEditingNodeId(nodeId)
             }
             break;
           }
@@ -560,13 +502,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
           case ' ': {  // Space key - start editing current node
             e.preventDefault();
-            setIsEditing(true);
+            viewStateMethods.setEditingNodeId(nodeId)
             break;
           }
 
           case 'Escape': {
             setEditValue(node.title);
-            setIsEditing(false);
+            clearEditing()
             break;
           }
 
@@ -705,7 +647,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
     toggleNode,
     expandedNodes,
     localSelectNode,
-    setEditingNodeId,
     expanded,
     nodes,
     displayOrder,

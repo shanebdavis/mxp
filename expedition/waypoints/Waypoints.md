@@ -6,7 +6,7 @@ childrenIds:
   - f4277335-c3a2-4dc6-9857-ce2b549fe118
 calculatedMetrics:
   readinessLevel: 0
-  workRemaining: 3
+  workRemaining: 1
 nodeState: active
 type: waypoint
 setMetrics: {}
