@@ -1,6 +1,5 @@
-import express, { Request, Response, Router } from 'express'
+import { Router } from 'express'
 import { createFileStore } from '../models/FileStore'
-import { configRouter } from './config'
 
 export interface ApiConfig {
   /** Absolute path to the storage folder */
@@ -14,10 +13,7 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
   // Add config endpoint
   router.get('/config', (req, res) => {
     try {
-      res.json({
-        projectTitle: fileStore.config.projectTitle,
-        workUnits: fileStore.config.workUnits
-      })
+      res.json(fileStore.config)
     } catch (error) {
       console.error('Error getting config:', error)
       res.status(500).json({ error: 'Failed to get config' })
@@ -103,6 +99,3 @@ export const createApiRouter = async (config: ApiConfig): Promise<Router> => {
 
   return router
 }
-
-const app = express()
-app.use('/api/config', configRouter)

@@ -42,6 +42,7 @@ interface NodeMetadata {
 interface ExpeditionConfig {
   projectTitle?: string
   workUnits?: string
+  iconPath?: string
 }
 
 const FILESTORE_SUB_DIRS_BY_TYPE: Record<NodeType, string> = {
@@ -107,7 +108,7 @@ class FileStore {
     }
 
     // Get base directory from first type's directory by removing the type-specific part
-    const baseDir = path.dirname(this._baseDirsByType[Object.keys(this._baseDirsByType)[0]])
+    const baseDir = path.dirname(this._baseDirsByType[Object.keys(this._baseDirsByType)[0] as NodeType])
 
     await this.loadConfig(baseDir)
     await this.ensureBaseDirs()
@@ -373,12 +374,13 @@ class FileStore {
     try {
       const content = await fs.readFile(configPath, 'utf-8')
       const config = yaml.load(content) as unknown
+      console.log({ config })
 
       // Validate config structure
       if (typeof config === 'object' && config !== null) {
         const validatedConfig: ExpeditionConfig = {}
 
-        const { projectTitle, workUnits } = config as Record<string, unknown>
+        const { projectTitle, workUnits, iconPath } = config as Record<string, unknown>
 
         if (projectTitle !== undefined && typeof projectTitle === 'string') {
           validatedConfig.projectTitle = projectTitle
@@ -386,6 +388,10 @@ class FileStore {
 
         if (workUnits !== undefined && typeof workUnits === 'string') {
           validatedConfig.workUnits = workUnits
+        }
+
+        if (iconPath !== undefined && typeof iconPath === 'string') {
+          validatedConfig.iconPath = iconPath
         }
 
         this._config = validatedConfig

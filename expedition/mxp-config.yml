@@ -5,4 +5,7 @@
 projectTitle: MXP - Expedition Method Facilitation Tool
 
 # Work units - used when displaying effort estimates (e.g. hours, days, points)
-workUnits: hours
+workUnits: "hours"
+
+# Icon path - used in the UI header
+iconPath: "/images/expedition-logo-512-alpha-upside-down.png"

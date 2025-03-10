@@ -233,7 +233,7 @@ const App = () => {
 
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
 
-  const [config, setConfig] = useState<{ projectTitle?: string, workUnits?: string }>({})
+  const [config, setConfig] = useState<{ projectTitle?: string, workUnits?: string, iconPath?: string }>({})
 
   useEffect(() => {
     fetch('/api/config')
@@ -243,6 +243,7 @@ const App = () => {
         }
         return res.json()
       })
+      .then(config => { console.log({ config }); return config })
       .then(setConfig)
       .catch(error => {
         console.error('Error fetching config:', error)
@@ -882,8 +883,8 @@ const App = () => {
     <div style={styles.layout}>
       <header style={styles.header}>
         <img
-          src="/expedition-logo-256-alpha.png"
-          alt="Expedition Logo"
+          src={config.iconPath || "/expedition-logo-256-alpha.png"}
+          alt="Project Logo"
           style={{ height: '24px', marginRight: '16px' }}
         />
         <h1 style={styles.title}>

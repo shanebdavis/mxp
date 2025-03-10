@@ -17,6 +17,12 @@ interface ServerOptions {
 const START_SCRIPT = realpathSync(process.argv[1])
 const PACKAGE_ROOT = path.join(START_SCRIPT, '..')
 
+const loadOpenApiSpec = () => {
+  const openApiSpec = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'openapi.json'), 'utf8'))
+  openApiSpec.servers = [{ url: '/api', description: 'Local API server' }]
+  return openApiSpec
+}
+
 export const startServer = async ({
   port = process.env.PORT != null ? parseInt(process.env.PORT) : 3001,
   storageFolder = process.env.STORAGE_FOLDER || join(process.cwd(), 'expedition'),
@@ -27,13 +33,12 @@ export const startServer = async ({
   app.use(cors())
   app.use(express.json())
 
-  // Mount API routes - correctly await the async router creation
-  const apiRouter = await createApiRouter({ storageFolder })
-  app.use('/api', apiRouter)
+  app.use('/images', express.static(join(storageFolder, 'images')))
+
+  app.use('/api', await createApiRouter({ storageFolder }))
 
   // Serve Swagger UI at /api-docs to match OpenAPI spec server URL
-  const openApiSpec = JSON.parse(readFileSync(join(PACKAGE_ROOT, 'openapi.json'), 'utf8'))
-  openApiSpec.servers = [{ url: '/api', description: 'Local API server' }]
+  const openApiSpec = loadOpenApiSpec()
 
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
 

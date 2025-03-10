@@ -1,6 +1,8 @@
 ---
 id: f5958119-9841-4b17-8c52-c731bd49159f
-title: Stay focused on the big picture
+title: >-
+  Projects fail due to lack of focus: MXP should help the team Stay focused on
+  the big picture
 parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 childrenIds:
   - 59a15be7-4837-4229-87f6-9e4cba09cecc
@@ -9,7 +11,8 @@ childrenIds:
   - 47b91c64-ebb3-4f78-b1df-3f7e12cd3bf9
 calculatedMetrics:
   readinessLevel: 3
-  workRemaining: 0
+  targetReadinessLevel: 1
+  workRemaining: 1
 nodeState: active
 type: map
 setMetrics: {}
