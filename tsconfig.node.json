@@ -2,22 +2,21 @@
   "compilerOptions": {
     "outDir": "./dist", // Redirect output structure to the directory
     "rootDir": "./src", // Specify the root directory of input files
-    "target": "es2018" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
-    "module": "commonjs" /* Specify what module code is generated. */,
-    "resolveJsonModule": true /* Enable importing .json files. */,
-    "sourceMap": true /* Create source map files for emitted JavaScript files. */,
-    "esModuleInterop": true /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */,
-    "forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
-    "strict": true /* Enable all strict type-checking options. */,
-    "noUnusedLocals": false /* Disable error reporting for unused local variables. */,
-    "noUnusedParameters": false /* Disable error reporting for unused parameters. */,
-    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+    "target": "ES2020", // Updated target for modern Node features
+    "module": "ES2020", // Changed from NodeNext
+    "moduleResolution": "bundler", // Changed from nodenext
+    "resolveJsonModule": true, // Enable importing .json files
+    "sourceMap": true, // Create source map files for emitted JavaScript files
+    "esModuleInterop": true, // Ease support for importing CommonJS modules
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true
   },
-  "include": [
-    "./src/**/*" // Include all files in the source directory
-  ],
+  "include": ["./src/**/*"],
   "exclude": [
-    "node_modules", // Exclude the node_modules directory
+    "node_modules",
     "./src/client/**/*",
     "./src/**/*.tsx",
     "./src/**/*.jsx"
