@@ -10,7 +10,7 @@ import {
   type TreeNodeSet,
   getTreeNodeSetDeltaWithUpdatedNodeMetrics,
   vivifyRootNodesByType,
-  inspectTree,
+  getTreeNodeSetDeltaForNodeCreated,
 } from '../../TreeNode'
 import { getActiveChildren } from '../../TreeNode'
 import { log } from '../../ArtStandardLib'
@@ -523,29 +523,27 @@ describe('TreeNode using Deltas', () => {
     })
 
     it('should move a node from index 0 to index 1', () => {
-      const rootId = Object.keys(testNodes)[0]
-
-      // Create three children
-      const child1 = createNode("map", { title: 'Child 1' })
-      const child2 = createNode("map", { title: 'Child 2' })
-      const child3 = createNode("map", { title: 'Child 3' })
-
-      // Add children to the root node
+      const rootNode = createNode("map", { title: 'Root Node' })
       let nodes: TreeNodeSet = {
-        [rootId]: { ...testNodes[rootId], childrenIds: [child1.id, child2.id, child3.id] },
-        [child1.id]: child1,
-        [child2.id]: child2,
-        [child3.id]: child3
+        [rootNode.id]: rootNode,
       }
 
+      // Create three children
+      const { addedNode: child1, delta: delta1 } = getTreeNodeSetDeltaForNodeCreated(nodes, "map", { title: 'Child 1' }, rootNode.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta1)
+
+      const { addedNode: child2, delta: delta2 } = getTreeNodeSetDeltaForNodeCreated(nodes, "map", { title: 'Child 2' }, rootNode.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta2)
+
+      const { addedNode: child3, delta: delta3 } = getTreeNodeSetDeltaForNodeCreated(nodes, "map", { title: 'Child 3' }, rootNode.id)
+      nodes = getTreeNodeSetWithDeltaApplied(nodes, delta3)
+
       // Move child1 from index 0 to index 1
-      const delta = getTreeNodeSetDeltaForNodeParentChanged(nodes, child1.id, rootId, 1)
+      const delta = getTreeNodeSetDeltaForNodeParentChanged(nodes, child1.id, rootNode.id, 1)
       const updatedNodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
 
       // Validate the order has changed
-      expect(updatedNodes[rootId].childrenIds[0]).toBe(child2.id)
-      expect(updatedNodes[rootId].childrenIds[1]).toBe(child1.id)
-      expect(updatedNodes[rootId].childrenIds[2]).toBe(child3.id)
+      expect(updatedNodes[rootNode.id].childrenIds).toEqual([child2.id, child1.id, child3.id])
     })
   })
 

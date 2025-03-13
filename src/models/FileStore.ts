@@ -374,7 +374,6 @@ class FileStore {
     try {
       const content = await fs.readFile(configPath, 'utf-8')
       const config = yaml.load(content) as unknown
-      console.log({ config })
 
       // Validate config structure
       if (typeof config === 'object' && config !== null) {

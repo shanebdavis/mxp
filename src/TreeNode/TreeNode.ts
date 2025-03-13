@@ -1,9 +1,10 @@
 import { v4 as uuid } from 'uuid'
-import { log, neq, objectHasKeys } from '../ArtStandardLib'
+import { eq, log, neq, objectHasKeys } from '../ArtStandardLib'
 import { moveElementInArray } from '../arrayLib'
 import { TreeNode, TreeNodeProperties, UpdateTreeNodeProperties, NodeType, RootNodesByType, TreeNodeSet, TreeNodeWithChildren, TreeNodeSetDelta } from './TreeNodeTypes'
 import { getDefaultFilename, getChildrenIdsWithInsertion, getChildrenIdsWithRemoval, getChildNodes, getChildIds, ROOT_NODE_DEFAULT_PROPERTIES, getActiveChildren } from './TreeNodeLib'
 import { calculateAllMetricsFromNode, calculateAllMetricsFromSetMetricsAndChildrenMetrics, compactMergeMetrics, metricsAreSame } from './TreeNodeMetrics'
+import { moveIdentifierInArray } from './TreeNodeInternalLib'
 
 //*******************************************
 // Single Node Creation and Update
@@ -257,6 +258,16 @@ export const getTreeNodeSetDeltaForNodeAdded = (
   return getTreeNodeSetDeltaWithUpdatedNodeMetrics(nodes, delta, nodeToAdd.id, true)
 }
 
+export const getTreeNodeSetDeltaForNodeCreated = (
+  nodes: TreeNodeSet,
+  type: NodeType,
+  node: TreeNodeProperties,
+  parentId: string
+): { addedNode: TreeNode, delta: TreeNodeSetDelta } => {
+  const addedNode = createNode(type, node)
+  return { addedNode, delta: getTreeNodeSetDeltaForNodeAdded(nodes, addedNode, parentId) }
+}
+
 export const getTreeNodeSetDeltaForNodeUpdated = (
   nodes: TreeNodeSet,
   nodeId: string,
@@ -307,18 +318,11 @@ export const getTreeNodeSetDeltaForNodeParentChanged = (
   // If moving within the same parent, handle differently
   if (node.parentId === newParentId) {
     const parent = getNode(nodes, newParentId, optionalDelta);
-    const currentIndex = parent.childrenIds.indexOf(nodeId);
-    if (currentIndex === -1) throw new Error(`Node ${nodeId} not found in parent's children`);
-
-    // If no insertAtIndex is provided, move to the end
-    const targetIndex = insertAtIndex ?? parent.childrenIds.length - 1;
-    // If moving to a later position, we need to account for the removal of the current item
-    const adjustedTargetIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
-
-    // Skip if the node is already at the target position
-    if (currentIndex === adjustedTargetIndex) {
-      return optionalDelta || { removed: {}, updated: {} };
-    }
+    const childrenIds = insertAtIndex != null ? moveIdentifierInArray(
+      parent.childrenIds,
+      nodeId,
+      insertAtIndex
+    ) : parent.childrenIds
 
     const delta: TreeNodeSetDelta = mergeTreeNodeSetDeltas(
       optionalDelta,
@@ -327,11 +331,7 @@ export const getTreeNodeSetDeltaForNodeParentChanged = (
         updated: {
           [newParentId]: {
             ...parent,
-            childrenIds: moveElementInArray(
-              parent.childrenIds,
-              currentIndex,
-              adjustedTargetIndex
-            )
+            childrenIds
           }
         }
       },

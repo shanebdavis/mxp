@@ -48,7 +48,11 @@ describe('FileStore', () => {
       parentId: fileStore.rootNodesByType.map.id,
       childrenIds: [],
       setMetrics: { readinessLevel: 5 },
-      calculatedMetrics: { readinessLevel: 5 },
+      calculatedMetrics: {
+        readinessLevel: 5,
+        targetReadinessLevel: 1,
+        workRemaining: 1,
+      },
       filename: `${createdNode.id}.md`,
       nodeState: "active",
       type: "map"
