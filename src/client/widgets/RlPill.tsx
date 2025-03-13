@@ -10,22 +10,44 @@ const autoTextStyle = {
   '--auto-text-color': 'var(--text-primary, currentColor)'
 } as React.CSSProperties
 
+// Readiness level descriptions
+const getRlTooltip = (level?: number) => {
+  if (level === undefined) return "Automatically calculated from children"
+
+  const tooltips: Record<number, string> = {
+    0: "RL0: Plan - Initial planning and tech stack selection",
+    1: "RL1: Spike - Core technical risks proven feasible",
+    2: "RL2: Prototype - Basic demo-able functionality",
+    3: "RL3: Alpha - Core functionality works, rough edges",
+    4: "RL4: Beta - Feature complete, needs polish",
+    5: "RL5: Industry-Standard - Solid, reliable product",
+    6: "RL6: Industry-Leading - Exceptional quality and polish - delightful",
+    7: "RL7: World-Leading - Revolutionizing the industry",
+    8: "RL8: World-Changing - Revolutionary impact beyond the industry",
+    9: "RL9: Epic - Making history"
+  }
+
+  return tooltips[level] || `RL${level}`
+}
+
 export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
-  <div style={{
-    ...styles.readinessLevelPill,
-    backgroundColor: level != null ? styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors] : 'var(--background-secondary)',
-    color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-  }}>
-    {level != null ? formatReadinessLevel(level) : 'auto'}
-    {auto && (
-      <Tooltip title="automatically calculated from children">
-        <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />
-      </Tooltip>
-    )}
-  </div>
+  <Tooltip title={getRlTooltip(level)} enterDelay={1000}>
+    <div style={{
+      ...styles.readinessLevelPill,
+      backgroundColor: level != null ? styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors] : 'var(--background-secondary)',
+      color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 4,
+    }}>
+      {level != null ? formatReadinessLevel(level) : 'auto'}
+      {auto && (
+        <Tooltip title="automatically calculated from children" enterDelay={1000}>
+          <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />
+        </Tooltip>
+      )}
+    </div>
+  </Tooltip>
 )
 
 export const RlPillWithDropdown = ({ level, handleRLSelect }:
@@ -44,7 +66,7 @@ export const RlPillWithDropdown = ({ level, handleRLSelect }:
       display: 'flex',
       flexDirection: 'column' as const,
       gap: '4px',
-      minWidth: '180px',
+      minWidth: '120px',
       whiteSpace: 'nowrap' as const,
       ...autoTextStyle
     }}>

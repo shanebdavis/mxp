@@ -4,8 +4,8 @@ title: Maximize a Project's Chance of Success
 parentId: null
 childrenIds:
   - 4423b37f-42d8-44c6-96ae-1a9bf605f8da
-  - f5958119-9841-4b17-8c52-c731bd49159f
   - 5de51286-7771-4102-9b86-194c38cda9ec
+  - f5958119-9841-4b17-8c52-c731bd49159f
   - ca7e0eaa-a0ae-4e7c-b364-4795c1e15aed
   - a2db11fa-fcdb-477f-a17e-e693c4b2349b
   - 6a95bed8-c988-4220-9af9-e7b438961e70
@@ -13,7 +13,7 @@ childrenIds:
 calculatedMetrics:
   readinessLevel: 0
   targetReadinessLevel: 1
-  workRemaining: 8
+  workRemaining: 7
 nodeState: active
 type: map
 setMetrics: {}

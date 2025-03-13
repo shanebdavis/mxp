@@ -5,12 +5,13 @@ parentId: a2db11fa-fcdb-477f-a17e-e693c4b2349b
 childrenIds: []
 calculatedMetrics:
   readinessLevel: 0
-draft: false
+  targetReadinessLevel: 1
+  workRemaining: 1
+nodeState: active
 type: map
 setMetrics:
   readinessLevel: 0
 ---
-
 Every item in the Expedition Map should be a problem statement that is clearly connected to solving the parent problem.
 
 I even have troubles with that!
