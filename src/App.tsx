@@ -876,7 +876,7 @@ const App = () => {
         </h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <div style={{ display: 'flex', gap: 4 }}>
-            <Tooltip title="Add Child">
+            <Tooltip title="Add Child (⌘+Enter / Ctrl+Enter)">
               <span>
                 <button
                   onClick={async () => {
@@ -900,7 +900,7 @@ const App = () => {
                 </button>
               </span>
             </Tooltip>
-            <Tooltip title="Add Sibling">
+            <Tooltip title="Add Sibling (Shift+Enter)">
               <span>
                 <button
                   onClick={async () => {
@@ -924,7 +924,7 @@ const App = () => {
                 </button>
               </span>
             </Tooltip>
-            <Tooltip title="Delete node">
+            <Tooltip title="Delete node (Delete / Backspace)">
               <span>
                 <button
                   onClick={async () => selectedNode && await treeNodesApi.removeNode(selectedNode.id)}
@@ -947,7 +947,7 @@ const App = () => {
       </header>
 
       <nav style={styles.nav}>
-        <Tooltip title="Dashboard (Option+1)" placement="right">
+        <Tooltip title="Dashboard (⌥+1 / Alt+1)">
           <button
             style={{
               ...styles.navButton,
@@ -959,7 +959,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Map (Option+2)" placement="right">
+        <Tooltip title="Map (⌥+2 / Alt+2)">
           <button
             style={{
               ...styles.navButton,
@@ -971,7 +971,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Waypoints (Option+3)" placement="right">
+        <Tooltip title="Waypoints (⌥+3 / Alt+3)">
           <button
             style={{
               ...styles.navButton,
@@ -983,7 +983,7 @@ const App = () => {
           </button>
         </Tooltip>
 
-        <Tooltip title="Contributors (Option+4)" placement="right">
+        <Tooltip title="Users (⌥+4 / Alt+4)">
           <button
             style={{
               ...styles.navButton,
