@@ -237,7 +237,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputBlur = async () => {
-
     try {
       if (editValue.trim() === '') {
         // If empty, use 'TBD' as a placeholder
@@ -254,10 +253,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
     } catch (error) {
       console.error('Error saving title:', error);
     } finally {
-      // Always exit edit mode
-      if (editingNodeId !== nodeId) {
-        clearEditing()
-      }
+      clearEditing()
     }
   }
 
@@ -467,6 +463,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
           case 'ArrowUp': {
             e.preventDefault();
+            console.log("ArrowUp in HTableRow")
             if (e.metaKey || e.ctrlKey) {
               // Move node up in current parent
               if (node.parentId && nodes[node.parentId]) {
@@ -491,6 +488,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
           case 'ArrowDown': {
             e.preventDefault();
+            console.log("ArrowDown in HTableRow")
             if (e.metaKey || e.ctrlKey) {
               // Move node down in current parent
               if (node.parentId && nodes[node.parentId]) {
@@ -498,7 +496,9 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 const currentIndex = parent.childrenIds.indexOf(nodeId);
                 if (currentIndex < parent.childrenIds.length - 1) {
                   try {
-                    await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex + 1);
+                    console.log("ArrowDown in HTableRow: setting node parent - currentIndex", currentIndex, "parentId", node.parentId)
+                    const result = await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex + 1);
+                    console.log("ArrowDown in HTableRow: result", result)
                   } catch (error) {
                     console.error('Error moving node:', error);
                   }
@@ -620,7 +620,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
   const isWayPoint = node.type === 'waypoint'
   const showReadinessLevel = node.type === 'map' || (node.type === 'waypoint' && node.parentId != null)
-  const hasMapReference = node.metadata?.referenceMapNodeId != null
 
   // Get child nodes if this is the drop parent
   const isDropParent = dropPreview.dropParentId === nodeId;

@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect, FC } from 'react'
+import React, { useState } from 'react'
 import { Switch, FormControlLabel, Tooltip } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
 import { SolutionItems } from '../widgets/SolutionItems'
-import type { TreeNode, TreeNodeSet, UpdateTreeNodeProperties } from '../../TreeNode'
+import type { TreeNode, TreeNodeSet } from '../../TreeNode'
 import { PanelHeader } from "./PanelHeader"
-import { useRef as useReactRef } from 'react'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
@@ -158,10 +157,10 @@ const styles = {
 } satisfies Record<string, CSSProperties>
 
 export const DetailsPanel = ({
-  isRightPanelCollapsed,
+  isDetailsPanelActive,
   rightPanelWidth,
   startResize,
-  setRightPanelCollapsed,
+  setDetailsPanelActive,
   selectedNode,
   isResizing,
   treeNodesApi,
@@ -170,10 +169,10 @@ export const DetailsPanel = ({
   nodes,
   viewStateMethods,
 }: {
-  isRightPanelCollapsed: boolean
+  isDetailsPanelActive: boolean
   rightPanelWidth: number
   startResize: (e: React.MouseEvent) => void
-  setRightPanelCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
+  setDetailsPanelActive: (active: boolean | ((prev: boolean) => boolean)) => void
   selectedNode: TreeNode | null
   isResizing: boolean
   treeNodesApi: TreeStateMethods
@@ -236,22 +235,22 @@ export const DetailsPanel = ({
   return (
     <aside style={{
       ...styles.rightPanel,
-      width: isRightPanelCollapsed ? '40px' : `${rightPanelWidth}px`,
+      width: isDetailsPanelActive ? `${rightPanelWidth}px` : '40px',
       transition: isResizing ? 'none' : 'width 0.2s ease',
     }}>
-      {!isRightPanelCollapsed && (
+      {isDetailsPanelActive && (
         <div
           onMouseDown={startResize}
           style={styles.resizeHandle}
         />
       )}
       <PanelHeader
-        isCollapsed={isRightPanelCollapsed}
+        isCollapsed={!isDetailsPanelActive}
         label="Details"
-        onClick={() => setRightPanelCollapsed(prev => !prev)}
+        onClick={() => setDetailsPanelActive(prev => !prev)}
         isVertical={true}
       />
-      {!isRightPanelCollapsed && (
+      {isDetailsPanelActive && (
         <div style={{ padding: '12px', ...styles.content }}>
           {selectedNode ? (
             <>

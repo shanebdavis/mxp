@@ -521,6 +521,32 @@ describe('TreeNode using Deltas', () => {
       expect(movedTree[user.id].calculatedMetrics.readinessLevel).toBe(3)
       expect(movedTree[rootNode.id].calculatedMetrics.readinessLevel).toBe(3)
     })
+
+    it('should move a node from index 0 to index 1', () => {
+      const rootId = Object.keys(testNodes)[0]
+
+      // Create three children
+      const child1 = createNode("map", { title: 'Child 1' })
+      const child2 = createNode("map", { title: 'Child 2' })
+      const child3 = createNode("map", { title: 'Child 3' })
+
+      // Add children to the root node
+      let nodes: TreeNodeSet = {
+        [rootId]: { ...testNodes[rootId], childrenIds: [child1.id, child2.id, child3.id] },
+        [child1.id]: child1,
+        [child2.id]: child2,
+        [child3.id]: child3
+      }
+
+      // Move child1 from index 0 to index 1
+      const delta = getTreeNodeSetDeltaForNodeParentChanged(nodes, child1.id, rootId, 1)
+      const updatedNodes = getTreeNodeSetWithDeltaApplied(nodes, delta)
+
+      // Validate the order has changed
+      expect(updatedNodes[rootId].childrenIds[0]).toBe(child2.id)
+      expect(updatedNodes[rootId].childrenIds[1]).toBe(child1.id)
+      expect(updatedNodes[rootId].childrenIds[2]).toBe(child3.id)
+    })
   })
 
   describe('isParentOfInTree', () => {

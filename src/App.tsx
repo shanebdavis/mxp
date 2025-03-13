@@ -19,6 +19,7 @@ import { TreeNode, TreeNodeSet, NodeType, TreeNodeProperties, getAllParentNodeId
 import { useApiForState } from './useApiForState'
 import { ViewStateMethods } from './ViewStateMethods'
 import { timeout } from './ArtStandardLib'
+import useSessionStorageState from 'use-session-storage-state'
 
 const MIN_PANEL_WIDTH_PERCENTAGE = 10 // Minimum percentage of window width
 const MAX_PANEL_WIDTH_PERCENTAGE = 67 // Maximum percentage of window width
@@ -198,81 +199,63 @@ interface DropPreview {
 }
 
 const App = () => {
-  const [isResizing, setIsResizing] = useState(false)
-  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
-  const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
-    const savedState = localStorage.getItem('detailsPanel.collapsed')
-    return savedState !== null ? savedState === 'true' : false
+  //*************************************************
+  // <APP STATE>
+  //*************************************************
+
+  //*************************************************
+  // Persisted View State that actually belongs here, in App state
+  //*************************************************
+
+  const [isDetailsPanelActive, setDetailsPanelActive] = useSessionStorageState<boolean>('detailsPanel.collapsed', {
+    defaultValue: true
   })
 
-  const [isFooterCollapsed, setFooterCollapsed] = useState(() => {
-    // Try to get saved state from localStorage, default to true (closed) if not found
-    const savedState = localStorage.getItem('commentsPanel.collapsed')
-    return savedState !== null ? savedState === 'true' : true
-  })
-
-  // Replace activeNav with activeViews to track which views are visible
-  const [activeViews, setActiveViews] = useState<ActiveViews>(() => {
-    const savedViews = localStorage.getItem('activeViews')
-    return savedViews ? JSON.parse(savedViews) : {
+  // show/hide sections
+  const [activeSectionsByName, setActiveSectionsByName] = useSessionStorageState<ActiveViews>('activeViews', {
+    defaultValue: {
       dashboard: false,
-      map: true,     // Map view enabled by default
+      map: true,
       waypoints: false,
       users: false
     }
   })
 
-  // State for "show draft" toggles
-  const [showDraftMaps, setShowDraftMaps] = useState(() => {
-    const savedValue = localStorage.getItem('showDraftMap')
-    return savedValue === null ? true : savedValue === 'true'
-  })
-
-  const [showDraftWaypoints, setShowDraftWaypoints] = useState(() => {
-    const savedValue = localStorage.getItem('showDraftWaypoints')
-    return savedValue === null ? true : savedValue === 'true'
-  })
-
-  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
-
-  const [config, setConfig] = useState<{ projectTitle?: string, workUnits?: string, iconPath?: string }>({})
-
-  const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useState(() => {
-    // Get saved panel width percentage from localStorage
-    const savedWidth = localStorage.getItem('detailsPanel.widthPercentage')
-    // Return saved width or default if not found
-    return savedWidth !== null ? parseFloat(savedWidth) : DEFAULT_PANEL_WIDTH_PERCENTAGE
+  // Right Panel Positioning
+  const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useSessionStorageState<number>('detailsPanel.widthPercentage', {
+    defaultValue: DEFAULT_PANEL_WIDTH_PERCENTAGE
   })
 
   // Track selected node ID for each type
-  const [selectedNodeIds, setSelectedNodeIds] = useState<Record<string, string | undefined>>({})
-
-  // Add expanded nodes state for each node type
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(() => {
-    // Initialize with saved state from localStorage if available
-    return JSON.parse(localStorage.getItem('expandedMapNodes') || '{}');
-  });
-
-  // Add state to track which section is currently focused
-  const [focusedSection, setFocusedSection] = useState<SectionName>(() => {
-    // Default to the first active section, preferring map
-    if (activeViews.map) return 'map'
-    if (activeViews.dashboard) return 'dashboard'
-    if (activeViews.waypoints) return 'waypoints'
-    if (activeViews.users) return 'users'
-    return 'map' // Default to map as fallback
+  const [selectedNodeIds, setSelectedNodeIds] = useSessionStorageState<Record<string, string | undefined>>('selectedNodeIds', {
+    defaultValue: {}
   })
 
-  // Add state for section weights
-  const [sectionWeights, setSectionWeights] = useState<SectionWeights>(() => {
-    const savedWeights = localStorage.getItem('sectionWeights')
-    return savedWeights ? JSON.parse(savedWeights) : {
+  // Add state to track which section is currently focused
+  const [focusedSection, setFocusedSection] = useSessionStorageState<SectionName>('focusedSection', {
+    defaultValue: 'map'
+  })
+
+  // Add expanded nodes state for each node type
+  const [expandedNodes, setExpandedNodes] = useSessionStorageState<Record<string, boolean>>('expandedMapNodes', {
+    defaultValue: {}
+  })
+
+  // Section Positioning
+  const [sectionWeights, setSectionWeights] = useSessionStorageState<SectionWeights>('sectionWeights', {
+    defaultValue: {
       dashboard: 1.0,
       map: 1.0,
       waypoints: 1.0,
       users: 1.0
     }
   })
+
+  //*************************************************
+  // Temporary View State
+  //*************************************************
+  const [isResizing, setIsResizing] = useState(false)
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
   // Track which section is being resized
   const [resizingSection, setResizingSection] = useState<{
@@ -283,17 +266,39 @@ const App = () => {
     initialNextHeight: number
   } | null>(null)
 
-  // Add state for hover detection
-  const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
-
-  // Add state for close button hover
-  const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
+  //*************************************************
+  // Temporary State for drag and drop
+  //*************************************************
+  const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
 
   // Add state for drop preview
   const [dropPreview, setDropPreview] = useState<DropPreview>({
     dropParentId: null,
     insertAtIndex: null
   });
+
+  //*************************************************
+  // To Refactor into Section Components
+  //*************************************************
+  // State for "show draft" toggles
+  const [showDraftMaps, setShowDraftMaps] = useSessionStorageState<boolean>('showDraftMap', {
+    defaultValue: true
+  })
+
+  const [showDraftWaypoints, setShowDraftWaypoints] = useSessionStorageState<boolean>('showDraftWaypoints', {
+    defaultValue: true
+  })
+
+  // Add state for hover detection
+  const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
+
+  // Add state for close button hover
+  const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
+
+  //*************************************************
+  // Belongs in useApiForState
+  //*************************************************
+  const [config, setConfig] = useState<{ projectTitle?: string, workUnits?: string, iconPath?: string }>({})
 
   useEffect(() => {
     fetch('/api/config')
@@ -310,6 +315,20 @@ const App = () => {
       })
   }, [])
 
+  //*************************************************
+  // </APP STATE>
+  //*************************************************
+  //*************************************************
+  // <APP STATE UPDATES>
+  //*************************************************
+  // if the selected node changes, clear editing node id
+  useEffect(() => {
+    setEditingNodeId(null)
+  }, [selectedNodeIds])
+
+  //*************************************************
+  // </APP STATE UPDATES>
+  //*************************************************
   useEffect(() => {
     const baseTitle = "Expedition"
     document.title = config.projectTitle
@@ -317,25 +336,11 @@ const App = () => {
       : baseTitle
   }, [config.projectTitle])
 
-  // Save active views to localStorage
-  useEffect(() => {
-    localStorage.setItem('activeViews', JSON.stringify(activeViews))
-  }, [activeViews])
-
-  // Save toggle states to localStorage
-  useEffect(() => {
-    localStorage.setItem('showDraftMap', showDraftMaps.toString())
-  }, [showDraftMaps])
-
-  useEffect(() => {
-    localStorage.setItem('showDraftWaypoints', showDraftWaypoints.toString())
-  }, [showDraftWaypoints])
-
   // Toggle a view on/off
   const toggleView = (view: keyof ActiveViews) => {
     const isFocusedSection = view === focusedSection;
 
-    setActiveViews(prev => {
+    setActiveSectionsByName((prev: ActiveViews) => {
       // Calculate what the new state would be
       const newState = {
         ...prev,
@@ -343,7 +348,7 @@ const App = () => {
       }
 
       // Check if all sections would be turned off
-      const allOff = Object.values(newState).every(isActive => !isActive)
+      const allOff = Object.values(newState).every((isActive: boolean) => !isActive)
 
       // If all would be off, turn on dashboard instead
       if (allOff) {
@@ -420,20 +425,6 @@ const App = () => {
     return Math.round((window.innerWidth * rightPanelWidthPercentage) / 100)
   }, [rightPanelWidthPercentage])
 
-
-  // Save panel states to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem('commentsPanel.collapsed', String(isFooterCollapsed))
-  }, [isFooterCollapsed])
-
-  useEffect(() => {
-    localStorage.setItem('detailsPanel.collapsed', String(isRightPanelCollapsed))
-  }, [isRightPanelCollapsed])
-
-  useEffect(() => {
-    localStorage.setItem('detailsPanel.widthPercentage', String(rightPanelWidthPercentage))
-  }, [rightPanelWidthPercentage])
-
   // Update panel width when window is resized
   useEffect(() => {
     const handleResize = () => {
@@ -464,7 +455,7 @@ const App = () => {
   // Ensure root nodes are expanded by default once they're available
   useEffect(() => {
     if (Object.keys(rootNodesByType).length > 0) {
-      setExpandedNodes(prev => {
+      setExpandedNodes((prev: Record<string, boolean>) => {
         const newExpandedNodes = { ...prev }
         Object.values(rootNodesByType).forEach(node => newExpandedNodes[node.id] = true)
         return newExpandedNodes
@@ -486,7 +477,7 @@ const App = () => {
     }, {} as Record<string, boolean>)
 
     // Update the appropriate expanded nodes state based on node type
-    setExpandedNodes(prev => ({ ...prev, ...expansionUpdates }))
+    setExpandedNodes((prev: Record<string, boolean>) => ({ ...prev, ...expansionUpdates }))
   }
 
   /**
@@ -501,7 +492,7 @@ const App = () => {
     const nodeType = node.type;
 
     // 1. Set the selected node to that node-id
-    setSelectedNodeIds(prev => {
+    setSelectedNodeIds((prev: Record<string, string | undefined>) => {
       if (prev[nodeType] !== nodeId) {
         return {
           ...prev,
@@ -512,7 +503,7 @@ const App = () => {
       // else we need to force scrolling to the node by temporarily deselecting it
       timeout(10).then(() => {
         // restore the selected node
-        setSelectedNodeIds(prevState => ({
+        setSelectedNodeIds((prevState: Record<string, string | undefined>) => ({
           ...prevState,
           [nodeType]: nodeId
         }));
@@ -524,8 +515,8 @@ const App = () => {
 
     // 2. Make sure appropriate section is shown
     const sectionName = nodeTypeToSectionMap[nodeType]
-    if (!activeViews[sectionName]) {
-      setActiveViews(prev => ({
+    if (!activeSectionsByName[sectionName]) {
+      setActiveSectionsByName((prev: ActiveViews) => ({
         ...prev,
         [sectionName]: true
       }))
@@ -625,47 +616,40 @@ const App = () => {
     }
   }, [isResizing, resize, stopResize])
 
-  // Save section weights to localStorage
-  useEffect(() => {
-    localStorage.setItem('sectionWeights', JSON.stringify(sectionWeights))
-  }, [sectionWeights])
-
   // Ref for the main container to get section elements
   const mainRef = useRef<HTMLDivElement>(null)
 
   // Get the active sections in display order
-  const activeSections = useMemo(() =>
-    (Object.entries(activeViews) as [SectionName, boolean][])
+  const activeSectionList =
+    (Object.entries(activeSectionsByName) as [SectionName, boolean][])
       .filter(([_, isActive]) => isActive)
-      .map(([name]) => name),
-    [activeViews]
-  )
+      .map(([name]) => name)
 
   // Calculate flex values for each section based on weights
   const getSectionFlex = useCallback((section: SectionName) => {
     // If there's only one section active, it should take full space
-    if (activeSections.length === 1) return 1
+    if (activeSectionList.length === 1) return 1
 
     // Calculate the total weight of all active sections
-    const totalWeight = activeSections.reduce(
-      (sum, name) => sum + sectionWeights[name],
+    const totalWeight = activeSectionList.reduce(
+      (sum: number, name: SectionName) => sum + sectionWeights[name],
       0
     )
 
     // Return the proportional flex value
     return sectionWeights[section] / totalWeight
-  }, [activeSections, sectionWeights])
+  }, [activeSectionList, sectionWeights])
 
   // Completely revise the startSectionResize function
   const startSectionResize = useCallback((e: React.MouseEvent, section: SectionName) => {
     // The error was here - when dragging section at index 1, we need to resize sections at index 0 and 1
 
     // We need to find the previous section (the one being resized)
-    const sectionIndex = activeSections.indexOf(section)
+    const sectionIndex = activeSectionList.indexOf(section)
     if (sectionIndex === 0) return // Cannot resize the first section (no previous section)
 
     // Get the previous section (the one above the drag handle)
-    const previousSection = activeSections[sectionIndex - 1]
+    const previousSection = activeSectionList[sectionIndex - 1]
 
     // Get section elements to calculate heights
     if (!mainRef.current) return
@@ -674,7 +658,7 @@ const App = () => {
     const sections = Array.from(mainRef.current.children).filter(el => {
       return el.tagName === 'DIV' &&
         el.getAttribute('data-section-type') &&
-        activeSections.includes(el.getAttribute('data-section-type') as SectionName)
+        activeSectionList.includes(el.getAttribute('data-section-type') as SectionName)
     }) as HTMLElement[]
 
     // Find the previous section and current section elements
@@ -696,7 +680,7 @@ const App = () => {
     document.body.style.cursor = 'row-resize'
     e.preventDefault()
     e.stopPropagation()
-  }, [activeSections])
+  }, [activeSectionList])
 
   // Update the handleSectionResize function to use data-section-type
   const handleSectionResize = useCallback((e: MouseEvent) => {
@@ -724,7 +708,7 @@ const App = () => {
     }
 
     // Update weights
-    setSectionWeights(prev => ({
+    setSectionWeights((prev: SectionWeights) => ({
       ...prev,
       [section]: newSectionWeight,
       [nextSection]: newNextSectionWeight
@@ -793,7 +777,7 @@ const App = () => {
       if (sectionIndex < sections.length) {
         const section = sections[sectionIndex] as SectionName;
 
-        if (activeViews[section]) {
+        if (activeSectionsByName[section]) {
           // If the view is active, focus on it
           setFocusedSection(section);
         } else {
@@ -802,7 +786,7 @@ const App = () => {
         }
       }
     }
-  }, [activeViews, focusedSection, toggleView]);
+  }, [activeSectionsByName, focusedSection, toggleView]);
 
   // Add keyboard shortcut handler for add child and add sibling
   useEffect(() => {
@@ -967,7 +951,7 @@ const App = () => {
           <button
             style={{
               ...styles.navButton,
-              ...(activeViews.dashboard ? styles.navButtonActive : {})
+              ...(activeSectionsByName.dashboard ? styles.navButtonActive : {})
             }}
             onClick={() => toggleView('dashboard')}
           >
@@ -979,7 +963,7 @@ const App = () => {
           <button
             style={{
               ...styles.navButton,
-              ...(activeViews.map ? styles.navButtonActive : {})
+              ...(activeSectionsByName.map ? styles.navButtonActive : {})
             }}
             onClick={() => toggleView('map')}
           >
@@ -991,7 +975,7 @@ const App = () => {
           <button
             style={{
               ...styles.navButton,
-              ...(activeViews.waypoints ? styles.navButtonActive : {})
+              ...(activeSectionsByName.waypoints ? styles.navButtonActive : {})
             }}
             onClick={() => toggleView('waypoints')}
           >
@@ -1003,7 +987,7 @@ const App = () => {
           <button
             style={{
               ...styles.navButton,
-              ...(activeViews.users ? styles.navButtonActive : {})
+              ...(activeSectionsByName.users ? styles.navButtonActive : {})
             }}
             onClick={() => toggleView('users')}
           >
@@ -1013,7 +997,7 @@ const App = () => {
       </nav>
 
       <main ref={mainRef} style={styles.main}>
-        {activeViews.dashboard && (
+        {activeSectionsByName.dashboard && (
           <div
             data-section-type="dashboard"
             style={{
@@ -1057,7 +1041,7 @@ const App = () => {
           </div>
         )}
 
-        {activeViews.map && rootNodesByType.map && (
+        {activeSectionsByName.map && rootNodesByType.map && (
           <div
             data-section-type="map"
             style={{
@@ -1083,7 +1067,7 @@ const App = () => {
               Problem / Solution Map
 
               {/* Add drag handle if not the first section */}
-              {activeSections.indexOf('map') > 0 && (
+              {activeSectionList.indexOf('map') > 0 && (
                 <div
                   style={{
                     ...styles.dragHandle,
@@ -1168,7 +1152,7 @@ const App = () => {
           </div>
         )}
 
-        {activeViews.waypoints && rootNodesByType.waypoint && (
+        {activeSectionsByName.waypoints && rootNodesByType.waypoint && (
           <div
             data-section-type="waypoints"
             style={{
@@ -1231,7 +1215,7 @@ const App = () => {
               </Tooltip>
 
               {/* Add drag handle if not the first section */}
-              {activeSections.indexOf('waypoints') > 0 && (
+              {activeSectionList.indexOf('waypoints') > 0 && (
                 <div
                   style={{
                     ...styles.dragHandle,
@@ -1279,7 +1263,7 @@ const App = () => {
           </div>
         )}
 
-        {activeViews.users && rootNodesByType.user && (
+        {activeSectionsByName.users && rootNodesByType.user && (
           <div
             data-section-type="users"
             style={{
@@ -1304,7 +1288,7 @@ const App = () => {
               <People sx={styles.sectionHeaderIcon} />
               Contributors
               {/* Add drag handle if not the first section */}
-              {activeSections.indexOf('users') > 0 && (
+              {activeSectionList.indexOf('users') > 0 && (
                 <div
                   style={{
                     ...styles.dragHandle,
@@ -1354,10 +1338,10 @@ const App = () => {
 
       {/* Details Panel - show focused section's selected node */}
       <DetailsPanel
-        isRightPanelCollapsed={isRightPanelCollapsed}
+        isDetailsPanelActive={isDetailsPanelActive}
         rightPanelWidth={rightPanelWidth}
         startResize={startResize}
-        setRightPanelCollapsed={setRightPanelCollapsed}
+        setDetailsPanelActive={setDetailsPanelActive}
         selectedNode={selectedNode}
         isResizing={isResizing}
         viewStateMethods={viewStateMethods}
@@ -1373,12 +1357,6 @@ const App = () => {
               focusedSection === 'users' ? "Status" : "Readiness Level"
         }
         nodes={nodes}
-      />
-
-      {/* Comments Panel - always present regardless of active views */}
-      <CommentsPanel
-        isFooterCollapsed={isFooterCollapsed}
-        setFooterCollapsed={setFooterCollapsed}
       />
 
       {/* Status Bar */}
