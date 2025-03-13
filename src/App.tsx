@@ -198,6 +198,8 @@ interface DropPreview {
 }
 
 const App = () => {
+  const [isResizing, setIsResizing] = useState(false)
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
   const [isRightPanelCollapsed, setRightPanelCollapsed] = useState(() => {
     const savedState = localStorage.getItem('detailsPanel.collapsed')
     return savedState !== null ? savedState === 'true' : false
@@ -234,6 +236,64 @@ const App = () => {
   const [draggedNode, setDraggedNode] = useState<TreeNode | null>(null)
 
   const [config, setConfig] = useState<{ projectTitle?: string, workUnits?: string, iconPath?: string }>({})
+
+  const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useState(() => {
+    // Get saved panel width percentage from localStorage
+    const savedWidth = localStorage.getItem('detailsPanel.widthPercentage')
+    // Return saved width or default if not found
+    return savedWidth !== null ? parseFloat(savedWidth) : DEFAULT_PANEL_WIDTH_PERCENTAGE
+  })
+
+  // Track selected node ID for each type
+  const [selectedNodeIds, setSelectedNodeIds] = useState<Record<string, string | undefined>>({})
+
+  // Add expanded nodes state for each node type
+  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(() => {
+    // Initialize with saved state from localStorage if available
+    return JSON.parse(localStorage.getItem('expandedMapNodes') || '{}');
+  });
+
+  // Add state to track which section is currently focused
+  const [focusedSection, setFocusedSection] = useState<SectionName>(() => {
+    // Default to the first active section, preferring map
+    if (activeViews.map) return 'map'
+    if (activeViews.dashboard) return 'dashboard'
+    if (activeViews.waypoints) return 'waypoints'
+    if (activeViews.users) return 'users'
+    return 'map' // Default to map as fallback
+  })
+
+  // Add state for section weights
+  const [sectionWeights, setSectionWeights] = useState<SectionWeights>(() => {
+    const savedWeights = localStorage.getItem('sectionWeights')
+    return savedWeights ? JSON.parse(savedWeights) : {
+      dashboard: 1.0,
+      map: 1.0,
+      waypoints: 1.0,
+      users: 1.0
+    }
+  })
+
+  // Track which section is being resized
+  const [resizingSection, setResizingSection] = useState<{
+    section: SectionName,
+    nextSection: SectionName,
+    startY: number,
+    initialHeight: number,
+    initialNextHeight: number
+  } | null>(null)
+
+  // Add state for hover detection
+  const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
+
+  // Add state for close button hover
+  const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
+
+  // Add state for drop preview
+  const [dropPreview, setDropPreview] = useState<DropPreview>({
+    dropParentId: null,
+    insertAtIndex: null
+  });
 
   useEffect(() => {
     fetch('/api/config')
@@ -355,20 +415,11 @@ const App = () => {
     });
   }
 
-  const [rightPanelWidthPercentage, setRightPanelWidthPercentage] = useState(() => {
-    // Get saved panel width percentage from localStorage
-    const savedWidth = localStorage.getItem('detailsPanel.widthPercentage')
-    // Return saved width or default if not found
-    return savedWidth !== null ? parseFloat(savedWidth) : DEFAULT_PANEL_WIDTH_PERCENTAGE
-  })
-
   // Calculate pixel width from percentage
   const rightPanelWidth = useMemo(() => {
     return Math.round((window.innerWidth * rightPanelWidthPercentage) / 100)
   }, [rightPanelWidthPercentage])
 
-  const [isResizing, setIsResizing] = useState(false)
-  const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
 
   // Save panel states to localStorage when they change
   useEffect(() => {
@@ -404,20 +455,11 @@ const App = () => {
     latestNodesRef.current = nodes;
   }, [nodes]);
 
-  // Track selected node ID for each type
-  const [selectedNodeIds, setSelectedNodeIds] = useState<Record<string, string | undefined>>({})
-
   // Get the current selected node
   const getSelectedNode = (type: NodeType): TreeNode | null => {
     const selectedId = selectedNodeIds[type]
     return selectedId ? nodes[selectedId] : null
   }
-
-  // Add expanded nodes state for each node type
-  const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>(() => {
-    // Initialize with saved state from localStorage if available
-    return JSON.parse(localStorage.getItem('expandedMapNodes') || '{}');
-  });
 
   // Ensure root nodes are expanded by default once they're available
   useEffect(() => {
@@ -527,16 +569,6 @@ const App = () => {
     }
   }, [rootNodesByType])
 
-  // Add state to track which section is currently focused
-  const [focusedSection, setFocusedSection] = useState<SectionName>(() => {
-    // Default to the first active section, preferring map
-    if (activeViews.map) return 'map'
-    if (activeViews.dashboard) return 'dashboard'
-    if (activeViews.waypoints) return 'waypoints'
-    if (activeViews.users) return 'users'
-    return 'map' // Default to map as fallback
-  })
-
   // Add a mapping between section names and node types
   const sectionToNodeType = {
     dashboard: 'dashboard',
@@ -593,30 +625,10 @@ const App = () => {
     }
   }, [isResizing, resize, stopResize])
 
-  // Add state for section weights
-  const [sectionWeights, setSectionWeights] = useState<SectionWeights>(() => {
-    const savedWeights = localStorage.getItem('sectionWeights')
-    return savedWeights ? JSON.parse(savedWeights) : {
-      dashboard: 1.0,
-      map: 1.0,
-      waypoints: 1.0,
-      users: 1.0
-    }
-  })
-
   // Save section weights to localStorage
   useEffect(() => {
     localStorage.setItem('sectionWeights', JSON.stringify(sectionWeights))
   }, [sectionWeights])
-
-  // Track which section is being resized
-  const [resizingSection, setResizingSection] = useState<{
-    section: SectionName,
-    nextSection: SectionName,
-    startY: number,
-    initialHeight: number,
-    initialNextHeight: number
-  } | null>(null)
 
   // Ref for the main container to get section elements
   const mainRef = useRef<HTMLDivElement>(null)
@@ -737,12 +749,6 @@ const App = () => {
     }
   }, [resizingSection, handleSectionResize, endSectionResize])
 
-  // Add state for hover detection
-  const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
-
-  // Add state for close button hover
-  const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
-
   // Add helper to generate section header styles based on focus
   const getSectionHeaderStyle = (section: SectionName) => ({
     ...styles.sectionHeader,
@@ -840,12 +846,6 @@ const App = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]); // Dependency includes the memoized handler
-
-  // Add state for drop preview
-  const [dropPreview, setDropPreview] = useState<DropPreview>({
-    dropParentId: null,
-    insertAtIndex: null
-  });
 
   // Function to clear drop preview
   const clearDropPreview = () => {
