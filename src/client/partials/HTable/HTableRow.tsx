@@ -463,7 +463,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
           case 'ArrowUp': {
             e.preventDefault();
-            console.log("ArrowUp in HTableRow")
             if (e.metaKey || e.ctrlKey) {
               // Move node up in current parent
               if (node.parentId && nodes[node.parentId]) {
@@ -488,7 +487,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
 
           case 'ArrowDown': {
             e.preventDefault();
-            console.log("ArrowDown in HTableRow")
             if (e.metaKey || e.ctrlKey) {
               // Move node down in current parent
               if (node.parentId && nodes[node.parentId]) {
@@ -496,9 +494,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
                 const currentIndex = parent.childrenIds.indexOf(nodeId);
                 if (currentIndex < parent.childrenIds.length - 1) {
                   try {
-                    console.log("ArrowDown in HTableRow: setting node parent - currentIndex", currentIndex, "parentId", node.parentId)
                     const result = await treeNodesApi.setNodeParent(nodeId, node.parentId, currentIndex + 1);
-                    console.log("ArrowDown in HTableRow: result", result)
                   } catch (error) {
                     console.error('Error moving node:', error);
                   }
