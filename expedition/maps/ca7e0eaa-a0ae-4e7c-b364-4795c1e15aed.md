@@ -13,7 +13,7 @@ calculatedMetrics:
   readinessLevel: 0
   targetReadinessLevel: 1
   workRemaining: 3
-nodeState: active
+nodeState: draft
 type: map
 setMetrics: {}
 ---

@@ -1,8 +1,6 @@
 ---
 id: f5958119-9841-4b17-8c52-c731bd49159f
-title: >-
-  Projects fail due to lack of focus: Everyone knows how their work connects to
-  the big picture
+title: "Lack of focus: Everyone knows how their work connects to the big picture"
 parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 childrenIds:
   - 59a15be7-4837-4229-87f6-9e4cba09cecc
@@ -17,7 +15,6 @@ nodeState: active
 type: map
 setMetrics: {}
 ---
-
 # Track Status, not To-Dos
 
 1. a hierarchy

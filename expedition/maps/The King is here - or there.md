@@ -9,11 +9,10 @@ childrenIds:
   - ca7e0eaa-a0ae-4e7c-b364-4795c1e15aed
   - a2db11fa-fcdb-477f-a17e-e693c4b2349b
   - 6a95bed8-c988-4220-9af9-e7b438961e70
-  - 3db2e75f-ee4a-4de7-8046-c3a2e9106c5b
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
   targetReadinessLevel: 1
-  workRemaining: 7
+  workRemaining: 3
 nodeState: active
 type: map
 setMetrics: {}

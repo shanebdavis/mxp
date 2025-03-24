@@ -529,8 +529,8 @@ const App = () => {
     expandParentNodes(nodeId)
   }
 
-  const addAndFocusNode = async (nodeProperties: TreeNodeProperties, parentId: string) => {
-    const newNode = await treeNodesApi.addNode(nodeProperties, parentId);
+  const addAndFocusNode = async (nodeProperties: TreeNodeProperties, parentId: string, insertAtIndex?: number) => {
+    const newNode = await treeNodesApi.addNode(nodeProperties, parentId, insertAtIndex);
     await timeout(10)
     selectNodeAndFocus(newNode);
     setEditingNodeId(newNode.id);
@@ -1064,7 +1064,7 @@ const App = () => {
           >
             <div style={getSectionHeaderStyle('map')}>
               <MapIcon sx={styles.sectionHeaderIcon} />
-              Problem / Solution Map
+              Problem to Solution Map
 
               {/* Add drag handle if not the first section */}
               {activeSectionList.indexOf('map') > 0 && (

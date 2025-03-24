@@ -1,8 +1,8 @@
 ---
 id: 4423b37f-42d8-44c6-96ae-1a9bf605f8da
 title: >-
-  Projects fail due to lack of Knowledge: MXP should help facilitate and guide
-  the knowledge generation processes
+  Lack of Knowledge: MXP should help facilitate and guide the knowledge
+  generation processes
 parentId: ed8e363c-0eb4-46ab-a4e8-90664887a59d
 childrenIds: []
 calculatedMetrics:

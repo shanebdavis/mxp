@@ -410,7 +410,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
               // Shift + Enter = Add sibling (if not root)
               e.preventDefault();
               e.stopPropagation();
-              await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId)
+              // Get the current node's index in its parent's children list
+              const parent = nodes[node.parentId];
+              const currentIndex = parent.childrenIds.indexOf(nodeId);
+              // Add the new node right after the current node
+              await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId, currentIndex + 1)
             }
             else {
               // Just Enter = Edit mode

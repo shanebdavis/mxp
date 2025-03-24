@@ -9,7 +9,7 @@ childrenIds:
   - d8301e97-f45d-418e-9c82-8fcbb7e945a5
   - 82a97424-cd3d-4970-8e11-029dc4a0ecc8
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 3
   targetReadinessLevel: 1
   workRemaining: 1
 nodeState: active
