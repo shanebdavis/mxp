@@ -1,4 +1,4 @@
-import { FC, useState, useRef, useEffect } from 'react'
+import { FC, useState, useRef, useEffect, useCallback, memo } from 'react'
 import { DragTarget, DragItem } from './types'
 import { styles } from './styles'
 import { ArrowDropDown, ArrowRight, Map, CheckCircle, AutoMode } from '@mui/icons-material'
@@ -37,7 +37,7 @@ interface TreeNodeProps {
   }
 }
 
-export const HTableRow: FC<TreeNodeProps> = ({
+export const HTableRow: FC<TreeNodeProps> = memo(({
   displayOrder,
   draggedNode,
   editingNodeId,
@@ -79,6 +79,11 @@ export const HTableRow: FC<TreeNodeProps> = ({
   const rowRef = useRef<HTMLTableRowElement>(null)
   const [isMapRefHovered, setIsMapRefHovered] = useState(false)
 
+  // Add debounce for input changes to prevent excessive re-renders
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditValue(e.target.value)
+  }, []);
+
   // Update the wasFocused ref after each render
   useEffect(() => {
     wasFocusedRef.current = isFocused;
@@ -90,13 +95,13 @@ export const HTableRow: FC<TreeNodeProps> = ({
     color: 'var(--text-secondary)',
   }
 
-  // Local selection function for keyboard navigation that doesn't change focus
-  const localSelectNode = (id: string) => {
+  // Memoize the localSelectNode function
+  const localSelectNode = useCallback((id: string) => {
     // Only call selectNodeAndFocus if the node is not already selected
     if (isFocused && (!selectedNode || selectedNode.id !== id)) {
       viewStateMethods.selectNodeAndFocus(nodes[id]);
     }
-  }
+  }, [isFocused, selectedNode, viewStateMethods, nodes]);
 
   useEffect(() => {
     if (editingNodeId === nodeId) {
@@ -144,8 +149,8 @@ export const HTableRow: FC<TreeNodeProps> = ({
     }
   }, [isSelected])
 
-  const handleRowClick = (e: React.MouseEvent) => {
-
+  // Memoize event handlers
+  const handleRowClick = useCallback((e: React.MouseEvent) => {
     // Ignore clicks on the toggle button or any cell with a click handler
     if ((e.target as HTMLElement).closest('.toggle-button') ||
       (e.target as HTMLElement).closest('[data-has-click-handler="true"]')) {
@@ -164,39 +169,40 @@ export const HTableRow: FC<TreeNodeProps> = ({
     if (!isSelected) {
       localSelectNode(nodeId);
     }
-  }
+  }, [isSelected, node.metadata?.referenceMapNodeId, nodeId, viewStateMethods, localSelectNode]);
 
-  const handleToggleClick = (e: React.MouseEvent) => {
+  const handleToggleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     toggleNode(nodeId)
-  }
+  }, [toggleNode, nodeId]);
 
-  const handleMapReferenceClick = (e: React.MouseEvent) => {
+  const handleMapReferenceClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     if (node.metadata?.referenceMapNodeId) {
       viewStateMethods.selectNodeAndFocus(nodes[node.metadata.referenceMapNodeId])
     }
-  }
+  }, [node.metadata?.referenceMapNodeId, viewStateMethods, nodes]);
 
-  const handleDragStart = (e: React.DragEvent) => {
+  const handleDragStart = useCallback((e: React.DragEvent) => {
     setDraggedNode(node)
     e.dataTransfer.setData('application/json', JSON.stringify({
       id: nodeId,
       parentId: null,
       type: node.type
     }))
-  }
+  }, [node, nodeId, setDraggedNode]);
 
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setDraggedNode(null)
     handleDragLeave()
     // Call external handler if provided
     if (externalHandleDragEnd) {
       externalHandleDragEnd()
     }
-  }
+  }, [setDraggedNode, handleDragLeave, externalHandleDragEnd]);
 
-  const handleDrop = async (e: React.DragEvent) => {
+  // Add back the handleDrop function
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault()
     const dragItem = JSON.parse(e.dataTransfer.getData('application/json')) as DragItem
     if (dragItem.id !== nodeId && !treeNodesApi.isParentOf(dragItem.id, nodeId)) {
@@ -258,7 +264,10 @@ export const HTableRow: FC<TreeNodeProps> = ({
       }
       handleDragLeave()
     }
-  }
+  }, [nodeId, node, nodes, dropPreview, expandedNodes, treeNodesApi, toggleNode, handleDragLeave]);
+
+  // For the input edit event, update with useCallback
+  const clearEditing = useCallback(() => viewStateMethods.setEditingNodeId(null), [viewStateMethods]);
 
   const handleInputBlur = async () => {
     // Add a small delay before checking if we should save
@@ -295,8 +304,6 @@ export const HTableRow: FC<TreeNodeProps> = ({
       }
     }
   }
-
-  const clearEditing = () => viewStateMethods.setEditingNodeId(null)
 
   const handleInputKeyDown = async (e: React.KeyboardEvent) => {
     e.stopPropagation();
@@ -747,7 +754,7 @@ export const HTableRow: FC<TreeNodeProps> = ({
             <input
               ref={inputRef}
               value={editValue}
-              onChange={e => setEditValue(e.target.value)}
+              onChange={handleInputChange}
               onBlur={handleInputBlur}
               onKeyDown={handleInputKeyDown}
               style={styles.input}
@@ -925,4 +932,4 @@ export const HTableRow: FC<TreeNodeProps> = ({
       ]}
     </tr>
   )
-}
+})

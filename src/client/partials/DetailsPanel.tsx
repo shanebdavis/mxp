@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { Switch, FormControlLabel, Tooltip } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import { EditableRlPill } from '../widgets'
@@ -156,7 +156,7 @@ const styles = {
   },
 } satisfies Record<string, CSSProperties>
 
-export const DetailsPanel = ({
+export const DetailsPanel = memo(({
   isDetailsPanelActive,
   rightPanelWidth,
   startResize,
@@ -184,30 +184,36 @@ export const DetailsPanel = ({
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')
 
-  // Handle description blur event
-  const handleDescriptionBlur = async () => {
+  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDescriptionDraft(e.target.value)
+  }, []);
+
+  const handleDescriptionBlur = useCallback(async () => {
     setIsEditingDescription(false)
     if (selectedNode && descriptionDraft !== selectedNode.description) {
       await treeNodesApi.updateNode(selectedNode.id, { description: descriptionDraft })
     }
-  }
+  }, [selectedNode, descriptionDraft, treeNodesApi]);
 
-  // Handle description keydown event
-  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+  const handleDescriptionKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setIsEditingDescription(false)
       e.stopPropagation()
     }
-  }
+  }, []);
 
-  // Handle double-click on description to start editing
-  const handleDescriptionDoubleClick = () => {
-    // Don't allow editing for nodes that reference a map node
+  const handleDescriptionDoubleClick = useCallback(() => {
     if (!isEditingDescription && selectedNode && !selectedNode.metadata?.referenceMapNodeId) {
       setDescriptionDraft(selectedNode.description || '')
       setIsEditingDescription(true)
     }
-  }
+  }, [isEditingDescription, selectedNode]);
+
+  useEffect(() => {
+    if (selectedNode) {
+      setDescriptionDraft(selectedNode.description || '')
+    }
+  }, [selectedNode]);
 
   const markdownComponents: Components = {
     code: ({ inline, className, children, ...props }: CodeProps) => {
@@ -229,15 +235,15 @@ export const DetailsPanel = ({
     },
   }
 
-  // Determine if we should show the readiness section based on node type
   const showReadinessSection = selectedNode && selectedNode.type === 'map';
 
   return (
-    <aside style={{
-      ...styles.rightPanel,
-      width: isDetailsPanelActive ? `${rightPanelWidth}px` : '40px',
-      transition: isResizing ? 'none' : 'width 0.2s ease',
-    }}>
+    <aside
+      style={{
+        ...styles.rightPanel,
+        ...(isDetailsPanelActive ? { width: rightPanelWidth } : styles.rightPanelCollapsed),
+      }}
+    >
       {isDetailsPanelActive && (
         <div
           onMouseDown={startResize}
@@ -340,7 +346,7 @@ export const DetailsPanel = ({
                 {isEditingDescription ? (
                   <textarea
                     value={descriptionDraft}
-                    onChange={e => setDescriptionDraft(e.target.value)}
+                    onChange={handleDescriptionChange}
                     onBlur={handleDescriptionBlur}
                     onKeyDown={handleDescriptionKeyDown}
                     className="details-text-container"
@@ -375,4 +381,4 @@ export const DetailsPanel = ({
       )}
     </aside>
   )
-}
+})

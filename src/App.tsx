@@ -198,6 +198,15 @@ interface DropPreview {
   insertAtIndex: number | null;
 }
 
+// Add debounce utility for optimization
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
 const App = () => {
   //*************************************************
   // <APP STATE>
@@ -550,11 +559,35 @@ const App = () => {
     return newNode;
   }
 
-  const viewStateMethods: ViewStateMethods = {
+  // Create a debounced version of setEditingNodeId to reduce re-renders
+  const debouncedSetEditingNodeId = useMemo(() =>
+    debounce((id: string | null) => {
+      setEditingNodeId(id);
+    }, 5), // Small delay to batch updates without affecting UX
+    []);
+
+  // Create an optimized version of viewStateMethods that uses the debounced function
+  const viewStateMethods: ViewStateMethods = useMemo(() => ({
+    expandParentNodes: (nodeId: string) => {
+      // Expand all parent nodes to ensure the target node is visible
+      const parentIds = getAllParentNodeIds(nodeId, nodes);
+      if (parentIds.length > 0) {
+        setExpandedNodes((prev) => {
+          const newState = { ...prev };
+          parentIds.forEach(id => {
+            newState[id] = true;
+          });
+          return newState;
+        });
+      }
+    },
+
     selectNodeAndFocus,
-    addAndFocusNode,
-    setEditingNodeId
-  }
+
+    setEditingNodeId: debouncedSetEditingNodeId, // Use the debounced version
+
+    addAndFocusNode
+  }), [nodes, setExpandedNodes, selectNodeAndFocus, debouncedSetEditingNodeId, addAndFocusNode]);
 
   // Update selectedNodeIds when rootNodesByType changes
   useEffect(() => {
