@@ -99,18 +99,42 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   useEffect(() => {
-    if (isEditing) {
-      setEditValue(node.title)  // Reset to current title when starting edit
-      inputRef.current?.focus()
-      inputRef.current?.select()
-    }
-  }, [isEditing, node.title])
-
-  useEffect(() => {
     if (editingNodeId === nodeId) {
-      setJustCreated(true)
+      // Check if the node is being newly created (has empty title)
+      const isNewNode = !node.title;
+      setJustCreated(true);
+
+      // Increase delay to allow the input to be mounted
+      timeout(10).then(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+          // Only clear edit value if this is a new node with no title
+          if (isNewNode) {
+            setEditValue('');
+          } else {
+            setEditValue(node.title); // For existing nodes, keep the title
+          }
+        }
+      });
+
+      // Add additional focus attempts in case the first one fails
+      timeout(50).then(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      });
+
+      // One more safety check after a bit longer
+      timeout(100).then(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      });
     }
-  }, [editingNodeId, nodeId, viewStateMethods])
+  }, [editingNodeId, nodeId, node.title]);
 
   useEffect(() => {
     if (isSelected && rowRef.current) {
@@ -237,23 +261,38 @@ export const HTableRow: FC<TreeNodeProps> = ({
   }
 
   const handleInputBlur = async () => {
-    try {
-      if (editValue.trim() === '') {
-        // If empty, use 'TBD' as a placeholder
-        await treeNodesApi.updateNode(nodeId, { title: 'TBD' });
-      } else if (editValue !== node.title) {
-        // Save changes if the title has been modified
-        await treeNodesApi.updateNode(nodeId, { title: editValue });
-      }
+    // Add a small delay before checking if we should save
+    // This helps in cases where we're just changing focus momentarily
+    await timeout(100);
 
-      // Clear justCreated flag since we're saving changes
-      if (justCreated) {
-        setJustCreated(false);
+    // Check if input is still the active element - if so, don't save yet
+    if (document.activeElement === inputRef.current) return;
+
+    // Only save if we're still in edit mode
+    if (editingNodeId === nodeId) {
+      try {
+        if (editValue.trim() === '') {
+          // If empty, use 'TBD' as a placeholder
+          await treeNodesApi.updateNode(nodeId, { title: 'TBD' });
+        } else if (editValue !== node.title) {
+          // Save changes if the title has been modified
+          await treeNodesApi.updateNode(nodeId, { title: editValue });
+        }
+
+        // Clear justCreated flag since we're saving changes
+        if (justCreated) {
+          setJustCreated(false);
+        }
+      } catch (error) {
+        console.error('Error saving title:', error);
+      } finally {
+        // Only clear editing if we aren't in the process of adding a new node
+        // via keyboard shortcuts (which should maintain edit mode)
+        if (!document.activeElement ||
+          document.activeElement.getAttribute('data-editing') !== 'true') {
+          clearEditing();
+        }
       }
-    } catch (error) {
-      console.error('Error saving title:', error);
-    } finally {
-      clearEditing()
     }
   }
 
@@ -274,10 +313,18 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (newTitle !== node.title) {
             await treeNodesApi.updateNode(nodeId, { title: newTitle })
           }
-          clearEditing()
 
-          await timeout(10)
+          // Don't clear edit mode - the addAndFocusNode function will handle setting edit mode for the new node
+          if (node.childrenIds.length === 0) {
+            await treeNodesApi.updateNode(nodeId, { setMetrics: {} });
+          }
 
+          // Ensure parent is expanded
+          if (!expandedNodes[nodeId]) {
+            toggleNode(nodeId);
+          }
+
+          // Don't add clearEditing() here - let addAndFocusNode handle the edit state
           await viewStateMethods.addAndFocusNode({ title: '' }, nodeId)
           return
         }
@@ -288,11 +335,14 @@ export const HTableRow: FC<TreeNodeProps> = ({
           if (newTitle !== node.title) {
             await treeNodesApi.updateNode(nodeId, { title: newTitle })
           }
-          clearEditing()
 
-          await timeout(10)
+          // Get the current node's index in its parent's children list
+          const parent = nodes[node.parentId];
+          const currentIndex = parent.childrenIds.indexOf(nodeId);
 
-          await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId)
+          // Don't clear edit mode - the addAndFocusNode function will handle setting edit mode for the new node
+          // Don't add clearEditing() here - let addAndFocusNode handle the edit state
+          await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId, currentIndex + 1)
           return
         }
 

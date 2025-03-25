@@ -256,6 +256,7 @@ const App = () => {
   //*************************************************
   const [isResizing, setIsResizing] = useState(false)
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null)
+  const [preserveEditing, setPreserveEditing] = useState<boolean>(false)
 
   // Track which section is being resized
   const [resizingSection, setResizingSection] = useState<{
@@ -321,10 +322,31 @@ const App = () => {
   //*************************************************
   // <APP STATE UPDATES>
   //*************************************************
-  // if the selected node changes, clear editing node id
+  const { nodes, rootNodesByType, treeNodesApi, loading, error } = useApiForState()
+
+  // Add this near your other state declarations
+  const latestNodesRef = useRef<TreeNodeSet>(nodes);
+
+  // Update the ref whenever nodes changes
   useEffect(() => {
-    setEditingNodeId(null)
-  }, [selectedNodeIds])
+    latestNodesRef.current = nodes;
+  }, [nodes]);
+
+  // Update the effect that clears edit mode to be more selective
+  useEffect(() => {
+    // Only clear edit mode if:
+    // 1. We're not preserving edit mode
+    // 2. The currently editing node is not the selected node for its type
+    if (!preserveEditing) {
+      const editingNode = editingNodeId ? nodes[editingNodeId] : null;
+      if (editingNode) {
+        const selectedId = selectedNodeIds[editingNode.type];
+        if (selectedId !== editingNodeId) {
+          setEditingNodeId(null);
+        }
+      }
+    }
+  }, [selectedNodeIds, preserveEditing, editingNodeId, nodes])
 
   //*************************************************
   // </APP STATE UPDATES>
@@ -436,16 +458,6 @@ const App = () => {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const { nodes, rootNodesByType, treeNodesApi, loading, error } = useApiForState()
-
-  // Add this near your other state declarations
-  const latestNodesRef = useRef<TreeNodeSet>(nodes);
-
-  // Update the ref whenever nodes changes
-  useEffect(() => {
-    latestNodesRef.current = nodes;
-  }, [nodes]);
-
   // Get the current selected node
   const getSelectedNode = (type: NodeType): TreeNode | null => {
     const selectedId = selectedNodeIds[type]
@@ -531,10 +543,10 @@ const App = () => {
 
   const addAndFocusNode = async (nodeProperties: TreeNodeProperties, parentId: string, insertAtIndex?: number) => {
     const newNode = await treeNodesApi.addNode(nodeProperties, parentId, insertAtIndex);
-    await timeout(10)
-    selectNodeAndFocus(newNode);
+    setPreserveEditing(true);
     setEditingNodeId(newNode.id);
-
+    selectNodeAndFocus(newNode);
+    setPreserveEditing(false);
     return newNode;
   }
 
