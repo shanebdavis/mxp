@@ -811,6 +811,11 @@ const App = () => {
             await treeNodesApi.updateNode(currentNode.id, { setMetrics: {} });
           }
 
+          // Ensure parent node is expanded
+          if (!expandedNodes[currentNode.id]) {
+            setExpandedNodes(prev => ({ ...prev, [currentNode.id]: true }));
+          }
+
           await addAndFocusNode({ title: '' }, currentNode.id)
         } else if (e.shiftKey && !e.metaKey && !e.ctrlKey && currentNode.parentId) {
           // Shift + Enter - Add Sibling (only if not root node)
@@ -823,7 +828,7 @@ const App = () => {
 
     window.addEventListener('keydown', handleNodeOperationShortcuts);
     return () => window.removeEventListener('keydown', handleNodeOperationShortcuts);
-  }, [nodes, selectedNodeIds, focusedSection, treeNodesApi, setEditingNodeId, sectionToNodeType, selectNodeAndFocus]);
+  }, [nodes, selectedNodeIds, focusedSection, treeNodesApi, setEditingNodeId, sectionToNodeType, selectNodeAndFocus, expandedNodes, setExpandedNodes]);
 
   // Add the event listener for the keyboard handler
   useEffect(() => {
