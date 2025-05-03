@@ -51,26 +51,21 @@ node = {
 
 ## Readiness Level Example
 
-The readiness level metric demonstrates the complete calculation pattern:
+The readiness level metric demonstrates a key principle in problem decomposition: **a problem can only be as solved as its least-solved sub-problem**. However, we also want to quantify continuous progress between integral readiness levels. This leads to our fractional readiness level calculation:
 
-```typescript
-const calculateReadinessLevel = (node, children) => {
-  // If manually set, use that value
-  if (node.setMetrics?.readinessLevel != null) {
-    return node.setMetrics.readinessLevel;
-  }
+1. Find the minimum readiness level (baseLevel) among active children
+2. Bound all active children's readiness levels to [baseLevel, baseLevel + 1]
+3. Take the average of these bounded values
 
-  // If has children, use min of their calculatedMetrics
-  if (children.length > 0) {
-    return Math.min(
-      ...children.map((child) => child.calculatedMetrics.readinessLevel)
-    );
-  }
+The result will always be in the range [baseLevel, baseLevel + 1), meaning it will be greater than or equal to baseLevel but strictly less than baseLevel + 1. This ensures the readiness level accurately reflects that we haven't fully achieved the next level until all sub-problems reach it.
 
-  // Default for leaf nodes
-  return 0;
-};
-```
+Note that we ignore how far ahead some sub-problems may be (2+ levels) - all that matters is how many sub-problems are at the next level and how many still need to be advanced. We take the average to incorporate some information about nested readiness levels, though the weighting is necessarily arbitrary. This approach focuses on the critical path to the next level while still acknowledging progress in other areas.
+
+This approach ensures:
+
+- The overall readiness level is bounded by the minimum sub-problem's readiness level
+- Progress in other sub-problems above the minimum is still reflected in the final value
+- The calculation provides smooth, continuous feedback as sub-problems progress
 
 Example tree calculation:
 
@@ -86,9 +81,16 @@ Results:
 - C: calculatedMetrics.readinessLevel = 5 (setMetrics override)
 - D: calculatedMetrics.readinessLevel = 2 (setMetrics override)
 - E: calculatedMetrics.readinessLevel = 3 (setMetrics override)
-- B: calculatedMetrics.readinessLevel = 2 (min of D and E)
-- A: calculatedMetrics.readinessLevel = 2 (min of B and C)
+- B: calculatedMetrics.readinessLevel = 2.5 (average of D and E bounded to [2,3])
+- A: calculatedMetrics.readinessLevel = 2.5 (average of B and C bounded to [2,3])
 ```
+
+This calculation method provides several benefits:
+
+1. It maintains the core principle that a problem's readiness level is fundamentally limited by its least-ready sub-problem
+2. It provides more granular feedback about progress within each readiness level
+3. It encourages balanced progress across sub-problems
+4. It makes progress visible even when some sub-problems are stuck at lower levels
 
 ## Efficient Updates
 

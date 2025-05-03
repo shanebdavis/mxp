@@ -11,7 +11,7 @@ childrenIds:
   - 6a95bed8-c988-4220-9af9-e7b438961e70
   - 63fa559a-6222-46ae-88bc-5d8922e3732c
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 0.75
   targetReadinessLevel: 1
   workRemaining: 4
 nodeState: active

@@ -248,9 +248,9 @@ describe('FileStore', () => {
     // Get the updated root node
     let updatedRoot = fileStore.getNode(root.id)
 
-    // Root should have calculatedMetrics.readinessLevel = 2 (min of children)
+    // Root should have calculatedMetrics.readinessLevel = 2.5 (average of children bounded to [2,3])
     expect(updatedRoot.setMetrics).toBeUndefined()
-    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2)
+    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2.5)
 
     // Now force root's readiness level to 4
     await fileStore.updateNode(root.id, {
@@ -270,9 +270,9 @@ describe('FileStore', () => {
 
     updatedRoot = fileStore.getNode(root.id)
 
-    // Root should return to readinessLevel = 2 (min of children)
+    // Root should return to readinessLevel = 2.5 (average of children bounded to [2,3])
     expect(updatedRoot.setMetrics).toEqual({})
-    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2)
+    expect(updatedRoot.calculatedMetrics.readinessLevel).toBe(2.5)
   })
 
   it('heals files with missing data', async () => {
@@ -498,8 +498,8 @@ calculatedMetrics:
 
     // Verify state
     let nodes = fileStore.allNodes
-    // Parent should use minimum of all children, including RL0
-    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+    // Parent should use average of all children, including RL0, bounded to [0,1]
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0.5)
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
 
@@ -507,7 +507,7 @@ calculatedMetrics:
     await fileStore.updateNode(child1.id, { setMetrics: { readinessLevel: null } })
     nodes = fileStore.allNodes
     // Now parent should only consider child2's value since child1 is in auto mode
-    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0.5)
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
   })
@@ -545,7 +545,7 @@ calculatedMetrics:
     expect(nodes[child1.id].calculatedMetrics.readinessLevel).toBe(0)
     expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
     expect(nodes[child3.id].calculatedMetrics.readinessLevel).toBe(5)
-    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0.5)
 
     // Now set child1 to draft mode
     await fileStore.updateNode(child1.id, { nodeState: "draft" })
@@ -590,7 +590,7 @@ calculatedMetrics:
     await fileStore.updateNode(middle.id, { setMetrics: { readinessLevel: null } })
     nodes = fileStore.allNodes
     // Middle should now calculate from children (min of 0 and 5)
-    expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[middle.id].calculatedMetrics.readinessLevel).toBe(0.5)
     // Root should still be 0 (manually set)
     expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
 
@@ -598,7 +598,7 @@ calculatedMetrics:
     await fileStore.updateNode(root.id, { setMetrics: { readinessLevel: null } })
     nodes = fileStore.allNodes
     // Root should now calculate from middle node
-    expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0)
+    expect(nodes[root.id].calculatedMetrics.readinessLevel).toBe(0.5)
   })
 
   it('correctly reorders children within the same parent', async () => {

@@ -2,6 +2,23 @@ import { Metrics, UpdateMetrics, TreeNode, TreeNodeSet } from './TreeNodeTypes'
 import { getActiveChildren } from './TreeNodeLib'
 import { compact, eq } from '../ArtStandardLib'
 
+/**
+ * Reduces a set of readiness levels to a single value using the following algorithm:
+ * 1. Find the minimum (baseLevel)
+ * 2. Bound all levels to [baseLevel, baseLevel+1]
+ * 3. Take the average
+ */
+const reducedReadinessLevels = (levels: number[]): number => {
+  if (levels.length === 0) return 0
+  const baseLevel = Math.min(...levels)
+  const upperBound = baseLevel + 1
+  let sum = 0
+  for (const level of levels) {
+    sum += Math.min(upperBound, Math.max(baseLevel, level))
+  }
+  return sum / levels.length
+}
+
 type CalculatableMetric = {
   default?: number | undefined
   calculate: (setMetrics: Metrics, childValues: Metrics[], referencedMapMetrics: Metrics | undefined) => number | undefined
@@ -13,9 +30,11 @@ const calculatableMetrics: Record<keyof Metrics, CalculatableMetric> = {
     calculate: (setMetrics, childValues, referencedMapMetrics) => {
       const childrenReadinessLevels = compact(childValues.map(child => child?.readinessLevel))
 
-      return setMetrics.readinessLevel != null ? setMetrics.readinessLevel
-        : referencedMapMetrics?.readinessLevel != null ? referencedMapMetrics.readinessLevel
-          : childrenReadinessLevels.length > 0 ? Math.min(...childrenReadinessLevels) : 0
+      // If manually set or referenced from map, use that value
+      if (setMetrics.readinessLevel != null) return setMetrics.readinessLevel
+      if (referencedMapMetrics?.readinessLevel != null) return referencedMapMetrics.readinessLevel
+
+      return reducedReadinessLevels(childrenReadinessLevels)
     }
   },
   targetReadinessLevel: {

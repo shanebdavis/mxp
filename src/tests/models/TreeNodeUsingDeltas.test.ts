@@ -359,9 +359,9 @@ describe('TreeNode using Deltas', () => {
       const nodesWithAuto = getTreeNodeSetWithDeltaApplied(nodesWithBothGrandchildren, delta5)
 
       expect(nodesWithAuto[grandChild1.id].calculatedMetrics.readinessLevel).toBe(3)
-      // Since there are two grandchildren, and only one has readinessLevel 3, the parent's readinessLevel should be 0
-      expect(nodesWithAuto[child1Id].calculatedMetrics.readinessLevel).toBe(0)
-      expect(nodesWithAuto[rootId].calculatedMetrics.readinessLevel).toBe(0)
+      // Since there are two grandchildren, and one has readinessLevel 3 and one has 0, the parent's readinessLevel should be 0.5 (average bounded to [0,1])
+      expect(nodesWithAuto[child1Id].calculatedMetrics.readinessLevel).toBe(0.5)
+      expect(nodesWithAuto[rootId].calculatedMetrics.readinessLevel).toBe(0.5)
 
       // Update the second grandchild too
       const delta6 = getTreeNodeSetDeltaForNodeUpdated(nodesWithAuto, grandChild2.id, {
@@ -382,9 +382,10 @@ describe('TreeNode using Deltas', () => {
       const nodesWithOverride = getTreeNodeSetWithDeltaApplied(nodesWithBothUpdated, delta7)
 
       expect(nodesWithOverride[grandChild1.id].calculatedMetrics.readinessLevel).toBe(5)
-      // Since one grandchild has readinessLevel 5 and the other has 3, the parent's readinessLevel should be 3
-      expect(nodesWithOverride[child1Id].calculatedMetrics.readinessLevel).toBe(3)
-      expect(nodesWithOverride[rootId].calculatedMetrics.readinessLevel).toBe(3)
+      // Since one grandchild has readinessLevel 5 and the other has 3, the parent's readinessLevel
+      // should be the average of [3,4] = 3.5
+      expect(nodesWithOverride[child1Id].calculatedMetrics.readinessLevel).toBe(3.5)
+      expect(nodesWithOverride[rootId].calculatedMetrics.readinessLevel).toBe(3.5)
     })
   })
 
@@ -948,8 +949,8 @@ describe('TreeNode using Deltas', () => {
       expect(nodes[child2.id].calculatedMetrics.readinessLevel).toBe(3)
       expect(nodes[child3.id].calculatedMetrics.readinessLevel).toBe(5)
 
-      // Parent should have readinessLevel 0 (min of active children: child1=0, child3=5)
-      expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0)
+      // Parent should have readinessLevel 0.5 (average of active children: child1=0, child3=5)
+      expect(nodes[parent.id].calculatedMetrics.readinessLevel).toBe(0.5)
       // Now set child1 to draft mode using direct delta functions
       delta = getTreeNodeSetDeltaForNodeUpdated(nodes, child1.id, { nodeState: "draft" })
       nodes = getTreeNodeSetWithDeltaApplied(nodes, delta)

@@ -10,9 +10,9 @@ childrenIds:
   - 2d4847e5-294d-4bb5-912e-0f040d7e35e7
   - 24d66842-855e-4a5d-83c2-a32d1aae6482
 calculatedMetrics:
-  readinessLevel: 0
+  readinessLevel: 0.5
   targetReadinessLevel: 1
-  workRemaining: 3
+  workRemaining: 4
 nodeState: draft
 type: map
 setMetrics: {}

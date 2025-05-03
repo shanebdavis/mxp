@@ -5,7 +5,9 @@ parentId: 6e1216a9-533d-4d9e-819f-d60719ad6e9e
 childrenIds: []
 calculatedMetrics:
   readinessLevel: 4
-draft: false
+  targetReadinessLevel: 1
+  workRemaining: 1
+nodeState: active
 type: map
 setMetrics:
   readinessLevel: 4
