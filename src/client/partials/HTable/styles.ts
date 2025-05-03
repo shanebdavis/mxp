@@ -113,7 +113,7 @@ export const styles = {
   },
   readinessLevelColors: {
     0: '#eee',  // grey
-    1: '#FF878F',  // red
+    1: '#FF8B55',  // red
     2: '#ffbd3b',  // orange
     3: '#ffeb3b',  // yellow
     4: '#af0',  // yellow-green

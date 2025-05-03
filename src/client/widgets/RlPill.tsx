@@ -30,25 +30,61 @@ const getRlTooltip = (level?: number) => {
   return tooltips[level] || `RL${level}`
 }
 
-export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => (
-  <Tooltip title={getRlTooltip(level)} enterDelay={1000}>
-    <div style={{
-      ...styles.readinessLevelPill,
-      backgroundColor: level != null ? styles.readinessLevelColors[level as keyof typeof styles.readinessLevelColors] : 'var(--background-secondary)',
-      color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-    }}>
-      {level != null ? formatReadinessLevel(level) : 'auto'}
-      {auto && (
-        <Tooltip title="automatically calculated from children" enterDelay={1000}>
-          <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />
-        </Tooltip>
-      )}
-    </div>
-  </Tooltip>
-)
+export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => {
+  const baseLevel = level != null ? Math.floor(level) : null
+  const progress = level != null ? level - baseLevel! : null
+  const nextLevel = baseLevel != null ? baseLevel + 1 : null
+
+  return (
+    <Tooltip title={getRlTooltip(level)} enterDelay={1000}>
+      <div style={{
+        ...styles.readinessLevelPill,
+        backgroundColor: 'transparent',
+        color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Base color background */}
+        {baseLevel != null && (
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            right: 0,
+            backgroundColor: styles.readinessLevelColors[baseLevel as keyof typeof styles.readinessLevelColors],
+            zIndex: 0,
+          }} />
+        )}
+        {/* Progress bar for fractional RLs */}
+        {progress != null && nextLevel != null && progress > 0 && (
+          <div style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: `${progress * 100}%`,
+            backgroundColor: styles.readinessLevelColors[nextLevel as keyof typeof styles.readinessLevelColors],
+            zIndex: 1,
+            transition: 'width 0.3s ease',
+          }} />
+        )}
+        {/* Content above backgrounds */}
+        <div style={{ position: 'relative', zIndex: 2, width: '100%', display: 'flex', alignItems: 'center', gap: 4 }}>
+          {level != null ? `RL${baseLevel}` : 'auto'}
+          {auto && (
+            <Tooltip title="automatically calculated from children" enterDelay={1000}>
+              <AutoMode sx={{ fontSize: 14, opacity: 0.7 }} />
+            </Tooltip>
+          )}
+        </div>
+      </div>
+    </Tooltip>
+  )
+}
 
 export const RlPillWithDropdown = ({ level, handleRLSelect }:
   { level?: number, handleRLSelect: (e: React.MouseEvent, level: number | undefined) => void }) => {
