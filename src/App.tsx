@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { HierarchicalTable, DetailsPanel, CommentsPanel, Dashboard, StatusBar } from './client/partials'
+import { HierarchicalTable, DetailsPanel, CommentsPanel, Dashboard, StatusBar, SectionBar } from './client/partials'
 import {
   Add,
   ArrowRight,
@@ -9,12 +9,9 @@ import {
   Map as MapIcon,
   LocationOn,
   People,
-  DragHandle,
-  Explore,
-  VisibilityOutlined,
-  VisibilityOffOutlined
+  Explore
 } from '@mui/icons-material'
-import { Tooltip, Switch, FormControlLabel } from '@mui/material'
+import { Tooltip } from '@mui/material'
 import { TreeNode, TreeNodeSet, NodeType, TreeNodeProperties, getAllParentNodeIds, getIndexInParentMap } from './TreeNode'
 import { useApiForState } from './useApiForState'
 import { ViewStateMethods } from './ViewStateMethods'
@@ -101,70 +98,13 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
   },
-  sectionHeader: {
-    padding: '6px 0 6px 12px',
-    background: 'var(--background-secondary)',
-    fontWeight: 600,
-    fontSize: '13px',
-    borderBottom: '1px solid var(--border-color)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    position: 'relative',
-    userSelect: 'none',
-    cursor: 'default',
-    minHeight: '28px',
-  },
-  sectionHeaderIcon: {
-    fontSize: '16px',
-    opacity: 0.8,
-  },
+
   sectionContent: {
     padding: '0',
     overflow: 'auto',
     flex: 1,
   },
-  dragHandle: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '100%',
-    cursor: 'row-resize',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  dragHandleHover: {
-    background: 'rgba(0, 0, 0, 0.05)',
-  },
-  dragHandleIcon: {
-    fontSize: '16px',
-    opacity: 0,
-    transition: 'opacity 0.2s',
-    pointerEvents: 'none',
-  },
-  dragHandleActive: {
-    background: 'rgba(0, 0, 0, 0.1)',
-  },
-  closeButton: {
-    cursor: 'pointer',
-    opacity: 0.5,
-    transition: 'opacity 0.2s',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    zIndex: 20,
-    height: '100%',
-    width: '30px',
-    fontSize: '16px',
-  },
-  closeButtonHover: {
-    opacity: 0.8,
-    background: 'rgba(0, 0, 0, 0.05)',
-  },
+
 } as const
 
 // Add a type for the active views state
@@ -778,16 +718,7 @@ const App = () => {
     }
   }, [resizingSection, handleSectionResize, endSectionResize])
 
-  // Add helper to generate section header styles based on focus
-  const getSectionHeaderStyle = (section: SectionName) => ({
-    ...styles.sectionHeader,
-    borderBottom: '1px solid ' + (focusedSection === section
-      ? 'var(--selected-color)'
-      : 'var(--border-color)'),
-    background: focusedSection === section
-      ? 'var(--selected-color-light, var(--background-secondary))'
-      : 'var(--background-secondary)',
-  })
+
 
   // Update the global keyboard handler to check if we should handle the event
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -1056,25 +987,19 @@ const App = () => {
             }}
             onClick={() => setFocusedSection('dashboard')}
           >
-            <div style={getSectionHeaderStyle('dashboard')}>
-              <DashboardIcon sx={styles.sectionHeaderIcon} />
-              Dashboard
-              <div
-                style={{
-                  ...styles.closeButton,
-                  ...(hoverCloseButton === 'dashboard' ? styles.closeButtonHover : {})
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleView('dashboard');
-                }}
-                onMouseEnter={() => setHoverCloseButton('dashboard')}
-                onMouseLeave={() => setHoverCloseButton(null)}
-                title="Close section"
-              >
-                ✕
-              </div>
-            </div>
+            <SectionBar
+              sectionName="dashboard"
+              title="Dashboard"
+              icon={<DashboardIcon />}
+              isFocused={focusedSection === 'dashboard'}
+              showDragHandle={false}
+              onClose={() => toggleView('dashboard')}
+              hoverSection={hoverSection}
+              setHoverSection={setHoverSection}
+              hoverCloseButton={hoverCloseButton}
+              setHoverCloseButton={setHoverCloseButton}
+              resizingSection={resizingSection}
+            />
             <div style={styles.sectionContent}>
               {rootNodesByType.map ? (
                 <Dashboard
@@ -1112,83 +1037,24 @@ const App = () => {
             }}
             aria-label="Map section"
           >
-            <div style={getSectionHeaderStyle('map')}>
-              <MapIcon sx={styles.sectionHeaderIcon} />
-              Problem to Solution Map
-
-              {/* Add drag handle if not the first section */}
-              {activeSectionList.indexOf('map') > 0 && (
-                <div
-                  style={{
-                    ...styles.dragHandle,
-                    ...(resizingSection?.nextSection === 'map' ? styles.dragHandleActive : {}),
-                    ...(hoverSection === 'map' ? styles.dragHandleHover : {})
-                  }}
-                  onMouseDown={(e) => startSectionResize(e, 'map')}
-                  onMouseEnter={() => setHoverSection('map')}
-                  onMouseLeave={() => setHoverSection(null)}
-                >
-                  <DragHandle sx={{
-                    ...styles.dragHandleIcon,
-                    opacity: (resizingSection?.nextSection === 'map' || hoverSection === 'map') ? 0.5 : 0,
-                  }} />
-                </div>
-              )}
-
-
-              {/* Add toggle for show/hide drafts */}
-              <Tooltip title={showDraftMaps ? "Hide draft problems" : "Show draft problems"}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showDraftMaps}
-                      onChange={(e) => {
-                        e.stopPropagation(); // Prevent event from reaching drag handlers
-                        setShowDraftMaps(e.target.checked);
-                      }}
-                    />
-                  }
-                  label={
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      {showDraftMaps ?
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
-                        </span> :
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <VisibilityOffOutlined sx={{ fontSize: 14 }} /> Drafts
-                        </span>
-                      }
-                    </span>
-                  }
-                  style={{
-                    margin: 0,
-                    marginLeft: 'auto', // Push to right
-                    marginRight: '0px', // No space before close button
-                    position: 'relative',
-                    zIndex: 25, // Higher than both drag handle and close button
-                  }}
-                  onClick={(e) => e.stopPropagation()} // Prevent triggering parent click events
-                  onMouseDown={(e) => e.stopPropagation()} // Also prevent drag handle activation
-                />
-              </Tooltip>
-
-              <div
-                style={{
-                  ...styles.closeButton,
-                  ...(hoverCloseButton === 'map' ? styles.closeButtonHover : {})
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleView('map');
-                }}
-                onMouseEnter={() => setHoverCloseButton('map')}
-                onMouseLeave={() => setHoverCloseButton(null)}
-                title="Close section"
-              >
-                ✕
-              </div>
-            </div>
+            <SectionBar
+              sectionName="map"
+              title="Problem to Solution Map"
+              icon={<MapIcon />}
+              isFocused={focusedSection === 'map'}
+              showDragHandle={activeSectionList.indexOf('map') > 0}
+              showDraftToggle={true}
+              showDrafts={showDraftMaps}
+              onDraftToggleChange={setShowDraftMaps}
+              onDragStart={(e) => startSectionResize(e, 'map')}
+              onClose={() => toggleView('map')}
+              hoverSection={hoverSection}
+              setHoverSection={setHoverSection}
+              hoverCloseButton={hoverCloseButton}
+              setHoverCloseButton={setHoverCloseButton}
+              resizingSection={resizingSection}
+              draftToggleTooltip={showDraftMaps ? "Hide draft problems" : "Show draft problems"}
+            />
             <div style={styles.sectionContent}>
               <HierarchicalTable
                 key="mapTable"
@@ -1223,81 +1089,24 @@ const App = () => {
             }}
             aria-label="Waypoints section"
           >
-            <div style={getSectionHeaderStyle('waypoints')}>
-              <LocationOn sx={styles.sectionHeaderIcon} />
-              Waypoints (Deliverables & Milestones)
-
-              {/* Add toggle for show/hide drafts */}
-              <Tooltip title={showDraftWaypoints ? "Hide draft waypoints" : "Show draft waypoints"}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showDraftWaypoints}
-                      onChange={(e) => {
-                        e.stopPropagation(); // Prevent event from reaching drag handlers
-                        setShowDraftWaypoints(e.target.checked);
-                      }}
-                    />
-                  }
-                  label={
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      {showDraftWaypoints ?
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
-                        </span> :
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <VisibilityOffOutlined sx={{ fontSize: 14 }} /> Drafts
-                        </span>
-                      }
-                    </span>
-                  }
-                  style={{
-                    margin: 0,
-                    marginLeft: 'auto', // Push to right
-                    marginRight: '0px', // No space before close button
-                    position: 'relative',
-                    zIndex: 25, // Higher than both drag handle and close button
-                  }}
-                  onClick={(e) => e.stopPropagation()} // Prevent triggering parent click events
-                  onMouseDown={(e) => e.stopPropagation()} // Also prevent drag handle activation
-                />
-              </Tooltip>
-
-              {/* Add drag handle if not the first section */}
-              {activeSectionList.indexOf('waypoints') > 0 && (
-                <div
-                  style={{
-                    ...styles.dragHandle,
-                    ...(resizingSection?.nextSection === 'waypoints' ? styles.dragHandleActive : {}),
-                    ...(hoverSection === 'waypoints' ? styles.dragHandleHover : {})
-                  }}
-                  onMouseDown={(e) => startSectionResize(e, 'waypoints')}
-                  onMouseEnter={() => setHoverSection('waypoints')}
-                  onMouseLeave={() => setHoverSection(null)}
-                >
-                  <DragHandle sx={{
-                    ...styles.dragHandleIcon,
-                    opacity: (resizingSection?.nextSection === 'waypoints' || hoverSection === 'waypoints') ? 0.5 : 0,
-                  }} />
-                </div>
-              )}
-              <div
-                style={{
-                  ...styles.closeButton,
-                  ...(hoverCloseButton === 'waypoints' ? styles.closeButtonHover : {})
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleView('waypoints');
-                }}
-                onMouseEnter={() => setHoverCloseButton('waypoints')}
-                onMouseLeave={() => setHoverCloseButton(null)}
-                title="Close section"
-              >
-                ✕
-              </div>
-            </div>
+            <SectionBar
+              sectionName="waypoints"
+              title="Waypoints (Deliverables & Milestones)"
+              icon={<LocationOn />}
+              isFocused={focusedSection === 'waypoints'}
+              showDragHandle={activeSectionList.indexOf('waypoints') > 0}
+              showDraftToggle={true}
+              showDrafts={showDraftWaypoints}
+              onDraftToggleChange={setShowDraftWaypoints}
+              onDragStart={(e) => startSectionResize(e, 'waypoints')}
+              onClose={() => toggleView('waypoints')}
+              hoverSection={hoverSection}
+              setHoverSection={setHoverSection}
+              hoverCloseButton={hoverCloseButton}
+              setHoverCloseButton={setHoverCloseButton}
+              resizingSection={resizingSection}
+              draftToggleTooltip={showDraftWaypoints ? "Hide draft waypoints" : "Show draft waypoints"}
+            />
             <div style={styles.sectionContent}>
               <HierarchicalTable
                 key="waypointTable"
@@ -1334,43 +1143,20 @@ const App = () => {
             }}
             aria-label="Contributors section"
           >
-            <div style={getSectionHeaderStyle('users')}>
-              <People sx={styles.sectionHeaderIcon} />
-              Contributors
-              {/* Add drag handle if not the first section */}
-              {activeSectionList.indexOf('users') > 0 && (
-                <div
-                  style={{
-                    ...styles.dragHandle,
-                    ...(resizingSection?.nextSection === 'users' ? styles.dragHandleActive : {}),
-                    ...(hoverSection === 'users' ? styles.dragHandleHover : {})
-                  }}
-                  onMouseDown={(e) => startSectionResize(e, 'users')}
-                  onMouseEnter={() => setHoverSection('users')}
-                  onMouseLeave={() => setHoverSection(null)}
-                >
-                  <DragHandle sx={{
-                    ...styles.dragHandleIcon,
-                    opacity: (resizingSection?.nextSection === 'users' || hoverSection === 'users') ? 0.5 : 0,
-                  }} />
-                </div>
-              )}
-              <div
-                style={{
-                  ...styles.closeButton,
-                  ...(hoverCloseButton === 'users' ? styles.closeButtonHover : {})
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleView('users');
-                }}
-                onMouseEnter={() => setHoverCloseButton('users')}
-                onMouseLeave={() => setHoverCloseButton(null)}
-                title="Close section"
-              >
-                ✕
-              </div>
-            </div>
+            <SectionBar
+              sectionName="users"
+              title="Contributors"
+              icon={<People />}
+              isFocused={focusedSection === 'users'}
+              showDragHandle={activeSectionList.indexOf('users') > 0}
+              onDragStart={(e) => startSectionResize(e, 'users')}
+              onClose={() => toggleView('users')}
+              hoverSection={hoverSection}
+              setHoverSection={setHoverSection}
+              hoverCloseButton={hoverCloseButton}
+              setHoverCloseButton={setHoverCloseButton}
+              resizingSection={resizingSection}
+            />
             <div style={styles.sectionContent}>
               <HierarchicalTable
                 key="userTable"
