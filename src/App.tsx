@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { HierarchicalTable, DetailsPanel, CommentsPanel, Dashboard, StatusBar, SectionBar } from './client/partials'
+import { DetailsPanel, CommentsPanel, StatusBar, Section } from './client/partials'
 import {
   Add,
   ArrowRight,
@@ -88,22 +88,7 @@ const styles = {
     background: 'var(--selected-color)',
     color: 'var(--text-primary)',
   },
-  section: {
-    borderTop: '1px solid var(--border-color)',
-    borderRadius: '0',
-    overflow: 'hidden',
-    background: 'var(--background-primary)',
-    flex: '1',
-    minHeight: '100px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
 
-  sectionContent: {
-    padding: '0',
-    overflow: 'auto',
-    flex: 1,
-  },
 
 } as const
 
@@ -227,17 +212,7 @@ const App = () => {
     insertAtIndex: null
   });
 
-  //*************************************************
-  // To Refactor into Section Components
-  //*************************************************
-  // State for "show draft" toggles
-  const [showDraftMaps, setShowDraftMaps] = useSessionStorageState<boolean>('showDraftMap', {
-    defaultValue: true
-  })
 
-  const [showDraftWaypoints, setShowDraftWaypoints] = useSessionStorageState<boolean>('showDraftWaypoints', {
-    defaultValue: true
-  })
 
   // Add state for hover detection
   const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
@@ -979,196 +954,111 @@ const App = () => {
 
       <main ref={mainRef} style={styles.main}>
         {activeSectionsByName.dashboard && (
-          <div
-            data-section-type="dashboard"
-            style={{
-              ...styles.section,
-              flex: getSectionFlex('dashboard')
-            }}
-            onClick={() => setFocusedSection('dashboard')}
-          >
-            <SectionBar
-              sectionName="dashboard"
-              title="Dashboard"
-              icon={<DashboardIcon />}
-              isFocused={focusedSection === 'dashboard'}
-              showDragHandle={false}
-              onClose={() => toggleView('dashboard')}
-              hoverSection={hoverSection}
-              setHoverSection={setHoverSection}
-              hoverCloseButton={hoverCloseButton}
-              setHoverCloseButton={setHoverCloseButton}
-              resizingSection={resizingSection}
-            />
-            <div style={styles.sectionContent}>
-              {rootNodesByType.map ? (
-                <Dashboard
-                  nodes={nodes}
-                  rootMapId={rootNodesByType.map.id}
-                  selectNodeAndFocus={selectNodeAndFocus}
-                />
-              ) : (
-                <div style={{ padding: '12px' }}>
-                  <p>No Map data available.</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <Section
+            sectionName="dashboard"
+            title="Dashboard"
+            icon={<DashboardIcon />}
+            isFocused={focusedSection === 'dashboard'}
+            showDragHandle={false}
+            onClose={() => toggleView('dashboard')}
+            onFocus={() => setFocusedSection('dashboard')}
+            flex={getSectionFlex('dashboard')}
+            hoverSection={hoverSection}
+            setHoverSection={setHoverSection}
+            hoverCloseButton={hoverCloseButton}
+            setHoverCloseButton={setHoverCloseButton}
+            resizingSection={resizingSection}
+            contentType="dashboard"
+            dashboardProps={rootNodesByType.map ? {
+              nodes,
+              rootMapId: rootNodesByType.map.id,
+              selectNodeAndFocus
+            } : undefined}
+          />
         )}
 
         {activeSectionsByName.map && rootNodesByType.map && (
-          <div
-            data-section-type="map"
-            style={{
-              ...styles.section,
-              flex: getSectionFlex('map')
+          <Section
+            sectionName="map"
+            title="Problem to Solution Map"
+            icon={<MapIcon />}
+            isFocused={focusedSection === 'map'}
+            showDragHandle={activeSectionList.indexOf('map') > 0}
+            showDraftToggle={true}
+            defaultShowDrafts={true}
+            draftToggleTooltip="Hide draft problems"
+            onDragStart={(e) => startSectionResize(e, 'map')}
+            onClose={() => toggleView('map')}
+            onFocus={() => setFocusedSection('map')}
+            flex={getSectionFlex('map')}
+            hoverSection={hoverSection}
+            setHoverSection={setHoverSection}
+            hoverCloseButton={hoverCloseButton}
+            setHoverCloseButton={setHoverCloseButton}
+            resizingSection={resizingSection}
+            contentType="table"
+            tableProps={{
+              rootNodeId: rootNodesByType.map.id,
+              selectedNode: getSelectedNode('map'),
+              ...commonProps
             }}
-            onClick={() => setFocusedSection('map')}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setFocusedSection('map');
-                e.preventDefault();
-              }
-            }}
-            onFocus={() => {
-              // When tabbed to, focus this section just like when clicked
-              setFocusedSection('map');
-            }}
-            aria-label="Map section"
-          >
-            <SectionBar
-              sectionName="map"
-              title="Problem to Solution Map"
-              icon={<MapIcon />}
-              isFocused={focusedSection === 'map'}
-              showDragHandle={activeSectionList.indexOf('map') > 0}
-              showDraftToggle={true}
-              showDrafts={showDraftMaps}
-              onDraftToggleChange={setShowDraftMaps}
-              onDragStart={(e) => startSectionResize(e, 'map')}
-              onClose={() => toggleView('map')}
-              hoverSection={hoverSection}
-              setHoverSection={setHoverSection}
-              hoverCloseButton={hoverCloseButton}
-              setHoverCloseButton={setHoverCloseButton}
-              resizingSection={resizingSection}
-              draftToggleTooltip={showDraftMaps ? "Hide draft problems" : "Show draft problems"}
-            />
-            <div style={styles.sectionContent}>
-              <HierarchicalTable
-                key="mapTable"
-                isFocused={focusedSection === 'map'}
-                rootNodeId={rootNodesByType.map.id}
-                selectedNode={getSelectedNode('map')}
-                showDraft={showDraftMaps}
-                {...commonProps}
-              />
-            </div>
-          </div>
+          />
         )}
 
         {activeSectionsByName.waypoints && rootNodesByType.waypoint && (
-          <div
-            data-section-type="waypoints"
-            style={{
-              ...styles.section,
-              flex: getSectionFlex('waypoints')
+          <Section
+            sectionName="waypoints"
+            title="Waypoints (Deliverables & Milestones)"
+            icon={<LocationOn />}
+            isFocused={focusedSection === 'waypoints'}
+            showDragHandle={activeSectionList.indexOf('waypoints') > 0}
+            showDraftToggle={true}
+            defaultShowDrafts={true}
+            draftToggleTooltip="Hide draft waypoints"
+            onDragStart={(e) => startSectionResize(e, 'waypoints')}
+            onClose={() => toggleView('waypoints')}
+            onFocus={() => setFocusedSection('waypoints')}
+            flex={getSectionFlex('waypoints')}
+            hoverSection={hoverSection}
+            setHoverSection={setHoverSection}
+            hoverCloseButton={hoverCloseButton}
+            setHoverCloseButton={setHoverCloseButton}
+            resizingSection={resizingSection}
+            contentType="table"
+            tableProps={{
+              rootNodeId: rootNodesByType.waypoint.id,
+              selectedNode: getSelectedNode('waypoint'),
+              nameColumnHeader: "Waypoint",
+              readinessColumnHeader: "Completion Level",
+              ...commonProps
             }}
-            onClick={() => setFocusedSection('waypoints')}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setFocusedSection('waypoints');
-                e.preventDefault();
-              }
-            }}
-            onFocus={() => {
-              // When tabbed to, focus this section just like when clicked
-              setFocusedSection('waypoints');
-            }}
-            aria-label="Waypoints section"
-          >
-            <SectionBar
-              sectionName="waypoints"
-              title="Waypoints (Deliverables & Milestones)"
-              icon={<LocationOn />}
-              isFocused={focusedSection === 'waypoints'}
-              showDragHandle={activeSectionList.indexOf('waypoints') > 0}
-              showDraftToggle={true}
-              showDrafts={showDraftWaypoints}
-              onDraftToggleChange={setShowDraftWaypoints}
-              onDragStart={(e) => startSectionResize(e, 'waypoints')}
-              onClose={() => toggleView('waypoints')}
-              hoverSection={hoverSection}
-              setHoverSection={setHoverSection}
-              hoverCloseButton={hoverCloseButton}
-              setHoverCloseButton={setHoverCloseButton}
-              resizingSection={resizingSection}
-              draftToggleTooltip={showDraftWaypoints ? "Hide draft waypoints" : "Show draft waypoints"}
-            />
-            <div style={styles.sectionContent}>
-              <HierarchicalTable
-                key="waypointTable"
-                rootNodeId={rootNodesByType.waypoint.id}
-                selectedNode={getSelectedNode('waypoint')}
-                nameColumnHeader="Waypoint"
-                readinessColumnHeader="Completion Level"
-                isFocused={focusedSection === 'waypoints'}
-                showDraft={showDraftWaypoints}
-                {...commonProps}
-              />
-            </div>
-          </div>
+          />
         )}
 
         {activeSectionsByName.users && rootNodesByType.user && (
-          <div
-            data-section-type="users"
-            style={{
-              ...styles.section,
-              flex: getSectionFlex('users')
+          <Section
+            sectionName="users"
+            title="Contributors"
+            icon={<People />}
+            isFocused={focusedSection === 'users'}
+            showDragHandle={activeSectionList.indexOf('users') > 0}
+            onDragStart={(e) => startSectionResize(e, 'users')}
+            onClose={() => toggleView('users')}
+            onFocus={() => setFocusedSection('users')}
+            flex={getSectionFlex('users')}
+            hoverSection={hoverSection}
+            setHoverSection={setHoverSection}
+            hoverCloseButton={hoverCloseButton}
+            setHoverCloseButton={setHoverCloseButton}
+            resizingSection={resizingSection}
+            contentType="table"
+            tableProps={{
+              rootNodeId: rootNodesByType.user.id,
+              selectedNode: getSelectedNode('user'),
+              nameColumnHeader: "User",
+              ...commonProps
             }}
-            onClick={() => setFocusedSection('users')}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setFocusedSection('users');
-                e.preventDefault();
-              }
-            }}
-            onFocus={() => {
-              // When tabbed to, focus this section just like when clicked
-              setFocusedSection('users');
-            }}
-            aria-label="Contributors section"
-          >
-            <SectionBar
-              sectionName="users"
-              title="Contributors"
-              icon={<People />}
-              isFocused={focusedSection === 'users'}
-              showDragHandle={activeSectionList.indexOf('users') > 0}
-              onDragStart={(e) => startSectionResize(e, 'users')}
-              onClose={() => toggleView('users')}
-              hoverSection={hoverSection}
-              setHoverSection={setHoverSection}
-              hoverCloseButton={hoverCloseButton}
-              setHoverCloseButton={setHoverCloseButton}
-              resizingSection={resizingSection}
-            />
-            <div style={styles.sectionContent}>
-              <HierarchicalTable
-                key="userTable"
-                rootNodeId={rootNodesByType.user.id}
-                selectedNode={getSelectedNode('user')}
-                nameColumnHeader="User"
-                isFocused={focusedSection === 'users'}
-                showDraft={showDraftWaypoints}
-                {...commonProps}
-              />
-            </div>
-          </div>
+          />
         )}
       </main>
 
