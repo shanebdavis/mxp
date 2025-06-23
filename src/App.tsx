@@ -216,11 +216,7 @@ const App = () => {
 
 
 
-  // Add state for hover detection
-  const [hoverSection, setHoverSection] = useState<SectionName | null>(null)
 
-  // Add state for close button hover
-  const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
 
   // Global show drafts toggle
   const [showDrafts, setShowDrafts] = useSessionStorageState<boolean>('showDrafts', {
@@ -992,15 +988,10 @@ const App = () => {
             title="Dashboard"
             icon={<DashboardIcon />}
             isFocused={focusedSection === 'dashboard'}
-            showDragHandle={false}
             showDrafts={showDrafts}
             onClose={() => toggleView('dashboard')}
             onFocus={() => setFocusedSection('dashboard')}
             flex={getSectionFlex('dashboard')}
-            hoverSection={hoverSection}
-            setHoverSection={setHoverSection}
-            hoverCloseButton={hoverCloseButton}
-            setHoverCloseButton={setHoverCloseButton}
             resizingSection={resizingSection}
             contentType="dashboard"
             dashboardProps={rootNodesByType.map ? {
@@ -1017,16 +1008,11 @@ const App = () => {
             title="Problem to Solution Map"
             icon={<MapIcon />}
             isFocused={focusedSection === 'map'}
-            showDragHandle={activeSectionList.indexOf('map') > 0}
             showDrafts={showDrafts}
             onDragStart={(e) => startSectionResize(e, 'map')}
             onClose={() => toggleView('map')}
             onFocus={() => setFocusedSection('map')}
             flex={getSectionFlex('map')}
-            hoverSection={hoverSection}
-            setHoverSection={setHoverSection}
-            hoverCloseButton={hoverCloseButton}
-            setHoverCloseButton={setHoverCloseButton}
             resizingSection={resizingSection}
             contentType="table"
             tableProps={{
@@ -1043,16 +1029,11 @@ const App = () => {
             title="Waypoints (Deliverables & Milestones)"
             icon={<LocationOn />}
             isFocused={focusedSection === 'waypoints'}
-            showDragHandle={activeSectionList.indexOf('waypoints') > 0}
             showDrafts={showDrafts}
             onDragStart={(e) => startSectionResize(e, 'waypoints')}
             onClose={() => toggleView('waypoints')}
             onFocus={() => setFocusedSection('waypoints')}
             flex={getSectionFlex('waypoints')}
-            hoverSection={hoverSection}
-            setHoverSection={setHoverSection}
-            hoverCloseButton={hoverCloseButton}
-            setHoverCloseButton={setHoverCloseButton}
             resizingSection={resizingSection}
             contentType="table"
             tableProps={{
@@ -1071,16 +1052,11 @@ const App = () => {
             title="Contributors"
             icon={<People />}
             isFocused={focusedSection === 'users'}
-            showDragHandle={activeSectionList.indexOf('users') > 0}
             showDrafts={showDrafts}
             onDragStart={(e) => startSectionResize(e, 'users')}
             onClose={() => toggleView('users')}
             onFocus={() => setFocusedSection('users')}
             flex={getSectionFlex('users')}
-            hoverSection={hoverSection}
-            setHoverSection={setHoverSection}
-            hoverCloseButton={hoverCloseButton}
-            setHoverCloseButton={setHoverCloseButton}
             resizingSection={resizingSection}
             contentType="table"
             tableProps={{

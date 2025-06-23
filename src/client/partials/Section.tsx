@@ -14,7 +14,6 @@ interface SectionProps {
   title: string
   icon: React.ReactElement
   isFocused: boolean
-  showDragHandle: boolean
   showDrafts: boolean
   onDragStart?: (e: React.MouseEvent) => void
   onClose: () => void
@@ -22,10 +21,6 @@ interface SectionProps {
   flex: number
 
   // Section resize state
-  hoverSection: SectionName | null
-  setHoverSection: (section: SectionName | null) => void
-  hoverCloseButton: SectionName | null
-  setHoverCloseButton: (section: SectionName | null) => void
   resizingSection?: {
     section: SectionName
     nextSection: SectionName
@@ -93,22 +88,16 @@ export const Section: React.FC<SectionProps> = ({
   title,
   icon,
   isFocused,
-  showDragHandle,
   showDrafts,
   onDragStart,
   onClose,
   onFocus,
   flex,
-  hoverSection,
-  setHoverSection,
-  hoverCloseButton,
-  setHoverCloseButton,
   resizingSection,
   contentType,
   dashboardProps,
   tableProps
 }) => {
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       onFocus()
@@ -163,13 +152,8 @@ export const Section: React.FC<SectionProps> = ({
         title={title}
         icon={icon}
         isFocused={isFocused}
-        showDragHandle={showDragHandle}
         onDragStart={onDragStart}
         onClose={onClose}
-        hoverSection={hoverSection}
-        setHoverSection={setHoverSection}
-        hoverCloseButton={hoverCloseButton}
-        setHoverCloseButton={setHoverCloseButton}
         resizingSection={resizingSection}
       />
       <div style={styles.sectionContent}>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { DragHandle } from '@mui/icons-material'
 
 type SectionName = 'dashboard' | 'map' | 'waypoints' | 'users'
@@ -8,13 +8,8 @@ interface SectionBarProps {
   title: string
   icon: React.ReactElement
   isFocused: boolean
-  showDragHandle: boolean
   onDragStart?: (e: React.MouseEvent) => void
   onClose: () => void
-  hoverSection: SectionName | null
-  setHoverSection: (section: SectionName | null) => void
-  hoverCloseButton: SectionName | null
-  setHoverCloseButton: (section: SectionName | null) => void
   resizingSection?: {
     section: SectionName
     nextSection: SectionName
@@ -91,15 +86,15 @@ export const SectionBar: React.FC<SectionBarProps> = ({
   title,
   icon,
   isFocused,
-  showDragHandle,
   onDragStart,
   onClose,
-  hoverSection,
-  setHoverSection,
-  hoverCloseButton,
-  setHoverCloseButton,
   resizingSection
 }) => {
+  const draggable = onDragStart !== undefined
+
+  // Local hover state
+  const [hoverDragHandle, setHoverDragHandle] = useState(false)
+  const [hoverCloseButton, setHoverCloseButton] = useState(false)
   const getSectionHeaderStyle = () => ({
     ...styles.sectionHeader,
     borderBottom: '1px solid ' + (isFocused
@@ -116,20 +111,20 @@ export const SectionBar: React.FC<SectionBarProps> = ({
       {title}
 
       {/* Drag Handle */}
-      {showDragHandle && onDragStart && (
+      {draggable && onDragStart && (
         <div
           style={{
             ...styles.dragHandle,
             ...(resizingSection?.nextSection === sectionName ? styles.dragHandleActive : {}),
-            ...(hoverSection === sectionName ? styles.dragHandleHover : {})
+            ...(hoverDragHandle ? styles.dragHandleHover : {})
           }}
           onMouseDown={onDragStart}
-          onMouseEnter={() => setHoverSection(sectionName)}
-          onMouseLeave={() => setHoverSection(null)}
+          onMouseEnter={() => setHoverDragHandle(true)}
+          onMouseLeave={() => setHoverDragHandle(false)}
         >
           <DragHandle sx={{
             ...styles.dragHandleIcon,
-            opacity: (resizingSection?.nextSection === sectionName || hoverSection === sectionName) ? 0.5 : 0,
+            opacity: (resizingSection?.nextSection === sectionName || hoverDragHandle) ? 0.5 : 0,
           }} />
         </div>
       )}
@@ -138,14 +133,14 @@ export const SectionBar: React.FC<SectionBarProps> = ({
       <div
         style={{
           ...styles.closeButton,
-          ...(hoverCloseButton === sectionName ? styles.closeButtonHover : {})
+          ...(hoverCloseButton ? styles.closeButtonHover : {})
         }}
         onClick={(e) => {
           e.stopPropagation()
           onClose()
         }}
-        onMouseEnter={() => setHoverCloseButton(sectionName)}
-        onMouseLeave={() => setHoverCloseButton(null)}
+        onMouseEnter={() => setHoverCloseButton(true)}
+        onMouseLeave={() => setHoverCloseButton(false)}
         title="Close section"
       >
         ✕
