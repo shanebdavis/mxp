@@ -9,9 +9,11 @@ import {
   Map as MapIcon,
   LocationOn,
   People,
-  Explore
+  Explore,
+  VisibilityOutlined,
+  VisibilityOffOutlined
 } from '@mui/icons-material'
-import { Tooltip } from '@mui/material'
+import { Tooltip, Switch, FormControlLabel } from '@mui/material'
 import { TreeNode, TreeNodeSet, NodeType, TreeNodeProperties, getAllParentNodeIds, getIndexInParentMap } from './TreeNode'
 import { useApiForState } from './useApiForState'
 import { ViewStateMethods } from './ViewStateMethods'
@@ -219,6 +221,11 @@ const App = () => {
 
   // Add state for close button hover
   const [hoverCloseButton, setHoverCloseButton] = useState<SectionName | null>(null)
+
+  // Global show drafts toggle
+  const [showDrafts, setShowDrafts] = useSessionStorageState<boolean>('showDrafts', {
+    defaultValue: true
+  })
 
   //*************************************************
   // Belongs in useApiForState
@@ -830,7 +837,33 @@ const App = () => {
         <h1 style={styles.title}>
           {config.projectTitle || "MXP: Method Expedition"}
         </h1>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Global drafts toggle */}
+          <Tooltip title={showDrafts ? "Hide draft items" : "Show draft items"}>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  checked={showDrafts}
+                  onChange={(e) => setShowDrafts(e.target.checked)}
+                />
+              }
+              label={
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  {showDrafts ?
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
+                    </span> :
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <VisibilityOffOutlined sx={{ fontSize: 14 }} /> Drafts
+                    </span>
+                  }
+                </span>
+              }
+              style={{ margin: 0 }}
+            />
+          </Tooltip>
+
           <div style={{ display: 'flex', gap: 4 }}>
             <Tooltip title="Add Child (⌘+Enter / Ctrl+Enter)">
               <span>
@@ -960,6 +993,7 @@ const App = () => {
             icon={<DashboardIcon />}
             isFocused={focusedSection === 'dashboard'}
             showDragHandle={false}
+            showDrafts={showDrafts}
             onClose={() => toggleView('dashboard')}
             onFocus={() => setFocusedSection('dashboard')}
             flex={getSectionFlex('dashboard')}
@@ -984,9 +1018,7 @@ const App = () => {
             icon={<MapIcon />}
             isFocused={focusedSection === 'map'}
             showDragHandle={activeSectionList.indexOf('map') > 0}
-            showDraftToggle={true}
-            defaultShowDrafts={true}
-            draftToggleTooltip="Hide draft problems"
+            showDrafts={showDrafts}
             onDragStart={(e) => startSectionResize(e, 'map')}
             onClose={() => toggleView('map')}
             onFocus={() => setFocusedSection('map')}
@@ -1012,9 +1044,7 @@ const App = () => {
             icon={<LocationOn />}
             isFocused={focusedSection === 'waypoints'}
             showDragHandle={activeSectionList.indexOf('waypoints') > 0}
-            showDraftToggle={true}
-            defaultShowDrafts={true}
-            draftToggleTooltip="Hide draft waypoints"
+            showDrafts={showDrafts}
             onDragStart={(e) => startSectionResize(e, 'waypoints')}
             onClose={() => toggleView('waypoints')}
             onFocus={() => setFocusedSection('waypoints')}
@@ -1042,6 +1072,7 @@ const App = () => {
             icon={<People />}
             isFocused={focusedSection === 'users'}
             showDragHandle={activeSectionList.indexOf('users') > 0}
+            showDrafts={showDrafts}
             onDragStart={(e) => startSectionResize(e, 'users')}
             onClose={() => toggleView('users')}
             onFocus={() => setFocusedSection('users')}

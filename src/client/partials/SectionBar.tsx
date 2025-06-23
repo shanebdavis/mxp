@@ -1,6 +1,5 @@
 import React from 'react'
-import { Tooltip, Switch, FormControlLabel } from '@mui/material'
-import { DragHandle, VisibilityOutlined, VisibilityOffOutlined } from '@mui/icons-material'
+import { DragHandle } from '@mui/icons-material'
 
 type SectionName = 'dashboard' | 'map' | 'waypoints' | 'users'
 
@@ -10,9 +9,6 @@ interface SectionBarProps {
   icon: React.ReactElement
   isFocused: boolean
   showDragHandle: boolean
-  showDraftToggle?: boolean
-  showDrafts?: boolean
-  onDraftToggleChange?: (checked: boolean) => void
   onDragStart?: (e: React.MouseEvent) => void
   onClose: () => void
   hoverSection: SectionName | null
@@ -26,7 +22,6 @@ interface SectionBarProps {
     initialHeight: number
     initialNextHeight: number
   } | null
-  draftToggleTooltip?: string
 }
 
 const styles = {
@@ -97,17 +92,13 @@ export const SectionBar: React.FC<SectionBarProps> = ({
   icon,
   isFocused,
   showDragHandle,
-  showDraftToggle = false,
-  showDrafts = true,
-  onDraftToggleChange,
   onDragStart,
   onClose,
   hoverSection,
   setHoverSection,
   hoverCloseButton,
   setHoverCloseButton,
-  resizingSection,
-  draftToggleTooltip
+  resizingSection
 }) => {
   const getSectionHeaderStyle = () => ({
     ...styles.sectionHeader,
@@ -141,45 +132,6 @@ export const SectionBar: React.FC<SectionBarProps> = ({
             opacity: (resizingSection?.nextSection === sectionName || hoverSection === sectionName) ? 0.5 : 0,
           }} />
         </div>
-      )}
-
-      {/* Draft Toggle */}
-      {showDraftToggle && onDraftToggleChange && (
-        <Tooltip title={draftToggleTooltip || (showDrafts ? "Hide drafts" : "Show drafts")}>
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={showDrafts}
-                onChange={(e) => {
-                  e.stopPropagation()
-                  onDraftToggleChange(e.target.checked)
-                }}
-              />
-            }
-            label={
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                {showDrafts ?
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <VisibilityOutlined sx={{ fontSize: 14 }} /> Drafts
-                  </span> :
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <VisibilityOffOutlined sx={{ fontSize: 14 }} /> Drafts
-                  </span>
-                }
-              </span>
-            }
-            style={{
-              margin: 0,
-              marginLeft: 'auto',
-              marginRight: '0px',
-              position: 'relative',
-              zIndex: 25,
-            }}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
-        </Tooltip>
       )}
 
       {/* Close Button */}

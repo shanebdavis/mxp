@@ -15,9 +15,7 @@ interface SectionProps {
   icon: React.ReactElement
   isFocused: boolean
   showDragHandle: boolean
-  showDraftToggle?: boolean
-  defaultShowDrafts?: boolean
-  draftToggleTooltip?: string
+  showDrafts: boolean
   onDragStart?: (e: React.MouseEvent) => void
   onClose: () => void
   onFocus: () => void
@@ -96,9 +94,7 @@ export const Section: React.FC<SectionProps> = ({
   icon,
   isFocused,
   showDragHandle,
-  showDraftToggle = false,
-  defaultShowDrafts = true,
-  draftToggleTooltip,
+  showDrafts,
   onDragStart,
   onClose,
   onFocus,
@@ -112,10 +108,6 @@ export const Section: React.FC<SectionProps> = ({
   dashboardProps,
   tableProps
 }) => {
-  // Section-specific state for draft toggle
-  const [showDrafts, setShowDrafts] = useSessionStorageState<boolean>(`showDraft${sectionName}`, {
-    defaultValue: defaultShowDrafts
-  })
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -172,9 +164,6 @@ export const Section: React.FC<SectionProps> = ({
         icon={icon}
         isFocused={isFocused}
         showDragHandle={showDragHandle}
-        showDraftToggle={showDraftToggle}
-        showDrafts={showDrafts}
-        onDraftToggleChange={setShowDrafts}
         onDragStart={onDragStart}
         onClose={onClose}
         hoverSection={hoverSection}
@@ -182,7 +171,6 @@ export const Section: React.FC<SectionProps> = ({
         hoverCloseButton={hoverCloseButton}
         setHoverCloseButton={setHoverCloseButton}
         resizingSection={resizingSection}
-        draftToggleTooltip={draftToggleTooltip}
       />
       <div style={styles.sectionContent}>
         {renderContent()}
