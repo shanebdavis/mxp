@@ -79,8 +79,9 @@ const styles = {
 export const SolutionItems = ({ node, children }: SolutionItemsProps) => {
   // Filter out draft items and find the minimum readiness level
   const nonDraftChildren = children.filter(child => child.nodeState !== "draft" && child.nodeState !== undefined)
+  const childrenWithReadiness = nonDraftChildren.filter(child => child.calculatedMetrics.readinessLevel !== undefined)
   const minReadinessLevel = Math.min(
-    ...nonDraftChildren.map(child => child.calculatedMetrics.readinessLevel)
+    ...childrenWithReadiness.map(child => child.calculatedMetrics.readinessLevel!)
   )
 
   // Find the first child with the minimum readiness level

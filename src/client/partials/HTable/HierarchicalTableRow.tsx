@@ -37,7 +37,7 @@ interface TreeNodeProps {
   }
 }
 
-export const HTableRow: FC<TreeNodeProps> = memo(({
+export const HierarchicalTableRow: FC<TreeNodeProps> = memo(({
   displayOrder,
   draggedNode,
   editingNodeId,

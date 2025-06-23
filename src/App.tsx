@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { HTable, DetailsPanel, CommentsPanel, Dashboard, StatusBar } from './client/partials'
+import { HierarchicalTable, DetailsPanel, CommentsPanel, Dashboard, StatusBar } from './client/partials'
 import {
   Add,
   ArrowRight,
@@ -1190,7 +1190,7 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              <HTable
+              <HierarchicalTable
                 key="mapTable"
                 isFocused={focusedSection === 'map'}
                 rootNodeId={rootNodesByType.map.id}
@@ -1299,7 +1299,7 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              <HTable
+              <HierarchicalTable
                 key="waypointTable"
                 rootNodeId={rootNodesByType.waypoint.id}
                 selectedNode={getSelectedNode('waypoint')}
@@ -1372,7 +1372,7 @@ const App = () => {
               </div>
             </div>
             <div style={styles.sectionContent}>
-              <HTable
+              <HierarchicalTable
                 key="userTable"
                 rootNodeId={rootNodesByType.user.id}
                 selectedNode={getSelectedNode('user')}

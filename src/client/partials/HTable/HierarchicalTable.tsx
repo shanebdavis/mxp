@@ -2,7 +2,7 @@ import { FC, useState, useRef, useMemo } from 'react'
 import React from 'react'
 import type { TreeNode, TreeNodeSet } from '../../../TreeNode'
 import { styles } from './styles'
-import { HTableRow } from './HTableRow'
+import { HierarchicalTableRow } from './HierarchicalTableRow'
 import { TreeStateMethods } from '../../../useApiForState'
 import { ViewStateMethods } from '../../../ViewStateMethods'
 interface HTableProps {
@@ -120,7 +120,7 @@ const getDisplayOrder = (
   return displayOrder
 }
 
-export const HTable: FC<HTableProps> = ({
+export const HierarchicalTable: FC<HTableProps> = ({
   nodes,
   rootNodeId,
   selectedNode,
@@ -247,7 +247,7 @@ export const HTable: FC<HTableProps> = ({
             if (isDraftSubtree) draftNodesVisited[nodeId] = true
 
             return (
-              <HTableRow
+              <HierarchicalTableRow
                 key={nodeId}
                 {...{
                   nodes,

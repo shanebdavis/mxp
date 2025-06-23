@@ -1,1 +1,1 @@
-export * from './HTable'
+export * from './HierarchicalTable'
