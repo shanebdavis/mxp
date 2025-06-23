@@ -98,11 +98,45 @@ export const Section: React.FC<SectionProps> = ({
   dashboardProps,
   tableProps
 }) => {
+  // Focus stack state - persisted per section
+  const [focusStack, setFocusStack] = useSessionStorageState<string[]>(`${sectionName}.focusStack`, {
+    defaultValue: []
+  })
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
       onFocus()
       e.preventDefault()
     }
+  }
+
+  // Focus stack operations
+  const pushFocus = (nodeId: string) => {
+    setFocusStack(prev => [...prev, nodeId])
+  }
+
+  const popFocus = () => {
+    setFocusStack(prev => prev.slice(0, -1))
+  }
+
+  // Get the currently focused root node (peek of stack)
+  const getFocusedRootNodeId = () => {
+    if (focusStack.length === 0) {
+      return tableProps?.rootNodeId || ''
+    }
+    return focusStack[focusStack.length - 1]
+  }
+
+  // Handle focus button click
+  const handleFocusNode = () => {
+    if (tableProps?.selectedNode && tableProps.selectedNode.id !== tableProps.rootNodeId) {
+      pushFocus(tableProps.selectedNode.id)
+    }
+  }
+
+  // Handle unfocus button click
+  const handleUnfocusNode = () => {
+    popFocus()
   }
 
   const renderContent = () => {
@@ -117,12 +151,16 @@ export const Section: React.FC<SectionProps> = ({
     }
 
     if (contentType === 'table' && tableProps) {
+      // Use the focused root node instead of the original root node
+      const focusedRootNodeId = getFocusedRootNodeId()
+
       return (
         <HierarchicalTable
           key={`${sectionName}Table`}
           isFocused={isFocused}
           showDraft={showDrafts}
           {...tableProps}
+          rootNodeId={focusedRootNodeId}
         />
       )
     }
@@ -133,6 +171,11 @@ export const Section: React.FC<SectionProps> = ({
       </div>
     )
   }
+
+  // Determine if we can show the focus button
+  const canFocus = tableProps?.selectedNode &&
+    tableProps.selectedNode.id !== tableProps.rootNodeId &&
+    !focusStack.includes(tableProps.selectedNode.id)
 
   return (
     <div
@@ -155,6 +198,10 @@ export const Section: React.FC<SectionProps> = ({
         onDragStart={onDragStart}
         onClose={onClose}
         resizingSection={resizingSection}
+        canFocus={canFocus ?? false}
+        onFocus={handleFocusNode}
+        canUnfocus={focusStack.length > 0}
+        onUnfocus={handleUnfocusNode}
       />
       <div style={styles.sectionContent}>
         {renderContent()}
