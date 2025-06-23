@@ -31,22 +31,37 @@ const getRlTooltip = (level?: number) => {
 }
 
 export const RlPill = ({ level, auto }: { level?: number, auto?: boolean }) => {
+  const [tooltipOpen, setTooltipOpen] = useState(false)
   const baseLevel = level != null ? Math.floor(level) : null
   const progress = level != null ? level - baseLevel! : null
   const nextLevel = baseLevel != null ? baseLevel + 1 : null
 
+  // Close tooltip on click
+  const handleClick = (e: React.MouseEvent) => {
+    setTooltipOpen(false)
+  }
+
   return (
-    <Tooltip title={getRlTooltip(level)} enterDelay={1000}>
-      <div style={{
-        ...styles.readinessLevelPill,
-        backgroundColor: 'transparent',
-        color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
+    <Tooltip
+      title={getRlTooltip(level)}
+      enterDelay={1000}
+      open={tooltipOpen}
+      onOpen={() => setTooltipOpen(true)}
+      onClose={() => setTooltipOpen(false)}
+    >
+      <div
+        style={{
+          ...styles.readinessLevelPill,
+          backgroundColor: 'transparent',
+          color: level == null ? 'var(--auto-text-color, currentColor)' : styles.readinessLevelPill.color,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+        onClick={handleClick}
+      >
         {/* Base color background */}
         {baseLevel != null && (
           <div style={{
