@@ -492,6 +492,7 @@ const App = () => {
     selectNodeAndFocus,
 
     setEditingNodeId: debouncedSetEditingNodeId, // Use the debounced version
+    setEditingNodeIdImmediate: (id: string | null) => setEditingNodeId(id),
 
     addAndFocusNode
   }), [nodes, setExpandedNodes, selectNodeAndFocus, debouncedSetEditingNodeId, addAndFocusNode]);

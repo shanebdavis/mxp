@@ -4,6 +4,7 @@ export interface ViewStateMethods {
   selectNodeAndFocus: (node: TreeNode | null | undefined) => void
   addAndFocusNode: (nodeProperties: TreeNodeProperties, parentId: string, insertAtIndex?: number) => Promise<TreeNode | undefined>
   setEditingNodeId: (nodeId: string | null) => void
+  setEditingNodeIdImmediate: (nodeId: string | null) => void
 }
 
 

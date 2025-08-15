@@ -331,8 +331,8 @@ export const HierarchicalTableRow: FC<TreeNodeProps> = memo(({
             toggleNode(nodeId);
           }
 
-          // Complete current edit and then add child (non-editing path)
-          clearEditing();
+          // Complete current edit immediately (avoid debounce race) then add child
+          viewStateMethods.setEditingNodeIdImmediate(null);
           await timeout(0);
           await viewStateMethods.addAndFocusNode({ title: '' }, nodeId)
           return
@@ -349,8 +349,8 @@ export const HierarchicalTableRow: FC<TreeNodeProps> = memo(({
           const parent = nodes[node.parentId];
           const currentIndex = parent.childrenIds.indexOf(nodeId);
 
-          // Complete current edit and then add sibling (non-editing path)
-          clearEditing();
+          // Complete current edit immediately (avoid debounce race) then add sibling
+          viewStateMethods.setEditingNodeIdImmediate(null);
           await timeout(0);
           await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId, currentIndex + 1)
           return
