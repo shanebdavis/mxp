@@ -241,12 +241,13 @@ const App = () => {
   useEffect(() => {
     // Only clear edit mode if:
     // 1. We're not preserving edit mode
-    // 2. The currently editing node is not the selected node for its type
+    // 2. There is a non-empty selected node id for this type
+    // 3. The currently editing node is not the selected node for its type
     if (!preserveEditing) {
       const editingNode = editingNodeId ? nodes[editingNodeId] : null;
       if (editingNode) {
         const selectedId = selectedNodeIds[editingNode.type];
-        if (selectedId !== editingNodeId) {
+        if (selectedId && selectedId !== editingNodeId) {
           setEditingNodeId(null);
         }
       }
@@ -457,6 +458,7 @@ const App = () => {
       return prev;
     });
 
+    // Set editing state for the new node immediately (not debounced)
     setPreserveEditing(true);
     setEditingNodeId(newNode.id);
     selectNodeAndFocus(newNode);

@@ -321,7 +321,7 @@ export const HierarchicalTableRow: FC<TreeNodeProps> = memo(({
             await treeNodesApi.updateNode(nodeId, { title: newTitle })
           }
 
-          // Don't clear edit mode - the addAndFocusNode function will handle setting edit mode for the new node
+          // If this is the first child, clear parent's setMetrics (default to auto metrics when there are children)
           if (node.childrenIds.length === 0) {
             await treeNodesApi.updateNode(nodeId, { setMetrics: {} });
           }
@@ -331,7 +331,9 @@ export const HierarchicalTableRow: FC<TreeNodeProps> = memo(({
             toggleNode(nodeId);
           }
 
-          // Don't add clearEditing() here - let addAndFocusNode handle the edit state
+          // Complete current edit and then add child (non-editing path)
+          clearEditing();
+          await timeout(0);
           await viewStateMethods.addAndFocusNode({ title: '' }, nodeId)
           return
         }
@@ -347,8 +349,9 @@ export const HierarchicalTableRow: FC<TreeNodeProps> = memo(({
           const parent = nodes[node.parentId];
           const currentIndex = parent.childrenIds.indexOf(nodeId);
 
-          // Don't clear edit mode - the addAndFocusNode function will handle setting edit mode for the new node
-          // Don't add clearEditing() here - let addAndFocusNode handle the edit state
+          // Complete current edit and then add sibling (non-editing path)
+          clearEditing();
+          await timeout(0);
           await viewStateMethods.addAndFocusNode({ title: '' }, node.parentId, currentIndex + 1)
           return
         }
