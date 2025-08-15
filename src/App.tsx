@@ -448,6 +448,15 @@ const App = () => {
 
   const addAndFocusNode = async (nodeProperties: TreeNodeProperties, parentId: string, insertAtIndex?: number) => {
     const newNode = await treeNodesApi.addNode(nodeProperties, parentId, insertAtIndex);
+
+    // Ensure parent node is expanded so the new node is visible
+    setExpandedNodes(prev => {
+      if (!prev[parentId]) {
+        return { ...prev, [parentId]: true };
+      }
+      return prev;
+    });
+
     setPreserveEditing(true);
     setEditingNodeId(newNode.id);
     selectNodeAndFocus(newNode);
