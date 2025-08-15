@@ -79,6 +79,7 @@ const styles = {
     flexDirection: 'column' as const,
     flex: 1,
     minHeight: 0,
+    gap: '8px',
     overflow: 'visible',
   },
   descriptionPreview: {

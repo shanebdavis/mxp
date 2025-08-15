@@ -8,8 +8,11 @@ interface SolutionItemsProps {
 
 const styles = {
   container: {
-    gap: '4px',
     margin: '8px 0',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start',
+    gap: '8px',
   },
   list: {
     margin: 0,
@@ -109,7 +112,7 @@ export const SolutionItems = ({ node, children }: SolutionItemsProps) => {
                   color: 'black',
                   background: styles.readinessLevelColors[child.calculatedMetrics.readinessLevel as keyof typeof styles.readinessLevelColors],
                 }}>
-                  RL{child.calculatedMetrics.readinessLevel}
+                  RL{child.calculatedMetrics.readinessLevel ? Math.floor(child.calculatedMetrics.readinessLevel | 0) : 0}
                 </span>
                 &nbsp;
               </>}
